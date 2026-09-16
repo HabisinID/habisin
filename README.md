@@ -18,17 +18,6 @@ Penumpukan makanan layak santap di Tempat Pembuangan Akhir (TPA) membuang sumber
 HABISIN hadir untuk menekan kerugian pelaku usaha, meringankan pengeluaran masyarakat, dan mentransformasikan penanganan food waste menjadi aksi mitigasi emisi gas rumah kaca yang terukur.
 
 ---
-
-## Peran Pengguna
-
-| Role | Deskripsi |
-|------|-----------|
-| **Pembeli** | Menjelajah peta, mencari & memesan makanan surplus, klaim tiket digital, memberi rating. |
-| **Mitra** | Mendaftarkan toko, mengelola listing makanan surplus, memverifikasi kode klaim kasir. |
-| **Admin** | Menyetujui/menolak mitra baru, memoderasi listing publik, take-down konten melanggar. |
-
----
-
 ## Public API / Mock API
 
 | Komponen | Penyedia / Teknologi | Endpoint Kunci / Metode | Kegunaan |
@@ -83,7 +72,7 @@ Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota.
 
 ---
 
-## User Role
+## Peran Pengguna
 ---
 ### Pembeli
 Pengguna umum yang mencari dan memesan makanan surplus dari gerai di sekitarnya. Hak akses & fitur:
