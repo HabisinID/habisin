@@ -44,37 +44,42 @@ HABISIN hadir untuk menekan kerugian pelaku usaha, meringankan pengeluaran masya
 
 ## Daftar Modul & Pembagian Tugas
 
-Aplikasi dibagi menjadi **10 modul** untuk 5 anggota.
+Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota.
 
-### Identity & Partner Location
+### Rozan Laudzai — Identity & Partner Location
+
 - **Modul 1 — Autentikasi & Manajemen Pengguna (Role-Based)**
-  Registrasi, login, logout, penyimpanan token sesi untuk 3 role. Halaman profil & form ganti password.
+  Registrasi, login, logout, dan penyimpanan token sesi untuk 3 role (Pembeli, Mitra, Admin). Cek ketersediaan username secara real-time (AJAX). Halaman profil pengguna dan form ganti password sederhana, termasuk fitur **Delete akun**.
 - **Modul 2 — Onboarding Mitra & Geocoding Lokasi Toko**
-  Form pendaftaran toko + integrasi Nominatim (alamat → koordinat) + peta mini Leaflet untuk konfirmasi pin.
+  Form pendaftaran toko (nama, deskripsi, alamat teks, jam operasional). Integrasi Nominatim API untuk mengubah alamat teks menjadi koordinat (lat, lng) yang tersimpan di database. Antarmuka peta mini (Leaflet) agar mitra dapat mengonfirmasi posisi pin tokonya.
 
-### Surplus Catalog & Map Explorer
+### Christiano Hosea — Surplus Catalog & Map Explorer
+
 - **Modul 3 — Manajemen Produk Makanan Surplus (CRUD Mitra)**
-  Form listing makanan (nama, foto, harga normal/diskon, stok, batas waktu) + tabel manajemen produk.
+  Form pembuatan listing makanan (nama, foto, deskripsi, harga normal, harga diskon/gratis, jumlah stok porsi, batas waktu pengambilan). Tabel manajemen produk di sisi mitra (edit data, ubah stok manual, tombol nonaktifkan listing).
 - **Modul 4 — Peta Sebaran Makanan Interaktif (Leaflet)**
-  Peta utama plot marker toko, deteksi GPS pengguna, popup ringkas (nama, jarak, tombol ke toko).
+  Halaman peta utama yang memplot marker lokasi toko berdasarkan data koordinat (lat, lng). Deteksi koordinat pengguna via browser GPS (`navigator.geolocation`). Popup ringkas saat marker diklik: nama toko, jarak relatif, dan tombol langsung ke halaman toko (AJAX).
 
-### Search & Admin Moderation
+### Damica Adreeza Ramadhan — Search & Admin Moderation
+
 - **Modul 5 — Pencarian Katalog & Filter Makanan**
-  Pencarian teks, filter kategori/harga/donasi gratis, daftar kartu produk responsif.
+  Kolom pencarian teks nama makanan/toko (AJAX). Komponen filter: pilihan kategori makanan, rentang harga, dan filter biner ("Hanya Tampilkan Donasi Gratis"). Tampilan daftar kartu produk (product card list) responsif dengan indikator harga diskon.
 - **Modul 6 — Panel Kontrol & Moderasi Admin**
-  Tabel approve/reject mitra baru + tabel listing publik dengan tombol take-down.
+  Halaman tabel admin untuk melihat daftar mitra baru dan tombol persetujuan (Approve/Reject). Tabel daftar listing publik dengan tombol darurat Take-Down jika isi listing melanggar aturan. **Moderation Log (CRUD)**.
 
-### Booking & Digital Ticket
+### Violin Monica — Booking & Digital Ticket
+
 - **Modul 7 — Alur Pemesanan & Mock Payment**
-  Ringkasan pemesanan + layar simulasi pembayaran ("Simulasikan Pembayaran Berhasil").
+  Halaman ringkasan pemesanan (input jumlah porsi, catatan pengambilan, menampilkan jarak toko dengan lokasi buyer). Halaman simulasi pembayaran (mock payment screen) dengan tombol instan "Simulasikan Pembayaran Berhasil" yang langsung mengubah status transaksi menjadi lunas/terpesan. Termasuk fitur batal pesanan.
 - **Modul 8 — Tiket Digital & Verifikasi Kode Kasir**
-  Tiket digital dengan kode klaim 5 digit acak + halaman verifikasi kasir sisi mitra.
+  Halaman tiket digital pembeli yang menampilkan ringkasan pesanan, batas jam ambil, dan kode klaim unik 5 digit acak (misal: H7B29). Halaman verifikasi kasir di sisi mitra untuk memasukkan kode 5 digit, memvalidasi kecocokannya, dan mengubah status pesanan menjadi selesai diambil (AJAX).
 
-### Reputation & Impact Dashboard
+### Raihan Daffa Aprilianda — Reputation & Impact Dashboard
+
 - **Modul 9 — Rating Toko & Sistem Komplain (Ulasan)**
-  Form rating bintang 1–5 & ulasan teks + rata-rata rating di profil toko + form komplain.
+  Form pengisian rating bintang (1–5) dan ulasan teks untuk pembeli yang sudah menyelesaikan pengambilan (AJAX). Komponen tampilan rata-rata rating pada profil toko dan form laporan komplain sederhana jika makanan tidak higienis. Termasuk fitur edit ulasan dan hapus ulasan.
 - **Modul 10 — Dasbor Statistik & Kalkulator Dampak Lingkungan**
-  Metrik publik (porsi terselamatkan, kg sampah terhindarkan W, estimasi CO₂e = W × 2,5 kg) + widget performa mitra.
+  Halaman metrik dampak lingkungan publik: akumulasi total porsi makanan terselamatkan, total kilogram sampah terhindarkan (W), dan estimasi penurunan gas rumah kaca (W × 2,5 kg CO₂e). Widget statistik performa penjualan di dasbor mitra (total porsi terselamatkan dan total rupiah terhimpun).
 
 ---
 
@@ -84,6 +89,6 @@ Aplikasi dibagi menjadi **10 modul** untuk 5 anggota.
 |------|----------------|
 | Rozan Laudzai | Identity & Partner Location |
 | Christiano Hosea | Surplus Catalog & Map Explorer |
-| Damica Adreeza Ramadhan | Search & Admin Moderation  |
-| Violin Monica | Booking & Digital Ticket  |
+| Damica Adreeza Ramadhan | Search & Admin Moderation |
+| Violin Monica | Booking & Digital Ticket |
 | Raihan Daffa Aprilianda | Reputation & Impact Dashboard |
