@@ -83,12 +83,38 @@ Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota.
 
 ---
 
+## User Role
+---
+### Pembeli
+Pengguna umum yang mencari dan memesan makanan surplus dari gerai di sekitarnya. Hak akses & fitur:
+- Menjelajah peta sebaran makanan surplus.
+- Mencari dan memfilter katalog makanan.
+- Memesan makanan surplus dan melakukan mock payment.
+- Mengklaim tiket digital dengan kode klaim unik.
+- Memberi rating, ulasan, dan laporan komplain.
+---
+### Mitra
+Pemilik atau pengelola gerai makanan yang ingin mendaftarkan dan mengelola tokonya di platform. Hak akses & fitur:
+- Mendaftarkan toko (nama, deskripsi, alamat, jam operasional) dengan geocoding lokasi.
+- Mengelola listing makanan surplus (tambah, edit, ubah stok, nonaktifkan).
+- Menetapkan harga normal, harga diskon, atau donasi gratis.
+- Memverifikasi kode klaim 5 digit di sisi kasir.
+- Memantau statistik performa penjualan dan porsi terselamatkan.
+---
+### Admin
+Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses & fitur:
+- Menyetujui atau menolak pendaftaran mitra baru.
+- Memoderasi listing publik yang beredar.
+- Melakukan take-down konten yang melanggar aturan.
+- Mengelola moderation log (CRUD).
+- Memantau seluruh aktivitas platform.
+
 ## Tim Pengembang
 
-| Nama | Tanggung Jawab |
-|------|----------------|
-| Rozan Laudzai | Identity & Partner Location |
-| Christiano Hosea | Surplus Catalog & Map Explorer |
-| Damica Adreeza Ramadhan | Search & Admin Moderation |
-| Violin Monica | Booking & Digital Ticket |
-| Raihan Daffa Aprilianda | Reputation & Impact Dashboard |
+| Nama | Tanggung Jawab | NPM |
+|------|----------------| --- |
+| Rozan Laudzai | Identity & Partner Location | 2506547544
+| Christiano Hosea | Surplus Catalog & Map Explorer | 2506615280
+| Damica Adreeza Ramadhan | Search & Admin Moderation | 2506625193
+| Violin Monica | Booking & Digital Ticket | 2506551794
+| Raihan Daffa Aprilianda | Reputation & Impact Dashboard | 2506620021
