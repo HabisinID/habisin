@@ -110,7 +110,7 @@ Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses
 - Memantau seluruh aktivitas platform.
 
 ## Tim Pengembang
-
+### Kelompok 10 PBP B
 | Nama | Tanggung Jawab | NPM |
 |------|----------------| --- |
 | Rozan Laudzai | Identity & Partner Location | 2506547544
