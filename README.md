@@ -7,6 +7,8 @@ Web app berbasis peta interaktif (map-first progressive web app) yang mempertemu
 **Kategori:** Web App Berbasis Peta Interaktif (Map-First PWA)
 **Domain Masalah:** Food Waste Management, Environmental Sustainability
 
+**Mulai di sini:** [Setup lokal](#menjalankan-demo-lokal) · [Konfigurasi](#konfigurasi-environment) · [Verifikasi](#verifikasi) · [Troubleshooting](#troubleshooting)
+
 ---
 
 ## Latar Belakang
@@ -116,41 +118,120 @@ Demo sudah mencakup autentikasi Django + DRF, katalog makanan, Leaflet/OpenStree
 pencarian/filter, favorit lokal, pemesanan dengan simulasi pembayaran, tiket pengambilan,
 dan pembatalan pesanan. Antarmuka tersedia dalam Bahasa Indonesia dan responsif.
 
-### Backend
+### Prasyarat
+
+- Python **3.10 atau lebih baru** dengan `pip` dan modul `venv` (pengembangan diuji dengan Python 3.12).
+- Node.js **20.9 atau lebih baru** dan npm, sesuai persyaratan Next.js yang digunakan.
+- Git dan terminal Bash (Linux, macOS, atau WSL).
+- Koneksi internet untuk instalasi dependensi, foto Unsplash, dan tile OpenStreetMap.
+
+Database menggunakan **SQLite** di `backend/db.sqlite3`; tidak perlu menyiapkan server
+PostgreSQL atau layanan database lain. Demo juga tidak memerlukan API key eksternal.
+
+Semua blok perintah di bawah dimulai dari **root repository**, kecuali disebutkan lain.
+Gunakan dua terminal terpisah untuk backend dan frontend. Jika `.venv`, `.env`, atau
+`.env.local` sudah ada, lewati perintah pembuatannya agar konfigurasi lokal tetap terjaga.
+
+### Instalasi pertama — backend
 
 ```bash
 cd backend
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+cp .env.example .env
 python manage.py migrate
 python manage.py seed_demo
+python manage.py collectstatic --noinput
 python manage.py runserver 127.0.0.1:8000
 ```
 
-Jika belum memiliki virtual environment, jalankan `python3 -m venv .venv` di folder
-`backend` sebelum aktivasi. `.env` bersifat opsional untuk pengembangan lokal;
-contoh konfigurasi tersedia di `backend/.env.example`.
+Biarkan terminal ini tetap berjalan. Migrasi membuat tabel SQLite; `collectstatic`
+menyiapkan aset statis Django admin. Selalu aktifkan `.venv` sebelum menjalankan
+perintah Python backend.
 
 `seed_demo` membuat atau memperbarui **enam listing contoh**, mengatur ulang stoknya,
-dan membuka waktu pengambilan selama delapan jam sejak perintah dijalankan.
-Jalankan ulang saat memulai sesi demo baru, bukan ketika pesanan demo sedang aktif. Perintah menolak pembaruan jika masih ada pesanan aktif.
+dan membuka waktu pengambilan selama **delapan jam** sejak perintah dijalankan.
+Perintah menolak pembaruan jika masih ada reservasi berstatus aktif, termasuk yang
+waktu pengambilannya sudah lewat. Batalkan pesanan melalui **Pesanan saya** sebelum
+menjalankan ulang seed.
+
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
 
-### Frontend (terminal terpisah)
+### Instalasi pertama — frontend
+
+Buka terminal kedua dari root repository:
 
 ```bash
 cd frontend
 npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Buka **http://localhost:3000**. Next.js meneruskan `/api/*` ke Django di
-`http://127.0.0.1:8000`, sehingga browser menggunakan satu origin. Untuk backend
-berbeda, isi `BACKEND_URL` di `frontend/.env.local` dan restart Next.js.
-Foto ilustrasi berasal dari Unsplash; foto dan tile OpenStreetMap membutuhkan internet.
-Jika backend tidak tersedia, katalog pratinjau tetap tampil dengan pesan yang jelas;
-autentikasi dan pemesanan membutuhkan backend aktif.
+Buka **http://localhost:3000**. Next.js meneruskan `/api/*` ke Django, sehingga browser
+menggunakan satu origin untuk halaman dan autentikasi. Gunakan hostname yang sama
+selama sesi; cookie untuk `localhost` dan `127.0.0.1` terpisah.
+
+| Layanan | Alamat lokal |
+| --- | --- |
+| Website | http://localhost:3000 |
+| Katalog API melalui frontend | http://localhost:3000/api/listings |
+| Katalog API langsung dari Django | http://127.0.0.1:8000/api/listings |
+| Django admin | http://127.0.0.1:8000/admin/ |
+
+Foto ilustrasi dan tile peta membutuhkan internet. Jika backend tidak tersedia,
+katalog pratinjau tetap tampil dengan pesan yang jelas; autentikasi dan pemesanan
+membutuhkan backend aktif.
+
+### Menjalankan kembali setelah instalasi
+
+Terminal backend, dari root repository:
+
+```bash
+cd backend
+source .venv/bin/activate
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
+```
+
+Terminal frontend, dari root repository:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Untuk memperbarui katalog yang kedaluwarsa, batalkan reservasi aktif terlebih dahulu,
+lalu jalankan dari terminal baru di root repository:
+
+```bash
+cd backend
+source .venv/bin/activate
+python manage.py seed_demo
+```
+
+Hentikan masing-masing server dengan `Ctrl+C`. Data akun dan pesanan tetap tersimpan
+di SQLite. Instal ulang dependensi hanya saat file requirements atau lockfile berubah.
+
+### Konfigurasi environment
+
+Contoh tersedia di [`backend/.env.example`](backend/.env.example) dan
+[`frontend/.env.example`](frontend/.env.example). File konfigurasi lokal tidak di-commit.
+Restart server terkait setelah mengubah konfigurasi.
+
+| File | Variabel | Nilai untuk demo lokal | Kegunaan |
+| --- | --- | --- | --- |
+| `backend/.env` | `DEBUG` | `True` | Mengaktifkan mode pengembangan dan cookie untuk HTTP lokal. |
+| `backend/.env` | `SECRET_KEY` | Nilai contoh khusus demo lokal | Kunci Django; ganti dengan nilai acak yang kuat sebelum deployment. |
+| `backend/.env` | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Hostname yang diterima Django, tanpa skema atau port. |
+| `backend/.env` | `CSRF_TRUSTED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Origin frontend yang diizinkan mengirim mutasi API. |
+| `frontend/.env.local` | `BACKEND_URL` | `http://127.0.0.1:8000` | Alamat Django untuk proxy Next.js, tanpa akhiran `/api` atau `/`. |
+
+Jika port backend berubah, sesuaikan `BACKEND_URL`. Jika origin frontend berubah
+(misalnya menjadi port 3001), tambahkan origin tersebut ke `CSRF_TRUSTED_ORIGINS`.
+Pisahkan beberapa nilai dengan koma tanpa spasi.
 
 ### Alur demo
 
@@ -198,17 +279,26 @@ makanan yang benar-benar terselamatkan. Semua listing saat ini merupakan data de
 
 ### Verifikasi
 
+Jalankan setiap blok dari root repository. Tes backend memakai database tes terpisah.
+
 ```bash
 cd backend
 source .venv/bin/activate
 python manage.py test
 python manage.py check
+python manage.py makemigrations --check --dry-run
 ```
 
 ```bash
 cd frontend
 npm run lint
 npm run build
+```
+
+Dengan kedua server tetap berjalan, jalankan tes browser dari terminal ketiga:
+
+```bash
+cd frontend
 npx playwright install chromium
 npm run test:e2e
 ```
@@ -218,6 +308,37 @@ Tes browser membutuhkan backend dan frontend aktif di `127.0.0.1:8000` dan
 sementara, menguji alur reservasi, lalu menghapus akun tersebut. Screenshot pemeriksaan
 tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`.
 
+### Troubleshooting
+
+| Masalah | Langkah penyelesaian |
+| --- | --- |
+| `No module named django` | Masuk ke `backend`, aktifkan `source .venv/bin/activate`, lalu jalankan `python -m pip install -r requirements.txt`. |
+| `No module named venv` atau pembuatan virtual environment gagal | Instal dukungan `venv` untuk Python dari package manager sistem, lalu ulangi pembuatan `.venv`. |
+| `no such table` | Jalankan `python manage.py migrate` dari `backend` dengan `.venv` aktif. |
+| “Backend belum terhubung” atau proxy gagal | Pastikan Django berjalan di port 8000 dan `BACKEND_URL` sesuai; restart frontend setelah mengubah environment. |
+| Katalog kosong saat backend aktif | Listing mungkin belum di-seed atau sudah kedaluwarsa. Batalkan reservasi aktif, lalu jalankan `python manage.py seed_demo`. |
+| Seed menolak karena reservasi aktif | Masuk ke akun pemesan dan batalkan pesanan melalui **Pesanan saya**, lalu ulangi seed. |
+| Login atau registrasi gagal dengan CSRF 403 | Pastikan origin browser tercantum dalam `CSRF_TRUSTED_ORIGINS`, gunakan `DEBUG=True` untuk HTTP lokal, lalu restart Django dan muat ulang halaman. |
+| Port 3000 sudah dipakai | Hentikan proses yang memakai port itu, atau sesuaikan origin CSRF jika memakai port lain. Tes browser tetap mengharapkan port 3000. |
+| Chromium gagal karena library sistem belum tersedia | Dari `frontend`, jalankan `npx playwright install --with-deps chromium`; pemasangan dependensi sistem dapat meminta akses administrator. |
+| Lokasi GPS ditolak | Izinkan akses lokasi di browser. Jika tidak tersedia, demo tetap memakai lokasi pencarian awal di Beji, Depok. |
+| Foto atau peta tidak tampil | Periksa koneksi internet dan pemblokiran permintaan ke Unsplash/OpenStreetMap. |
+
+### Build frontend untuk dijalankan lokal
+
+Dengan backend tetap berjalan, dari root repository:
+
+```bash
+cd frontend
+npm run build
+npm run start
+```
+
+Hentikan `npm run dev` terlebih dahulu agar port 3000 tersedia. Ini menjalankan build
+produksi Next.js secara lokal; backend masih mengikuti konfigurasi environment-nya.
+
+### Catatan deployment
+
 Untuk deployment, tetapkan `DEBUG=False`, `SECRET_KEY` acak yang kuat,
 `ALLOWED_HOSTS`, dan `CSRF_TRUSTED_ORIGINS` sesuai domain HTTPS. Cookie secure otomatis
 aktif ketika debug mati. Jalankan `python manage.py collectstatic --noinput` untuk
@@ -225,6 +346,8 @@ aset Django admin. Konfigurasi produksi lebih lanjut diperlukan sebelum menerima
 pengguna atau transaksi sungguhan.
 
 ## AI Disclosure
+
+### Task 1
 
 Implemented and running at
 
