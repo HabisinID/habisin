@@ -347,12 +347,14 @@ pengguna atau transaksi sungguhan.
 
 ## AI Disclosure
 
-### Task 1
+### branch: feat/auth
 
-Implemented and running at
+Chat link: https://chatgpt.com/s/cx_6aba210934d88191815c9b8c82fb9223
 
 Authentication: registration, login/logout, roles, persistent sessions, profile editing, password changes, and account deletion.
 
 Responsive demo: food catalog, search/filtering, interactive map, favorites, mock payments, reservations, pickup tickets, and cancellation.
 
 Setup instructions and demo limitations added to [README.md](/home/nekomputer/myroom/programming/projects/habisin/README.md)
+
+Updated [README.md](/home/nekomputer/myroom/programming/projects/habisin/README.md) with prerequisites, backend/frontend setup, environment configuration, demo seeding, test commands, and troubleshooting.
