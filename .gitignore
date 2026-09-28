@@ -126,3 +126,12 @@ sftp-config.json
 
 # node js for tailwindcss
 node_modules/
+
+# Frontend source helpers (override Python lib exclusion)
+!frontend/src/lib/
+!frontend/src/lib/**
+
+# Generated assets and browser test output
+backend/staticfiles/
+frontend/test-results/
+frontend/playwright-report/
