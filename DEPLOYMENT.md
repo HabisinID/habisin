@@ -3,7 +3,7 @@
 Domain yang dipakai:
 
 - Backend: https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
-- Frontend: https://habisin-six.vercel.app
+- Frontend: https://habisin-id.vercel.app
 
 ## Alur request dan branch
 
@@ -30,7 +30,7 @@ Masukkan melalui dashboard environment PWS (bukan ke Git):
 DEBUG=False
 SECRET_KEY=GANTI_DENGAN_SECRET_ACAK_BARU
 ALLOWED_HOSTS=rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
-CSRF_TRUSTED_ORIGINS=https://habisin-six.vercel.app,https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
+CSRF_TRUSTED_ORIGINS=https://habisin-id.vercel.app,https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
 WHITENOISE_USE_FINDERS=True
 SEED_DEMO_ON_MIGRATE=True
 ```
@@ -134,7 +134,7 @@ git push origin frontend-prod
 Setelah mengganti environment, **redeploy dengan build baru**. Perubahan environment
 tidak memperbaiki deployment lama secara retroaktif. Jangan memilih reuse existing build
 untuk perubahan target rewrite. Pastikan deploy tersebut menjadi Production untuk alias
-`habisin-six.vercel.app`.
+`habisin-id.vercel.app`.
 
 Alternatif di masa depan: Vercel juga bisa memakai `main` dengan Root Directory
 `frontend`. Jangan campur pengaturan root monorepo itu dengan branch `frontend-prod`.
@@ -146,8 +146,8 @@ Jalankan pemeriksaan baca saja:
 ```bash
 curl -i https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id/api/health
 curl -i https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id/api/listings
-curl -i https://habisin-six.vercel.app/api/health
-curl -i https://habisin-six.vercel.app/api/auth/csrf
+curl -i https://habisin-id.vercel.app/api/health
+curl -i https://habisin-id.vercel.app/api/auth/csrf
 ```
 
 Hasil yang diharapkan:
@@ -159,7 +159,7 @@ Hasil yang diharapkan:
 - Respons API memakai `Cache-Control: private, no-store` agar CDN tidak menyimpan
   data akun, tiket, atau inventaris yang berubah.
 
-Di https://habisin-six.vercel.app, daftar akun pembeli, refresh, pesan satu produk,
+Di https://habisin-id.vercel.app, daftar akun pembeli, refresh, pesan satu produk,
 buka tiket, batalkan pesanan, dan logout. Di DevTools, request tetap menuju domain
 Vercel; cookie `sessionid` harus `Secure`, `HttpOnly`, dan `SameSite=Lax`.
 
