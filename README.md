@@ -1,3 +1,5 @@
+Panduan hosting: [Deploy PWS dan Vercel](DEPLOYMENT.md).
+
 # HABISIN
 
 > **Save Food, Cut Waste, Feed Communities.**

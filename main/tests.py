@@ -126,3 +126,68 @@ class ReservationTests(TestCase):
 
     def test_buyer_cannot_access_dashboard(self):
         self.assertEqual(self.client.get("/api/dashboard").status_code, 403)
+
+
+class DeploymentTests(TestCase):
+    def test_health_and_api_responses_are_not_publicly_cached(self):
+        for path in ["/api/health", "/api/listings", "/api/auth/csrf", "/api/auth/me"]:
+            response = self.client.get(path)
+            self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(self.client.get("/").json()["status"], "ok")
+
+    def test_production_cookie_flags_and_trusted_vercel_origin(self):
+        from django.test import override_settings
+        with override_settings(
+            DEBUG=False,
+            ALLOWED_HOSTS=["rozan-laudzai-habisin-backend.pws.cs.ui.ac.id"],
+            CSRF_TRUSTED_ORIGINS=["https://habisin-six.vercel.app"],
+            SESSION_COOKIE_SECURE=True,
+            CSRF_COOKIE_SECURE=True,
+        ):
+            client = APIClient(enforce_csrf_checks=True)
+            host = {"HTTP_HOST": "rozan-laudzai-habisin-backend.pws.cs.ui.ac.id"}
+            csrf = client.get("/api/auth/csrf", **host)
+            self.assertTrue(csrf.cookies["csrftoken"]["secure"])
+            headers = {**host, "HTTP_X_CSRFTOKEN": csrf.json()["csrfToken"]}
+            data = {"username": "deploytest", "name": "Deploy Test", "email": "test@example.com", "password": "Deploy-Strong-1937!", "role": "buyer"}
+            denied = client.post("/api/auth/register", data, format="json", HTTP_ORIGIN="https://untrusted.example.com", **headers)
+            self.assertEqual(denied.status_code, 403)
+            response = client.post("/api/auth/register", data, format="json", HTTP_ORIGIN="https://habisin-six.vercel.app", **headers)
+            self.assertEqual(response.status_code, 201)
+            self.assertTrue(response.cookies["sessionid"]["secure"])
+            self.assertTrue(response.cookies["sessionid"]["httponly"])
+            self.assertEqual(response.cookies["sessionid"]["samesite"], "Lax")
+            self.assertFalse(response.cookies["sessionid"]["domain"])
+
+    def test_whitenoise_serves_admin_css_without_collectstatic(self):
+        import tempfile
+        from django.test import override_settings
+        from django.test.client import Client
+        with tempfile.TemporaryDirectory() as empty_static:
+            with override_settings(DEBUG=False, WHITENOISE_USE_FINDERS=True, WHITENOISE_AUTOREFRESH=False, STATIC_ROOT=empty_static):
+                response = Client().get("/static/admin/css/base.css")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("text/css", response["Content-Type"])
+                response.close()
+
+    def test_opt_in_demo_seeding_preserves_existing_reservations(self):
+        from django.apps import apps
+        from django.test import override_settings
+        from .deployment import seed_demo_after_migrate
+        with override_settings(SEED_DEMO_ON_MIGRATE=False):
+            seed_demo_after_migrate(apps.get_app_config("main"))
+            self.assertEqual(Listing.objects.count(), 0)
+        with override_settings(SEED_DEMO_ON_MIGRATE=True):
+            seed_demo_after_migrate(apps.get_app_config("main"))
+            self.assertEqual(Listing.objects.count(), 6)
+            listing = Listing.objects.first()
+            user = User.objects.create_user(username="reserved")
+            Reservation.objects.create(user=user, listing=listing, quantity=1, total=listing.price, code="AB123")
+            listing.stock = 1
+            listing.save()
+            old_deadline = listing.pickup_end
+            seed_demo_after_migrate(apps.get_app_config("main"))
+            listing.refresh_from_db()
+            self.assertEqual(listing.stock, 1)
+            self.assertEqual(listing.pickup_end, old_deadline)
+            self.assertEqual(Reservation.objects.count(), 1)
