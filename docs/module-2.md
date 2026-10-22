@@ -38,6 +38,31 @@ tambahkan URL/kontak pengelola saat deployment. Default tercantum dalam
 [`backend/.env.example`](../backend/.env.example). Untuk trafik lebih besar,
 gunakan penyedia geocoding yang sesuai atau instance Nominatim sendiri.
 
+Jika DNS atau koneksi sementara gagal, backend mencoba ulang sekali dengan jeda
+minimal 1,1 detik sambil tetap memegang kuota bersama. Penolakan HTTP (termasuk
+403/429), sertifikat tidak valid, dan hasil yang rusak tidak dicoba ulang otomatis.
+Gangguan yang menetap tetap menghasilkan 503 dengan pesan sesuai penyebabnya.
+
+Log backend menyertakan kategori `dns`, `timeout`, `tls`, `connection`,
+`http_error`, `rate_limited`, atau `invalid_response`, beserta status HTTP jika tersedia. Alamat
+toko, token, dan parameter URL penyedia tidak dicatat. Untuk `dns`, periksa DNS
+dan koneksi internet mesin yang menjalankan Django; untuk `tls`, periksa trust
+store/sertifikat jaringan; untuk HTTP 403/429, periksa identitas aplikasi, kuota,
+dan kebijakan penyedia. Error jaringan permanen perlu diperbaiki pada server.
+
+Untuk memeriksa DNS dari environment backend:
+
+```bash
+python -c "import socket; print(socket.getaddrinfo('nominatim.openstreetmap.org', 443))"
+```
+
+Pada WSL, jika resolusi DNS gagal secara berselang-seling, simpan pekerjaan lalu
+jalankan `wsl --shutdown` dari **Windows PowerShell**, buka kembali WSL, dan
+jalankan ulang backend/frontend. Perintah ini menghentikan semua distribusi WSL
+yang sedang berjalan. Jika masalah tetap muncul, periksa DNS/VPN di Windows;
+lihat [panduan troubleshooting WSL Microsoft](https://learn.microsoft.com/windows/wsl/troubleshooting)
+dan [penjelasan DNS tunneling](https://learn.microsoft.com/windows/wsl/networking#dns-tunneling).
+
 Hasil pencarian menghasilkan token bertanda tangan yang terikat pada alamat dan
 akun, berlaku 30 menit. API menolak penyimpanan alamat baru tanpa token yang sesuai
 serta pin terkonfirmasi. Jika token kedaluwarsa, cari alamat lagi. Cache yang masih

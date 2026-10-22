@@ -1,7 +1,9 @@
 import json
+import socket
+import ssl
 from datetime import timedelta
 from unittest.mock import patch
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from django.contrib.auth.models import User
 from django.core import signing
@@ -144,3 +146,75 @@ class GeocodingTests(TestCase):
         upstream.return_value.__enter__.return_value.read.return_value = b'[]'
         self.assertEqual(search_address("Jalan Margonda, Depok"), [])
         self.assertEqual(search_address("Jalan Margonda, Depok"), [])
+
+    @patch("main.geocoding.sleep")
+    @patch("main.geocoding.urlopen")
+    def test_transient_dns_failure_retries_once_and_caches_success(self, upstream, pause):
+        response = upstream.return_value
+        response.__enter__.return_value.read.return_value = b'[{"lat":"-6.36","lon":"106.83","display_name":"Depok"}]'
+        upstream.side_effect = [URLError(socket.gaierror(socket.EAI_AGAIN, "Temporary failure in name resolution")), response]
+        with self.assertLogs("main.geocoding", level="WARNING") as logs:
+            result = search_address("Jalan Margonda, Depok")
+        self.assertEqual(result[0]["latitude"], -6.36)
+        self.assertEqual(upstream.call_count, 2)
+        pause.assert_called_once_with(1.1)
+        self.assertIn("category=dns", logs.output[0])
+        self.assertNotIn("Jalan Margonda", logs.output[0])
+        self.assertEqual(search_address("Jalan Margonda, Depok"), result)
+        self.assertEqual(upstream.call_count, 2)
+
+    @patch("main.geocoding.sleep")
+    @patch("main.geocoding.urlopen")
+    def test_persistent_dns_failure_reports_dns_and_stops_after_one_retry(self, upstream, pause):
+        upstream.side_effect = URLError(socket.gaierror(socket.EAI_AGAIN, "Temporary DNS failure"))
+        with self.assertLogs("main.geocoding", level="WARNING"):
+            with self.assertRaises(GeocodingUnavailable) as failure:
+                search_address("Jalan Margonda, Depok")
+        self.assertEqual(upstream.call_count, 2)
+        pause.assert_called_once_with(1.1)
+        self.assertIn("DNS", str(failure.exception.detail))
+        self.assertEqual(failure.exception.detail.code, "geocoder_dns")
+        self.assertFalse(GeocodingCache.objects.exists())
+        self.assertGreater(GeocodingQuota.objects.get().available_at, timezone.now())
+
+    @patch("main.geocoding.sleep")
+    @patch("main.geocoding.urlopen")
+    def test_rejections_certificates_and_permanent_dns_are_not_retried(self, upstream, pause):
+        errors = [
+            (HTTPError("https://provider.invalid/search?secret=hidden", 403, "Forbidden", {}, None), "geocoder_http_error"),
+            (HTTPError("https://provider.invalid/search", 429, "Too many requests", {}, None), "geocoder_rate_limited"),
+            (URLError(ssl.SSLCertVerificationError("Invalid certificate")), "geocoder_tls"),
+            (URLError(socket.gaierror(socket.EAI_NONAME, "Unknown host")), "geocoder_dns"),
+        ]
+        for error, code in errors:
+            GeocodingQuota.objects.all().delete()
+            upstream.reset_mock()
+            upstream.side_effect = error
+            with self.assertLogs("main.geocoding", level="WARNING") as logs:
+                with self.assertRaises(GeocodingUnavailable) as failure:
+                    search_address("Jalan Margonda, Depok")
+            self.assertEqual(failure.exception.detail.code, code)
+            upstream.assert_called_once()
+            self.assertNotIn("secret", str(logs.output))
+            self.assertNotIn("Jalan Margonda", str(logs.output))
+        pause.assert_not_called()
+
+    @patch("main.geocoding.sleep")
+    @patch("main.geocoding.urlopen")
+    def test_timeout_retries_but_malformed_response_does_not(self, upstream, pause):
+        response = upstream.return_value
+        response.__enter__.return_value.read.return_value = b'[]'
+        upstream.side_effect = [URLError(TimeoutError("Timed out")), response]
+        with self.assertLogs("main.geocoding", level="WARNING"):
+            self.assertEqual(search_address("Jalan Margonda, Depok"), [])
+        self.assertEqual(upstream.call_count, 2)
+        pause.assert_called_once_with(1.1)
+        GeocodingQuota.objects.all().delete()
+        upstream.reset_mock()
+        upstream.side_effect = None
+        response.__enter__.return_value.read.return_value = b'not json'
+        with self.assertLogs("main.geocoding", level="WARNING"):
+            with self.assertRaises(GeocodingUnavailable) as failure:
+                search_address("Jalan lain, Depok")
+        self.assertEqual(failure.exception.detail.code, "geocoder_invalid_response")
+        upstream.assert_called_once()
