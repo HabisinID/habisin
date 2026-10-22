@@ -1193,6 +1193,233 @@ footer > p {
   background: #162c236e;
   backdrop-filter: blur(5px);
 }
+.modal-wide {
+  --green: #3e6b26;
+  --dark: #1c2616;
+  --cream: #fbf7ec;
+  --line: #e6e4d6;
+  width: min(1040px, calc(100% - 28px));
+  border-radius: 12px;
+}
+.listing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.listing-toolbar p,
+.listing-hint {
+  color: #5a6653;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.listing-toolbar .button {
+  white-space: nowrap;
+}
+.listing-table-wrap {
+  margin-top: 20px;
+}
+.listing-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.listing-table th,
+.listing-table td {
+  padding: 16px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.listing-table th {
+  color: #5a6653;
+  font-size: 12px;
+}
+.listing-product {
+  display: flex;
+  gap: 12px;
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+.listing-product small {
+  display: block;
+  margin-top: 5px;
+  color: #5a6653;
+  font-size: 12px;
+}
+.listing-thumbnail {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #f6eacb center/cover;
+}
+.listing-status {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #dee2e6;
+  font-size: 12px;
+}
+.listing-status.is-active {
+  background: #eaf1e2;
+  color: #3e6b26;
+}
+.listing-actions,
+.listing-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.listing-actions button {
+  padding: 8px 10px;
+  min-height: 44px;
+  border: 1px solid #7a8872;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #3e6b26;
+  background: white;
+}
+.listing-actions .listing-delete {
+  color: #b3261e;
+  border-color: #b3261e;
+}
+.listing-confirm {
+  padding: 16px;
+  border: 1px solid #7a8872;
+  background: #f6eacb;
+  border-radius: 6px;
+  line-height: 1.6;
+}
+.listing-confirm .listing-actions {
+  margin-top: 12px;
+}
+.listing-form {
+  display: grid;
+  gap: 20px;
+}
+.listing-back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+}
+.listing-form h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.listing-fields {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.listing-field {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.listing-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.listing-field input,
+.listing-field select,
+.listing-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #7a8872;
+  background: white;
+  color: #1c2616;
+  font: inherit;
+}
+.listing-field textarea {
+  resize: vertical;
+}
+.listing-field [aria-invalid="true"] {
+  border-color: #b3261e;
+}
+.listing-field-error {
+  color: #b3261e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.listing-span {
+  grid-column: 1 / -1;
+}
+.listing-span .listing-hint {
+  margin-top: 8px;
+}
+.listing-donation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  min-height: 44px;
+}
+.listing-donation input {
+  width: 18px;
+  height: 18px;
+  accent-color: #3e6b26;
+}
+.listing-form-actions {
+  justify-content: flex-end;
+}
+.listing-secondary {
+  border: 1px solid #7a8872;
+  background: white;
+  color: #3e6b26;
+}
+.listing-loading {
+  padding: 24px 0;
+}
+@media (max-width: 760px) {
+  .modal-wide {
+    padding: 20px;
+  }
+  .listing-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .listing-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .listing-table,
+  .listing-table tbody,
+  .listing-table tr,
+  .listing-table td {
+    display: block;
+  }
+  .listing-table thead {
+    display: none;
+  }
+  .listing-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid #7a8872;
+  }
+  .listing-table td {
+    padding: 6px 0;
+    border: 0;
+  }
+  .listing-table td[data-label]:not(:first-child)::before {
+    content: attr(data-label) ": ";
+    color: #5a6653;
+  }
+  .listing-table td:last-child .listing-actions {
+    margin-top: 8px;
+  }
+  .listing-product {
+    max-width: none;
+  }
+}
 .modal-head {
   display: flex;
   align-items: center;

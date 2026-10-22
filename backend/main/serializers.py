@@ -1,6 +1,9 @@
+import math
+from urllib.parse import urlsplit
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Listing, Reservation
 
@@ -43,7 +46,61 @@ class RegisterSerializer(serializers.Serializer):
 class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
-        fields = "__all__"
+        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active"]
+
+
+class PartnerListingSerializer(ListingSerializer):
+    image = serializers.URLField(max_length=250)
+    category = serializers.ChoiceField(choices=["Makanan berat", "Roti & kue", "Camilan", "Sehat"])
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    price = serializers.IntegerField(min_value=0)
+    original_price = serializers.IntegerField(min_value=0)
+    stock = serializers.IntegerField(min_value=0)
+
+    class Meta(ListingSerializer.Meta):
+        read_only_fields = ["id"]
+
+    def validate_image(self, value):
+        if urlsplit(value).scheme.lower() not in ["http", "https"]:
+            raise serializers.ValidationError("URL foto harus menggunakan HTTP atau HTTPS.")
+        return value
+
+    def validate_latitude(self, value):
+        if not math.isfinite(value):
+            raise serializers.ValidationError("Latitude harus berupa angka yang valid.")
+        return value
+
+    def validate_longitude(self, value):
+        if not math.isfinite(value):
+            raise serializers.ValidationError("Longitude harus berupa angka yang valid.")
+        return value
+
+    def validate(self, attrs):
+        def value(field):
+            return attrs.get(field, getattr(self.instance, field, None))
+
+        errors = {}
+        if value("price") > value("original_price"):
+            errors["price"] = "Harga jual tidak boleh melebihi harga normal."
+        if value("pickup_end") <= value("pickup_start"):
+            errors["pickup_end"] = "Waktu akhir harus setelah waktu mulai."
+        if (self.instance is None or {"pickup_start", "pickup_end"}.intersection(attrs)) and value("pickup_end") <= timezone.now():
+            errors["pickup_end"] = "Batas pengambilan harus di masa depan."
+        if self.instance and self.instance.reservation_set.filter(status="reserved").exists():
+            for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
+                if field in attrs and attrs[field] != getattr(self.instance, field):
+                    errors[field] = "Tidak dapat diubah selama ada pesanan aktif."
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if validated_data:
+            instance.save(update_fields=list(validated_data))
+        return instance
 
 
 class ReservationSerializer(serializers.ModelSerializer):

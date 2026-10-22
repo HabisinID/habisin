@@ -6,6 +6,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import F
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -13,7 +15,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from .models import Profile, Listing, Reservation
-from .serializers import UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer
+from .serializers import UserSerializer, RegisterSerializer, ListingSerializer, PartnerListingSerializer, ReservationSerializer
 
 
 class AuthThrottle(AnonRateThrottle):
@@ -83,6 +85,7 @@ def me(request):
             for reservation in Reservation.objects.filter(user=request.user, status="reserved"):
                 Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
             user = request.user
+            Listing.objects.filter(owner=user).update(active=False)
             logout(request)
             user.delete()
         return Response(status=204)
@@ -116,6 +119,39 @@ def password(request):
 def listings(request):
     items = Listing.objects.filter(active=True, pickup_end__gt=timezone.now())
     return Response(ListingSerializer(items, many=True).data)
+
+
+@api_view(["GET", "POST"])
+def partner_listings(request):
+    if UserSerializer(request.user).data["role"] != "partner":
+        return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
+    if request.method == "GET":
+        items = Listing.objects.filter(owner=request.user).order_by("-id")
+        return Response(ListingSerializer(items, many=True).data)
+    serializer = PartnerListingSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save(owner=request.user)
+    return Response(serializer.data, status=201)
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+def partner_listing_detail(request, pk):
+    if UserSerializer(request.user).data["role"] != "partner":
+        return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
+    with transaction.atomic():
+        item = get_object_or_404(Listing.objects.select_for_update(), pk=pk, owner=request.user)
+        if request.method == "DELETE":
+            try:
+                item.delete()
+            except ProtectedError:
+                return Response({"detail": "Listing memiliki riwayat pesanan dan tidak dapat dihapus. Nonaktifkan listing agar tidak ditawarkan lagi."}, status=409)
+            return Response(status=204)
+        if request.method == "PATCH":
+            serializer = PartnerListingSerializer(item, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+        return Response(ListingSerializer(item).data)
 
 
 @api_view(["GET", "POST"])

@@ -10,6 +10,8 @@ urlpatterns = [
     path("auth/me", views.me),
     path("auth/password", views.password),
     path("listings", views.listings),
+    path("partner/listings", views.partner_listings),
+    path("partner/listings/<int:pk>", views.partner_listing_detail),
     path("reservations", views.reservations),
     path("reservations/<int:pk>/cancel", views.cancel_reservation),
     path("dashboard", views.dashboard),

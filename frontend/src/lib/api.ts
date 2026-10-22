@@ -22,6 +22,13 @@ export type Listing = {
   pickup_end: string;
   active: boolean;
 };
+export type ListingInput = Omit<Listing, "id" | "active">;
+export const listingCategories = [
+  "Makanan berat",
+  "Roti & kue",
+  "Camilan",
+  "Sehat",
+];
 export type Reservation = {
   id: number;
   listing: Listing;
@@ -32,10 +39,28 @@ export type Reservation = {
   created_at: string;
 };
 
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public details: Record<string, unknown>,
+  ) {
+    super(
+      Object.entries(details)
+        .map(
+          ([key, value]) =>
+            `${key === "detail" ? "" : `${key}: `}${Array.isArray(value) ? value.join(" ") : value}`,
+        )
+        .join(" "),
+    );
+    this.name = "ApiError";
+  }
+}
+
 export async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -55,22 +80,24 @@ export async function api<T>(
     credentials: "same-origin",
     cache: "no-store",
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
   });
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => ({
     detail: "Server belum terhubung. Pastikan backend berjalan.",
   }));
-  if (!response.ok)
-    throw new Error(
-      Object.entries(data)
-        .map(
-          ([key, value]) =>
-            `${key === "detail" ? "" : `${key}: `}${Array.isArray(value) ? value.join(" ") : value}`,
-        )
-        .join(" "),
-    );
+  if (!response.ok) throw new ApiError(response.status, data);
   return data as T;
 }
+export const partnerListingApi = {
+  list: (signal?: AbortSignal) =>
+    api<Listing[]>("partner/listings", "GET", undefined, signal),
+  create: (data: ListingInput) =>
+    api<Listing>("partner/listings", "POST", data),
+  update: (id: number, data: Partial<ListingInput> & { active?: boolean }) =>
+    api<Listing>(`partner/listings/${id}`, "PATCH", data),
+  remove: (id: number) => api<void>(`partner/listings/${id}`, "DELETE"),
+};
 export const rupiah = (value: number) =>
   value === 0
     ? "Gratis"

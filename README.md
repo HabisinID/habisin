@@ -142,7 +142,8 @@ Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses
 
 Demo sudah mencakup autentikasi Django + DRF, katalog makanan, Leaflet/OpenStreetMap,
 pencarian/filter, favorit lokal, pemesanan dengan simulasi pembayaran, tiket pengambilan,
-dan pembatalan pesanan. Antarmuka tersedia dalam Bahasa Indonesia dan responsif.
+pengelolaan listing mitra, dan pembatalan pesanan. Antarmuka tersedia dalam Bahasa
+Indonesia dan responsif.
 
 ### Prasyarat
 
@@ -180,7 +181,8 @@ perintah Python backend.
 dan membuka waktu pengambilan selama **delapan jam** sejak perintah dijalankan.
 Perintah menolak pembaruan jika masih ada reservasi berstatus aktif, termasuk yang
 waktu pengambilannya sudah lewat. Batalkan pesanan melalui **Pesanan saya** sebelum
-menjalankan ulang seed.
+menjalankan ulang seed. Seed juga menolak seluruh pembaruan jika ID data demo
+bertabrakan dengan listing milik mitra; data mitra tidak ditimpa.
 
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
@@ -271,7 +273,8 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.
 
-Akun **Mitra** dapat mendaftar dan membuka ringkasan demo khusus mitra.
+Akun **Mitra** dapat mendaftar dan mengelola listing miliknya melalui **Dasbor mitra**
+di header desktop atau **Kelola listing** pada banner mitra di mobile.
 Akun **Admin** hanya dibuat/ditetapkan lewat Django, bukan form publik:
 
 ```bash
@@ -285,6 +288,36 @@ agar akun juga dapat digunakan melalui form login frontend.
 Admin Django dapat mengelola listing, profil peran, dan melihat reservasi.
 Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 
+### Pengelolaan listing mitra (Modul 3)
+
+1. Daftar/pilih peran **Mitra**, lalu buka pengelolaan listing.
+2. Klik **Tambah listing**. Isi nama makanan/toko, kategori, deskripsi, stok tersedia,
+   URL foto publik HTTP/HTTPS, alamat, latitude/longitude, dan jendela pengambilan dalam **WIB**.
+   Foto menggunakan URL; upload berkas dan pengisian lokasi dari profil toko belum tersedia.
+3. Masukkan harga normal dan harga jual (harga jual tidak boleh melebihi harga normal),
+   atau aktifkan **Gratis (donasi)** untuk harga nol. Klik **Tayangkan listing**.
+4. Gunakan **Ubah** untuk memperbarui detail atau stok tersedia. Stok ini adalah sisa porsi
+   yang dapat dipesan; pembatalan pesanan mengembalikan porsi ke stok tersebut.
+5. **Nonaktifkan** menyembunyikan listing dari katalog dan mencegah pesanan baru tanpa
+   membatalkan pesanan yang sudah masuk. **Aktifkan** menawarkannya kembali selama belum kedaluwarsa.
+6. **Hapus** memerlukan konfirmasi dan hanya berlaku jika listing belum memiliki riwayat
+   reservasi. Listing ber-riwayat harus dinonaktifkan. Harga, alamat/koordinat, dan waktu ambil
+   tidak dapat diubah selama ada reservasi aktif.
+
+Inventaris menampilkan seluruh listing milik akun, termasuk nonaktif, habis, dan kedaluwarsa.
+Listing demo lama tidak memiliki pemilik dan tidak otomatis masuk ke inventaris akun baru.
+Jika akun mitra dihapus, listing miliknya dinonaktifkan; riwayat pesanan pembeli tetap dipertahankan.
+
+API mitra memakai sesi dan CSRF yang sama dengan autentikasi aplikasi:
+
+| Endpoint | Metode | Perilaku |
+| --- | --- | --- |
+| `/api/partner/listings` | GET, POST | Inventaris sendiri dan buat listing |
+| `/api/partner/listings/:id` | GET, PATCH, DELETE | Baca, ubah, dan hapus listing sendiri |
+
+Server menetapkan pemilik dari sesi, membatasi akses ke peran mitra, dan menolak akses
+lintas akun. Endpoint publik `/api/listings` tetap tersedia untuk katalog pembeli.
+
 ### Cakupan autentikasi
 
 - Registrasi pembeli/mitra, login, logout, sesi persisten tujuh hari.
@@ -293,18 +326,19 @@ Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 - Password di-hash oleh Django dan divalidasi dengan validator bawaan Django.
 - Username unik tanpa membedakan huruf besar/kecil untuk registrasi aplikasi.
 - Perubahan password mempertahankan sesi saat ini dan mencabut sesi lainnya.
-- Server membatasi akses berdasarkan peran dan kepemilikan pesanan.
+- Server membatasi akses berdasarkan peran, kepemilikan pesanan, dan kepemilikan listing mitra.
 - Pembatasan percobaan login/registrasi anonim: 30 permintaan per menit per IP
   melalui cache lokal DRF (konfigurasi cache bersama diperlukan untuk multi-worker).
 
 ### Status implementasi
 
 Ini fondasi demo, belum implementasi lengkap seluruh 10 modul. Onboarding/geocoding
-mitra, CRUD toko dan produk di frontend, edit/hapus pesanan, persetujuan mitra/moderasi,
+mitra, CRUD toko, upload berkas foto, edit/hapus pesanan, persetujuan mitra/moderasi,
 moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
 offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
-demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Semua listing saat
-ini merupakan data demo.
+demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Katalog awal berisi
+data demo; akun mitra dapat membuat listing sendiri. Pengembangan lanjutan Modul 4
+(popup toko dan penyempurnaan lifecycle peta) masih terpisah dari implementasi Modul 3 ini.
 
 ### Verifikasi
 
@@ -335,7 +369,9 @@ npm run test:e2e
 Tes browser membutuhkan backend dan frontend aktif di `127.0.0.1:8000` dan
 `127.0.0.1:3000`, serta katalog `seed_demo` yang belum kedaluwarsa. Tes membuat akun
 sementara, menguji alur reservasi, lalu menghapus akun tersebut. Screenshot pemeriksaan
-tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`.
+tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`. Tes Modul 3
+mencakup CRUD, validasi, donasi, konflik reservasi, loading/error/retry, dan layout mobile;
+screenshot-nya memakai prefix `/tmp/habisin-module3-`.
 
 ### Troubleshooting
 
@@ -350,6 +386,7 @@ tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`.
 | Login atau registrasi gagal dengan CSRF 403 | Pastikan origin browser tercantum dalam `CSRF_TRUSTED_ORIGINS`, gunakan `DEBUG=True` untuk HTTP lokal, lalu restart Django dan muat ulang halaman. |
 | Port 3000 sudah dipakai | Hentikan proses yang memakai port itu, atau sesuaikan origin CSRF jika memakai port lain. Tes browser tetap mengharapkan port 3000. |
 | Chromium gagal karena library sistem belum tersedia | Dari `frontend`, jalankan `npx playwright install --with-deps chromium`; pemasangan dependensi sistem dapat meminta akses administrator. |
+| Turbopack gagal dengan `binding to a port: Operation not permitted` dalam sandbox | Gunakan `npm run build -- --webpack` untuk build atau `npm run dev -- --webpack` untuk server lokal. Tidak perlu mengubah konfigurasi proyek. |
 | Lokasi GPS ditolak | Izinkan akses lokasi di browser. Jika tidak tersedia, demo tetap memakai lokasi pencarian awal di Beji, Depok. |
 | Foto atau peta tidak tampil | Periksa koneksi internet dan pemblokiran permintaan ke Unsplash/OpenStreetMap. |
 

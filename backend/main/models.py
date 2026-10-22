@@ -17,6 +17,7 @@ class Profile(models.Model):
 
 
 class Listing(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="listings")
     name = models.CharField(max_length=160)
     store = models.CharField(max_length=120)
     category = models.CharField(max_length=30)

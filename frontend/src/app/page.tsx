@@ -34,9 +34,11 @@ import {
 } from "lucide-react";
 import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
+import PartnerListings from "@/components/partner-listings";
 import {
   api,
   distance,
+  listingCategories,
   pickup,
   rupiah,
   type Listing,
@@ -66,7 +68,7 @@ function readFavorites() {
     return "[]";
   }
 }
-const categories = ["Semua", "Makanan berat", "Roti & kue", "Camilan", "Sehat"];
+const categories = ["Semua", ...listingCategories];
 const defaultOrigin: [number, number] = [-6.366, 106.829];
 type Panel =
   | "login"
@@ -283,12 +285,20 @@ export default function Home() {
   function openPartner() {
     setDashboardError("");
     setPanel("partner");
-    if (user && user.role !== "buyer")
+    if (user?.role === "admin")
       api<{ users: number | null; listings: number; message: string }>(
         "dashboard",
       )
         .then(setDashboard)
         .catch((e) => setDashboardError(e.message));
+  }
+  function updateCatalog(item: Listing | null, id: number) {
+    setItems((current) => {
+      const remaining = current.filter((row) => row.id !== id);
+      return item?.active && new Date(item.pickup_end).getTime() > Date.now()
+        ? [...remaining, item]
+        : remaining;
+    });
   }
   function resetFilters() {
     setQuery("");
@@ -769,7 +779,7 @@ export default function Home() {
             <p>Jangkau pelanggan baru dan ubah makanan berlebih jadi berkah.</p>
           </div>
           <button className="button primary" onClick={openPartner}>
-            Kenalan jadi mitra
+            {user?.role === "partner" ? "Kelola listing" : "Kenalan jadi mitra"}
             <ArrowUpRight size={18} />
           </button>
         </section>
@@ -885,7 +895,13 @@ export default function Home() {
           </button>
         </Modal>
       )}
-      {panel === "partner" && (
+      {panel === "partner" && user?.role === "partner" && (
+        <PartnerListings
+          onClose={() => setPanel(null)}
+          onCatalogChange={updateCatalog}
+        />
+      )}
+      {panel === "partner" && user?.role !== "partner" && (
         <Modal
           title={
             user?.role === "admin" ? "Dasbor admin" : "Tumbuh bersama HABISIN."
@@ -928,8 +944,8 @@ export default function Home() {
                 menjadi bagian dari HABISIN.
               </p>
               <p className="fine-print">
-                Demo ini mencakup akun mitra. Pendaftaran toko, pengelolaan
-                produk, dan moderasi akan hadir pada tahap berikutnya.
+                Akun mitra dapat mengelola listing surplus sendiri. Pendaftaran
+                toko dan moderasi akan hadir pada tahap berikutnya.
               </p>
               {!user && (
                 <button
