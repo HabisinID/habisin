@@ -300,13 +300,13 @@ export default function Home() {
 
   return (
     <>
-      <div className="announcement">
+      {/* <div className="announcement">
         <Leaf size={13} />
         <span>Makanan baik layak mendapat kesempatan kedua.</span>
         <span className="announcement-link">
           Yuk, mulai dari piringmu <ArrowUpRight size={13} />
         </span>
-      </div>
+      </div> */}
       <header className="header">
         <div className="header-inner">
           <Link className="brand" href="/" aria-label="Habisin beranda">
@@ -380,10 +380,6 @@ export default function Home() {
       <main>
         <section className="hero wrap">
           <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="status-dot" /> RASA TETAP ENAK. HARGA LEBIH
-              BIJAK.
-            </div>
             <h1>
               Jangan disisain.
               <br />
@@ -406,21 +402,6 @@ export default function Home() {
                 Cari makanan di dekatmu
                 <ArrowDown size={17} />
               </a>
-              <span className="hero-note">
-                <Leaf size={17} /> Baik buat kamu & bumi.
-              </span>
-            </div>
-            <div className="social-proof">
-              <div className="people">
-                <span>R</span>
-                <span>A</span>
-                <span>N</span>
-                <span>D</span>
-              </div>
-              <div>
-                <strong>Satu porsi, banyak arti.</strong>
-                <small>Jadi bagian dari gerakan baik ini.</small>
-              </div>
             </div>
           </div>
           <div className="hero-art">
@@ -442,7 +423,6 @@ export default function Home() {
                 <strong>Masih enak banget!</strong>
                 <small>Cuma harganya yang berkurang.</small>
               </div>
-              <span>✦</span>
             </div>
             <div className="discount-tag">
               <span>HEMAT SAMPAI</span>
@@ -457,49 +437,15 @@ export default function Home() {
               </span>
               Less waste, more taste.
             </div>
-            <span className="art-caption">GOOD FOOD. SECOND CHANCE.</span>
-          </div>
-        </section>
-        <section className="benefits wrap" aria-label="Keuntungan Habisin">
-          <div>
-            <span className="benefit-icon">
-              <ShoppingBag size={20} />
-            </span>
-            <p>
-              <strong>Enaknya dapat, hematnya juga.</strong>
-              <small>Makanan favorit, diskon hingga 70%</small>
-            </p>
-          </div>
-          <div>
-            <span className="benefit-icon">
-              <Leaf size={21} />
-            </span>
-            <p>
-              <strong>Aksi kecil, dampak besar.</strong>
-              <small>Kurangi makanan terbuang setiap hari</small>
-            </p>
-          </div>
-          <div>
-            <span className="benefit-icon">
-              <Heart size={21} />
-            </span>
-            <p>
-              <strong>Berbagi itu bikin kenyang.</strong>
-              <small>Temukan donasi makanan di sekitarmu</small>
-            </p>
           </div>
         </section>
 
         <section className="explore wrap" id="explore">
           <div className="section-top">
             <div>
-              <div className="eyebrow section-eyebrow">
-                TEMUKAN FAVORIT BARUMU
-              </div>
               <h2>
                 Yang enak di dekatmu<span>.</span>
               </h2>
-              <p>Makanan hari ini. Kesempatan baik untuk kamu.</p>
             </div>
             <button
               className="location-button"
