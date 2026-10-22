@@ -32,7 +32,8 @@ export default function FoodMap({
       }).addTo(instance);
       items.forEach((item) => {
         const icon = L.divIcon({
-          className: "food-pin",
+          className:
+            "food-pin [&_span]:bg-brand [&_span]:[border:2px_solid_white] [&_span]:shadow-[0_3px_10px_#0003] [&_span]:rounded-[18px] [&_span]:pt-[7px] [&_span]:pr-[10px] [&_span]:pb-[7px] [&_span]:pl-[10px] [&_span]:text-[white] [&_span]:whitespace-nowrap [&_span]:font-bold [&_span]:font-[Arial,_sans-serif] [&_span]:block [&_span]:text-center [&:hover_span]:bg-[#c6a54c]",
           html: `<span>${rupiah(item.price)}</span>`,
           iconSize: [88, 34],
           iconAnchor: [44, 34],
@@ -63,7 +64,7 @@ export default function FoodMap({
   }, [items, onSelect, origin]);
   return (
     <div
-      className="map-canvas"
+      className="map-canvas h-[530px] w-full z-[0] bg-[#e9efdf] [@media(width<=760px)]:h-[450px]"
       ref={element}
       aria-label="Peta lokasi makanan; pilih marker harga untuk melihat makanan"
     />
