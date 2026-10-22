@@ -9,6 +9,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowDown,
   ArrowRight,
@@ -81,6 +82,7 @@ type Panel =
   | null;
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [items, setItems] = useState<Listing[]>(demo);
   const [online, setOnline] = useState(false);
@@ -283,6 +285,10 @@ export default function Home() {
     }
   }
   function openPartner() {
+    if (user?.role === "partner") {
+      router.push("/partner/store");
+      return;
+    }
     setDashboardError("");
     setPanel("partner");
     if (user && user.role !== "buyer")
@@ -349,6 +355,15 @@ export default function Home() {
             <span className="header-divider h-[23px] w-[1px] bg-line compact:hidden" />
             {user ? (
               <>
+                {user.role === "partner" && (
+                  <Link
+                    href="/partner/store"
+                    className="text-xs font-semibold text-brand"
+                    aria-label="Toko saya"
+                  >
+                    Toko
+                  </Link>
+                )}
                 <button
                   className="account-button flex items-center gap-[7px] mobile:[&_>_span:last-child]:max-w-[65px] mobile:[&_>_span:last-child]:overflow-hidden mobile:[&_>_span:last-child]:text-ellipsis"
                   onClick={() => setPanel("profile")}
@@ -803,6 +818,7 @@ export default function Home() {
           onUser={(newUser) => {
             setUser(newUser);
             setNotice(`Selamat datang, ${newUser.name}!`);
+            if (newUser.role === "partner") router.push("/partner/store");
           }}
         />
       )}
@@ -933,8 +949,9 @@ export default function Home() {
                 menjadi bagian dari HABISIN.
               </p>
               <p className="fine-print text-[10px] leading-[1.8] text-[#939b88] my-[15px] mx-0">
-                Demo ini mencakup akun mitra. Pendaftaran toko, pengelolaan
-                produk, dan moderasi akan hadir pada tahap berikutnya.
+                Buat akun mitra, lengkapi profil toko, lalu konfirmasi lokasinya
+                di peta. Pengelolaan produk dan moderasi akan hadir pada tahap
+                berikutnya.
               </p>
               {!user && (
                 <button
