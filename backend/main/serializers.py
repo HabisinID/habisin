@@ -1,3 +1,5 @@
+import math
+
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -81,7 +83,6 @@ class StoreSerializer(serializers.ModelSerializer):
         return GeocodeSerializer().validate_address(value)
 
     def validate(self, attrs):
-        import math
         for field in ["latitude", "longitude"]:
             if field in attrs and not math.isfinite(attrs[field]):
                 raise serializers.ValidationError({field: "Koordinat tidak valid."})

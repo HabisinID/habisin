@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import type { Page } from "@playwright/test";
 import type { Store } from "../src/lib/api";
 
 const address = "Jalan Margonda Raya 10, Depok";
@@ -111,11 +112,16 @@ test("partner creates, edits, closes, reopens, and deletes a store", async ({
   await page
     .getByRole("button", { name: "Daftarkan toko", exact: true })
     .click();
-  await expect(page.locator("main").getByRole("status").filter({ hasNotText: "Memuat peta" })).toContainText("sudah terdaftar");
+  await expect(
+    page
+      .locator("main")
+      .getByRole("status")
+      .filter({ hasNotText: "Memuat peta" }),
+  ).toContainText("sudah terdaftar");
   expect(api.store()?.latitude).toBe(-6.361);
   expect(api.writes[0].data.geocode_token).toBe("test-geocode-token");
   expect(api.writes[0].data.location_confirmed).toBe(true);
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("heading", { name: "Dapur Berkah", exact: true }),
   ).toBeVisible();
@@ -134,7 +140,12 @@ test("partner creates, edits, closes, reopens, and deletes a store", async ({
   ).toHaveCount(0);
   await confirm(page);
   await page.getByRole("button", { name: "Simpan perubahan toko" }).click();
-  await expect(page.locator("main").getByRole("status").filter({ hasNotText: "Memuat peta" })).toContainText("berhasil diperbarui");
+  await expect(
+    page
+      .locator("main")
+      .getByRole("status")
+      .filter({ hasNotText: "Memuat peta" }),
+  ).toContainText("berhasil diperbarui");
   expect(api.lookups()).toBe(2);
   expect(api.store()?.address).toBe("Jalan Melati 22, Depok");
   await expect(
@@ -170,7 +181,12 @@ test("partner creates, edits, closes, reopens, and deletes a store", async ({
     .getByLabel("Ketik nama toko untuk konfirmasi")
     .fill("Dapur Tetangga");
   await dialog.getByRole("button", { name: "Hapus toko permanen" }).click();
-  await expect(page.locator("main").getByRole("status").filter({ hasNotText: "Memuat peta" })).toContainText("berhasil dihapus");
+  await expect(
+    page
+      .locator("main")
+      .getByRole("status")
+      .filter({ hasNotText: "Memuat peta" }),
+  ).toContainText("berhasil dihapus");
   expect(api.store()).toBeNull();
   await page.goto("/stores/7");
   await expect(
@@ -193,14 +209,19 @@ test("geocoding failures and invalid coordinates cannot save a store", async ({
     }),
   );
   await page.getByRole("button", { name: "Cari alamat di peta" }).click();
-  await expect(page.locator("main").getByRole("alert")).toContainText("tidak tersedia");
+  await expect(page.locator("main").getByRole("alert")).toContainText(
+    "tidak tersedia",
+  );
   await page.route("**/api/partner/geocode", (route) =>
     route.fulfill({ json: { results: [], geocode_token: null } }),
   );
   await page.getByRole("button", { name: "Cari alamat di peta" }).click();
-  await expect(page.locator("main").getByRole("status").filter({ hasNotText: "Memuat peta" })).toContainText(
-    "Alamat belum ditemukan",
-  );
+  await expect(
+    page
+      .locator("main")
+      .getByRole("status")
+      .filter({ hasNotText: "Memuat peta" }),
+  ).toContainText("Alamat belum ditemukan");
   await page.route("**/api/partner/geocode", (route) =>
     route.fulfill({ json: { results: [result], geocode_token: "new-token" } }),
   );
@@ -233,7 +254,7 @@ test("anonymous visitors can sign in and buyers cannot manage stores", async ({
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({ json: { ...partner, role: "buyer" } }),
   );
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("heading", { name: "Halaman khusus mitra" }),
   ).toBeVisible();

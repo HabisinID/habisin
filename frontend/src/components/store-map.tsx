@@ -17,6 +17,7 @@ export default function StoreMap({
   const change = useRef(onChange);
   const initial = useRef({ latitude, longitude });
   const [failed, setFailed] = useState(false);
+  const [tilesUnavailable, setTilesUnavailable] = useState(false);
   useEffect(() => {
     change.current = onChange;
   }, [onChange]);
@@ -38,7 +39,14 @@ export default function StoreMap({
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19,
-        }).addTo(instance);
+        })
+          .on("tileerror", () => {
+            if (!disposed) setTilesUnavailable(true);
+          })
+          .on("tileload", () => {
+            if (!disposed) setTilesUnavailable(false);
+          })
+          .addTo(instance);
         const pin = L.marker(point, {
           draggable: editable,
           autoPan: true,
@@ -95,8 +103,16 @@ export default function StoreMap({
       />
       {failed && (
         <p role="alert" className="mt-2 text-sm text-red-800">
-          Peta belum dapat dimuat. Gunakan kolom koordinat untuk mengatur posisi
-          pin.
+          Peta belum dapat dimuat.{" "}
+          {editable
+            ? "Gunakan kolom koordinat untuk mengatur posisi pin."
+            : "Koordinat toko tetap tersedia di bawah."}
+        </p>
+      )}
+      {tilesUnavailable && (
+        <p className="mt-2 text-xs text-muted" aria-live="polite">
+          Gambar peta belum dapat dimuat. Posisi pin dan koordinat tetap
+          tersedia.
         </p>
       )}
     </div>
