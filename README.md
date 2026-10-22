@@ -20,34 +20,45 @@ Penumpukan makanan layak santap di Tempat Pembuangan Akhir (TPA) membuang sumber
 HABISIN hadir untuk menekan kerugian pelaku usaha, meringankan pengeluaran masyarakat, dan mentransformasikan penanganan food waste menjadi aksi mitigasi emisi gas rumah kaca yang terukur.
 
 ---
-## Public API / Mock API
 
-| Komponen | Penyedia / Teknologi | Endpoint Kunci / Metode | Kegunaan |
-|----------|----------------------|--------------------------|----------|
-| Peta Interaktif | Leaflet.js + OpenStreetMap | `L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png')` | Menampilkan peta & merender marker toko tanpa batasan kuota. |
-| Geocoding Alamat | Nominatim API (OSM) | `GET https://nominatim.openstreetmap.org/search?q={alamat}&format=json` | Mengubah teks alamat toko menjadi koordinat (lat, lng) saat onboarding. |
-| Deteksi Lokasi Klien | HTML5 Geolocation API | `navigator.geolocation.getCurrentPosition()` | Mendeteksi posisi pengguna untuk perhitungan radius terdekat. |
-| Penyimpanan Gambar | Cloudinary API / Supabase Storage | `POST https://api.cloudinary.com/v1_1/{cloud_name}/image/upload` | Menyimpan gambar makanan surplus & avatar pengguna. |
-| Generator QR Code | qrcode.react / qrcode (NPM) | Client-side library (tanpa external API) | Menghasilkan QR tiket klaim di peramban pembeli. |
-| Pembayaran | Mock Payment (simulasi) | Client-side | Simulasi transaksi berhasil untuk mengubah status pesanan. |
+## Public API
+
+| Layanan | Endpoint / Metode | Kegunaan | Dokumentasi |
+|---|---|---|---|
+| OpenStreetMap Tile Server | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` | Sumber tile peta yang dirender oleh Leaflet. | [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) |
+| Nominatim (OSM) | `GET https://nominatim.openstreetmap.org/search?q={alamat}&format=json` | Mengubah teks alamat toko menjadi koordinat (lat, lng) saat onboarding mitra. | [Nominatim Search API](https://nominatim.org/release-docs/latest/api/Search/) |
+| Cloudinary | `POST https://api.cloudinary.com/v1_1/{cloud_name}/image/upload` | Menyimpan gambar makanan surplus dan avatar pengguna. | [Cloudinary Upload API](https://cloudinary.com/documentation/image_upload_api_reference) |
+| Supabase Storage (alternatif) | Supabase JS SDK / REST API | Alternatif penyimpanan gambar jika Cloudinary tidak digunakan. | [Supabase Storage Docs](https://supabase.com/docs/guides/storage) |
+
+> **Catatan penggunaan:** Tile server OSM dan Nominatim adalah layanan publik dengan kebijakan pemakaian wajar. Nominatim dibatasi maksimal sekitar 1 permintaan per detik dan mewajibkan identitas aplikasi (User-Agent/Referer) yang jelas.
+
+## Client-Side Library & Web API Browser
+
+| Library / API | Jenis | Kegunaan | Dokumentasi |
+|---|---|---|---|
+| Leaflet.js | Library JavaScript (NPM) | Merender peta interaktif, marker toko, dan popup informasi. | [Leaflet Reference](https://leafletjs.com/reference.html) |
+| qrcode.react | Library React (NPM) | Menghasilkan QR tiket klaim langsung di browser pembeli, tanpa API eksternal. | [qrcode.react](https://www.npmjs.com/package/qrcode.react) |
+| HTML5 Geolocation API | Web API bawaan browser | Mendeteksi posisi pengguna untuk perhitungan jarak dan radius terdekat. | [MDN Geolocation API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API) |
+
+> **Catatan pembayaran:** HABISIN menggunakan simulasi pembayaran (mock payment) di sisi aplikasi untuk mengubah status pesanan. Tidak ada integrasi payment gateway atau transaksi uang sungguhan.
 
 ---
 
 ## Daftar Modul & Pembagian Tugas
 
-Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota.
+Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota. Setiap anggota mengelola minimal satu entitas dengan operasi **CRUD lengkap** (Create, Read, Update, Delete).
 
 ### Rozan Laudzai — Identity & Partner Location
 
 - **Modul 1 — Autentikasi & Manajemen Pengguna (Role-Based)**
-  Registrasi, login, logout, dan penyimpanan token sesi untuk 3 role (Pembeli, Mitra, Admin). Cek ketersediaan username secara real-time (AJAX). Halaman profil pengguna dan form ganti password sederhana, termasuk fitur **Delete akun**.
+  Registrasi, login, logout, dan penyimpanan token sesi untuk 3 role (Pembeli, Mitra, Admin). Cek ketersediaan username secara real-time (AJAX). Halaman profil pengguna, form edit profil, form ganti password, serta fitur **hapus akun** dengan konfirmasi password.
 - **Modul 2 — Onboarding Mitra & Geocoding Lokasi Toko**
-  Form pendaftaran toko (nama, deskripsi, alamat teks, jam operasional). Integrasi Nominatim API untuk mengubah alamat teks menjadi koordinat (lat, lng) yang tersimpan di database. Antarmuka peta mini (Leaflet) agar mitra dapat mengonfirmasi posisi pin tokonya.
+  Form pendaftaran toko (nama, deskripsi, alamat teks, jam operasional). Integrasi Nominatim API untuk mengubah alamat teks menjadi koordinat (lat, lng) yang tersimpan di database. Antarmuka peta mini (Leaflet) agar mitra dapat mengonfirmasi posisi pin tokonya. Halaman profil toko, form **edit data toko** (termasuk geocoding ulang saat alamat berubah), dan fitur **hapus/tutup toko**.
 
 ### Christiano Hosea — Surplus Catalog & Map Explorer
 
 - **Modul 3 — Manajemen Produk Makanan Surplus (CRUD Mitra)**
-  Form pembuatan listing makanan (nama, foto, deskripsi, harga normal, harga diskon/gratis, jumlah stok porsi, batas waktu pengambilan). Tabel manajemen produk di sisi mitra (edit data, ubah stok manual, tombol nonaktifkan listing).
+  Form pembuatan listing makanan (nama, foto, deskripsi, harga normal, harga diskon/gratis, jumlah stok porsi, batas waktu pengambilan). Tabel manajemen produk di sisi mitra untuk melihat semua listing, **edit data listing**, ubah stok manual, nonaktifkan sementara, dan **hapus listing** secara permanen.
 - **Modul 4 — Peta Sebaran Makanan Interaktif (Leaflet)**
   Halaman peta utama yang memplot marker lokasi toko berdasarkan data koordinat (lat, lng). Deteksi koordinat pengguna via browser GPS (`navigator.geolocation`). Popup ringkas saat marker diklik: nama toko, jarak relatif, dan tombol langsung ke halaman toko (AJAX).
 
@@ -56,42 +67,53 @@ Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota.
 - **Modul 5 — Pencarian Katalog & Filter Makanan**
   Kolom pencarian teks nama makanan/toko (AJAX). Komponen filter: pilihan kategori makanan, rentang harga, dan filter biner ("Hanya Tampilkan Donasi Gratis"). Tampilan daftar kartu produk (product card list) responsif dengan indikator harga diskon.
 - **Modul 6 — Panel Kontrol & Moderasi Admin**
-  Halaman tabel admin untuk melihat daftar mitra baru dan tombol persetujuan (Approve/Reject). Tabel daftar listing publik dengan tombol darurat Take-Down jika isi listing melanggar aturan. **Moderation Log (CRUD)**.
+  Halaman tabel admin untuk melihat daftar mitra baru dan tombol persetujuan (Approve/Reject). Tabel daftar listing publik dengan tombol darurat Take-Down jika isi listing melanggar aturan. **Moderation Log (CRUD):** setiap tindakan moderasi otomatis tercatat bersama alasannya (Create), admin dapat melihat dan memfilter riwayat log (Read), mengedit catatan atau alasan moderasi (Update), dan menghapus entri log (Delete).
 
 ### Violin Monica — Booking & Digital Ticket
 
 - **Modul 7 — Alur Pemesanan & Mock Payment**
-  Halaman ringkasan pemesanan (input jumlah porsi, catatan pengambilan, menampilkan jarak toko dengan lokasi buyer). Halaman simulasi pembayaran (mock payment screen) dengan tombol instan "Simulasikan Pembayaran Berhasil" yang langsung mengubah status transaksi menjadi lunas/terpesan. Termasuk fitur batal pesanan.
+  Halaman ringkasan pemesanan (input jumlah porsi, catatan pengambilan, menampilkan jarak toko dengan lokasi pembeli). Fitur **edit pesanan** sebelum dibayar (ubah jumlah porsi dan catatan pengambilan). Halaman simulasi pembayaran (mock payment screen) dengan tombol instan "Simulasikan Pembayaran Berhasil" yang langsung mengubah status transaksi menjadi lunas/terpesan. Fitur **batal pesanan** yang mengembalikan stok, serta **hapus pesanan** yang sudah selesai atau dibatalkan dari riwayat.
 - **Modul 8 — Tiket Digital & Verifikasi Kode Kasir**
-  Halaman tiket digital pembeli yang menampilkan ringkasan pesanan, batas jam ambil, dan kode klaim unik 5 digit acak (misal: H7B29). Halaman verifikasi kasir di sisi mitra untuk memasukkan kode 5 digit, memvalidasi kecocokannya, dan mengubah status pesanan menjadi selesai diambil (AJAX).
+  Halaman tiket digital pembeli yang menampilkan ringkasan pesanan, batas jam ambil, kode klaim unik 5 karakter acak (misal: H7B29), dan QR code berisi kode tersebut. Halaman verifikasi kasir di sisi mitra untuk memasukkan kode klaim, memvalidasi kecocokannya, dan mengubah status pesanan menjadi selesai diambil (AJAX).
 
 ### Raihan Daffa Aprilianda — Reputation & Impact Dashboard
 
 - **Modul 9 — Rating Toko & Sistem Komplain (Ulasan)**
-  Form pengisian rating bintang (1–5) dan ulasan teks untuk pembeli yang sudah menyelesaikan pengambilan (AJAX). Komponen tampilan rata-rata rating pada profil toko dan form laporan komplain sederhana jika makanan tidak higienis. Termasuk fitur edit ulasan dan hapus ulasan.
+  Form pengisian rating bintang (1–5) dan ulasan teks untuk pembeli yang sudah menyelesaikan pengambilan (AJAX). Komponen tampilan rata-rata rating pada profil toko. Fitur **edit ulasan** dan **hapus ulasan**. Form laporan komplain sederhana jika makanan tidak higienis, yang dapat dilihat dan dihapus oleh pelapornya.
 - **Modul 10 — Dasbor Statistik & Kalkulator Dampak Lingkungan**
   Halaman metrik dampak lingkungan publik: akumulasi total porsi makanan terselamatkan, total kilogram sampah terhindarkan (W), dan estimasi penurunan gas rumah kaca (W × 2,5 kg CO₂e). Widget statistik performa penjualan di dasbor mitra (total porsi terselamatkan dan total rupiah terhimpun).
+
+### Matriks CRUD per Anggota
+
+| Anggota | Entitas | Create | Read | Update | Delete |
+|---|---|---|---|---|---|
+| Rozan Laudzai | Akun Pengguna | Registrasi akun | Halaman profil | Edit profil & ganti password | Hapus akun |
+| Rozan Laudzai | Toko Mitra | Pendaftaran toko + geocoding | Profil toko & pin peta | Edit data toko & geocoding ulang | Hapus/tutup toko |
+| Christiano Hosea | Listing Makanan | Buat listing | Tabel produk mitra & peta | Edit listing, ubah stok, nonaktifkan | Hapus listing |
+| Damica Adreeza Ramadhan | Moderation Log | Catat tindakan moderasi | Riwayat & filter log | Edit catatan/alasan | Hapus entri log |
+| Violin Monica | Reservasi/Pesanan | Buat pesanan | Ringkasan & tiket digital | Edit pesanan, status bayar, verifikasi kasir | Batal & hapus dari riwayat |
+| Raihan Daffa Aprilianda | Ulasan & Komplain | Tulis ulasan/komplain | Rating di profil toko | Edit ulasan | Hapus ulasan/komplain |
 
 ---
 
 ## Peran Pengguna
----
+
 ### Pembeli
 Pengguna umum yang mencari dan memesan makanan surplus dari gerai di sekitarnya. Hak akses & fitur:
 - Menjelajah peta sebaran makanan surplus.
 - Mencari dan memfilter katalog makanan.
-- Memesan makanan surplus dan melakukan mock payment.
+- Memesan, mengedit, dan membatalkan pesanan serta melakukan mock payment.
 - Mengklaim tiket digital dengan kode klaim unik.
-- Memberi rating, ulasan, dan laporan komplain.
----
+- Memberi, mengedit, dan menghapus rating, ulasan, serta laporan komplain.
+
 ### Mitra
 Pemilik atau pengelola gerai makanan yang ingin mendaftarkan dan mengelola tokonya di platform. Hak akses & fitur:
-- Mendaftarkan toko (nama, deskripsi, alamat, jam operasional) dengan geocoding lokasi.
-- Mengelola listing makanan surplus (tambah, edit, ubah stok, nonaktifkan).
+- Mendaftarkan, mengedit, dan menutup toko (nama, deskripsi, alamat, jam operasional) dengan geocoding lokasi.
+- Mengelola listing makanan surplus (tambah, edit, ubah stok, nonaktifkan, hapus).
 - Menetapkan harga normal, harga diskon, atau donasi gratis.
-- Memverifikasi kode klaim 5 digit di sisi kasir.
+- Memverifikasi kode klaim di sisi kasir.
 - Memantau statistik performa penjualan dan porsi terselamatkan.
----
+
 ### Admin
 Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses & fitur:
 - Menyetujui atau menolak pendaftaran mitra baru.
@@ -100,15 +122,19 @@ Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses
 - Mengelola moderation log (CRUD).
 - Memantau seluruh aktivitas platform.
 
+---
+
 ## Tim Pengembang
+
 ### Kelompok 10 PBP B
+
 | Nama | Tanggung Jawab | NPM |
-|------|----------------| --- |
-| Rozan Laudzai | Identity & Partner Location | 2506547544
-| Christiano Hosea | Surplus Catalog & Map Explorer | 2506615280
-| Damica Adreeza Ramadhan | Search & Admin Moderation | 2506625193
-| Violin Monica | Booking & Digital Ticket | 2506551794
-| Raihan Daffa Aprilianda | Reputation & Impact Dashboard | 2506620021
+|------|----------------|-----|
+| Rozan Laudzai | Identity & Partner Location | 2506547544 |
+| Christiano Hosea | Surplus Catalog & Map Explorer | 2506615280 |
+| Damica Adreeza Ramadhan | Search & Admin Moderation | 2506625193 |
+| Violin Monica | Booking & Digital Ticket | 2506551794 |
+| Raihan Daffa Aprilianda | Reputation & Impact Dashboard | 2506620021 |
 
 ---
 
@@ -271,11 +297,14 @@ Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 - Pembatasan percobaan login/registrasi anonim: 30 permintaan per menit per IP
   melalui cache lokal DRF (konfigurasi cache bersama diperlukan untuk multi-worker).
 
+### Status implementasi
+
 Ini fondasi demo, belum implementasi lengkap seluruh 10 modul. Onboarding/geocoding
-mitra, CRUD produk di frontend, persetujuan mitra/moderasi, verifikasi kasir/QR,
-ulasan/komplain, statistik dampak aktual, dan PWA offline belum diimplementasikan.
-Kalkulator dampak memakai asumsi ilustratif; pemesanan demo tidak dihitung sebagai
-makanan yang benar-benar terselamatkan. Semua listing saat ini merupakan data demo.
+mitra, CRUD toko dan produk di frontend, edit/hapus pesanan, persetujuan mitra/moderasi,
+moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
+offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
+demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Semua listing saat
+ini merupakan data demo.
 
 ### Verifikasi
 
@@ -345,16 +374,16 @@ aktif ketika debug mati. Jalankan `python manage.py collectstatic --noinput` unt
 aset Django admin. Konfigurasi produksi lebih lanjut diperlukan sebelum menerima
 pengguna atau transaksi sungguhan.
 
+---
+
 ## AI Disclosure
 
-### branch: feat/auth
+### Branch: `feat/auth`
 
 Chat link: https://chatgpt.com/s/cx_6aba210934d88191815c9b8c82fb9223
 
-Authentication: registration, login/logout, roles, persistent sessions, profile editing, password changes, and account deletion.
+Bantuan AI digunakan untuk:
 
-Responsive demo: food catalog, search/filtering, interactive map, favorites, mock payments, reservations, pickup tickets, and cancellation.
-
-Setup instructions and demo limitations added to [README.md](/home/nekomputer/myroom/programming/projects/habisin/README.md)
-
-Updated [README.md](/home/nekomputer/myroom/programming/projects/habisin/README.md) with prerequisites, backend/frontend setup, environment configuration, demo seeding, test commands, and troubleshooting.
+- **Autentikasi:** registrasi, login/logout, role, sesi persisten, edit profil, ganti password, dan hapus akun.
+- **Demo responsif:** katalog makanan, pencarian/filter, peta interaktif, favorit, mock payment, reservasi, tiket pengambilan, dan pembatalan pesanan.
+- **Dokumentasi:** penyusunan instruksi setup, prasyarat, konfigurasi environment, seeding demo, perintah pengujian, troubleshooting, dan batasan demo di README ini.
