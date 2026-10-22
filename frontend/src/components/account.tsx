@@ -79,7 +79,7 @@ export function Auth({
       </div>
       <form
         onSubmit={submit}
-        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[#5d7054] [&_input]:w-full [&_input]:[border:1px_solid_#dfe5d7] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_#dfe5d7] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
+        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[#5d7054] [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_#dfe5d7] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_#dfe5d7] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
       >
         {mode === "register" && (
           <label>
@@ -264,7 +264,7 @@ export function Profile({
         ))}
       </div>
       <form
-        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[#5d7054] [&_input]:w-full [&_input]:[border:1px_solid_#dfe5d7] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_#dfe5d7] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
+        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[#5d7054] [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_#dfe5d7] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_#dfe5d7] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
         key={tab}
         onSubmit={submit}
       >
