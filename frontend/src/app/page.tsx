@@ -231,10 +231,14 @@ export default function Home() {
     setBusy(true);
     setOrderError("");
     try {
-      const order = await api<Reservation>("reservations", "POST", {
+      const pending = await api<Reservation>("reservations", "POST", {
         listing_id: selected!.id,
         quantity,
       });
+      const order = await api<Reservation>(
+        `reservations/${pending.id}/pay`,
+        "POST",
+      );
       setTicket(order);
       setSelected(null);
       setItems((current) =>
@@ -1149,20 +1153,22 @@ export default function Home() {
                   <small>
                     Ambil sebelum {pickup(order.listing.pickup_end)} WIB
                   </small>
-                  {order.status === "paid" && (
+                  {(order.status === "pending" || order.status === "paid") && (
                     <div className="order-actions flex justify-between items-center mt-[10px]">
+                      {order.status === "paid" && (
+                        <button
+                          className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"
+                          onClick={() => {
+                            setPanel(null);
+                            setTicket(order);
+                          }}
+                        >
+                          Tiket {order.code}
+                          <Ticket size={15} />
+                        </button>
+                      )}
                       <button
-                        className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"
-                        onClick={() => {
-                          setPanel(null);
-                          setTicket(order);
-                        }}
-                      >
-                        Tiket {order.code}
-                        <Ticket size={15} />
-                      </button>
-                      <button
-                        className="cancel-button text-[10px] text-[#ac7462] p-2"
+                        className="cancel-button text-[10px] text-[#ac7462] p-2 ml-auto"
                         disabled={busy}
                         onClick={() => cancel(order)}
                       >

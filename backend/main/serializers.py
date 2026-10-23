@@ -57,6 +57,35 @@ class ReservationSerializer(serializers.ModelSerializer):
         fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "paid_at", "picked_up_at"]
 
 
+class StrictIntegerField(serializers.IntegerField):
+    # DRF accepts "2" and True as integers; orders only accept real JSON numbers.
+    def to_internal_value(self, data):
+        if type(data) is not int:
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+class StrictCharField(serializers.CharField):
+    # DRF converts numbers to strings; a note must be sent as text.
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+QUANTITY_ERRORS = {"invalid": "Jumlah porsi harus berupa angka bulat.", "min_value": "Pilih 1–10 porsi.", "max_value": "Pilih 1–10 porsi."}
+
+
+class ReservationUpdateSerializer(serializers.Serializer):
+    quantity = StrictIntegerField(min_value=1, max_value=10, required=False, error_messages=QUANTITY_ERRORS)
+    note = StrictCharField(max_length=200, allow_blank=True, required=False, error_messages={"invalid": "Catatan harus berupa teks.", "max_length": "Catatan maksimal 200 karakter."})
+
+
+class ReservationCreateSerializer(ReservationUpdateSerializer):
+    listing_id = StrictIntegerField(error_messages={"invalid": "Pilih produk yang valid."})
+    quantity = StrictIntegerField(min_value=1, max_value=10, default=1, error_messages=QUANTITY_ERRORS)
+
+
 class GeocodeSerializer(serializers.Serializer):
     address = serializers.CharField(min_length=5, max_length=250)
 
