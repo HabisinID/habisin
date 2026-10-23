@@ -337,6 +337,37 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(Reservation.objects.get(pk=pk).status, "expired")
 
 
+    def ends_in(self, minutes):
+        end = timezone.now() + timedelta(minutes=minutes)
+        Listing.objects.filter(pk=self.item.pk).update(pickup_end=end)
+        return end
+
+    def test_paid_orders_cannot_be_cancelled_in_last_30_minutes(self):
+        paid = self.order(quantity=1)
+        self.client.post(f"/api/reservations/{paid}/pay")
+        end = self.ends_in(20)
+        response = self.client.post(f"/api/reservations/{paid}/cancel")
+        self.assertEqual(response.status_code, 409)
+        self.assertIn(f"Pembatalan ditutup pukul {timezone.localtime(end - timedelta(minutes=30)):%H.%M}", response.json()["detail"])
+        self.assertEqual(Reservation.objects.get(pk=paid).status, "paid")
+        self.assertEqual(self.stock(), 4)
+
+    def test_unpaid_orders_and_early_cancellations_are_allowed(self):
+        pending = self.order(quantity=1)
+        self.ends_in(20)
+        self.assertEqual(self.client.post(f"/api/reservations/{pending}/cancel").status_code, 200)
+        paid = self.order(quantity=1)
+        self.client.post(f"/api/reservations/{paid}/pay")
+        self.ends_in(31)
+        self.assertEqual(self.client.post(f"/api/reservations/{paid}/cancel").status_code, 200)
+        self.assertEqual(self.stock(), 5)
+
+    def test_order_reports_when_cancellation_closes(self):
+        end = self.ends_in(120)
+        order = self.reserve().json()
+        self.assertEqual(datetime.fromisoformat(order["cancel_until"]), end - timedelta(minutes=30))
+
+
 class SeedDemoTests(TestCase):
     def test_seed_reads_demo_catalog_as_utf8(self):
         # Windows defaults to cp1252, which turns "·" into "Â·".
