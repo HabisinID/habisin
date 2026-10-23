@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/**", (route) =>
@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 test("responsive catalog, active filters, and accessible dialogs retain their styles", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("status")).toContainText("pratinjau demo");
   for (const [width, columns, headingSize] of [
     [1500, 3, "66px"],
@@ -87,7 +87,7 @@ test("profile tabs and account deletion checkbox preserve their layout", async (
       },
     }),
   );
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "T Test", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Hapus akun", exact: true }).click();

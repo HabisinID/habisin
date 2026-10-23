@@ -1,8 +1,11 @@
+import math
+
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-from .models import Listing, Reservation
+from .models import Listing, Reservation, Store
+from .geocoding import normalize_address, validate_location_token
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -52,3 +55,50 @@ class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = ["id", "listing", "quantity", "total", "code", "status", "created_at"]
+
+
+class GeocodeSerializer(serializers.Serializer):
+    address = serializers.CharField(min_length=5, max_length=250)
+
+    def validate_address(self, value):
+        value = normalize_address(value)
+        if len(value) < 5:
+            raise serializers.ValidationError("Tulis alamat toko yang lengkap.")
+        return value
+
+
+class StoreSerializer(serializers.ModelSerializer):
+    address = serializers.CharField(min_length=5, max_length=250)
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    geocode_token = serializers.CharField(write_only=True, required=False, max_length=2000)
+    location_confirmed = serializers.BooleanField(write_only=True, required=False)
+
+    class Meta:
+        model = Store
+        fields = ["id", "name", "description", "address", "opening_time", "closing_time", "latitude", "longitude", "is_open", "created_at", "updated_at", "geocode_token", "location_confirmed"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_address(self, value):
+        return GeocodeSerializer().validate_address(value)
+
+    def validate(self, attrs):
+        for field in ["latitude", "longitude"]:
+            if field in attrs and not math.isfinite(attrs[field]):
+                raise serializers.ValidationError({field: "Koordinat tidak valid."})
+        instance = self.instance
+        opening = attrs.get("opening_time", instance.opening_time if instance else None)
+        closing = attrs.get("closing_time", instance.closing_time if instance else None)
+        if opening == closing:
+            raise serializers.ValidationError({"closing_time": "Jam tutup harus berbeda dari jam buka. Jam tutup lebih awal berarti hari berikutnya."})
+        address_changed = instance is None or attrs.get("address", instance.address) != instance.address
+        coordinates_changed = instance is None or any(field in attrs and attrs[field] != getattr(instance, field) for field in ["latitude", "longitude"])
+        confirmed = attrs.pop("location_confirmed", False)
+        token = attrs.pop("geocode_token", None)
+        if address_changed:
+            validate_location_token(token, attrs["address"], self.context["request"].user.pk)
+            if "latitude" not in attrs or "longitude" not in attrs:
+                raise serializers.ValidationError({"latitude": "Pilih ulang posisi pin untuk alamat baru."})
+        if (address_changed or coordinates_changed) and not confirmed:
+            raise serializers.ValidationError({"location_confirmed": "Konfirmasi posisi pin toko sebelum menyimpan."})
+        return attrs

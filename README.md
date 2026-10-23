@@ -253,6 +253,8 @@ Restart server terkait setelah mengubah konfigurasi.
 | `backend/.env` | `SECRET_KEY` | Nilai contoh khusus demo lokal | Kunci Django; ganti dengan nilai acak yang kuat sebelum deployment. |
 | `backend/.env` | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Hostname yang diterima Django, tanpa skema atau port. |
 | `backend/.env` | `CSRF_TRUSTED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Origin frontend yang diizinkan mengirim mutasi API. |
+| `backend/.env` | `NOMINATIM_URL` | `https://nominatim.openstreetmap.org/search` | Endpoint geocoding yang dapat diganti tanpa perubahan kode. |
+| `backend/.env` | `NOMINATIM_USER_AGENT` | `HABISIN/1.0 (partner store onboarding)` | Identitas aplikasi untuk geocoder; tambahkan kontak pengelola saat deployment. |
 | `frontend/.env.local` | `BACKEND_URL` | `http://127.0.0.1:8000` | Alamat Django untuk proxy Next.js, tanpa akhiran `/api` atau `/`. |
 
 Jika port backend berubah, sesuaikan `BACKEND_URL`. Jika origin frontend berubah
@@ -271,7 +273,9 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.
 
-Akun **Mitra** dapat mendaftar dan membuka ringkasan demo khusus mitra.
+Akun **Mitra** dapat mendaftarkan dan mengelola toko melalui `/partner/store`.
+Lihat [panduan Modul 2](docs/module-2.md) untuk alur onboarding, API toko, dan
+kebijakan penggunaan Nominatim. Jalankan migrasi backend sebelum membuka fitur ini.
 Akun **Admin** hanya dibuat/ditetapkan lewat Django, bukan form publik:
 
 ```bash
@@ -299,8 +303,9 @@ Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 
 ### Status implementasi
 
-Ini fondasi demo, belum implementasi lengkap seluruh 10 modul. Onboarding/geocoding
-mitra, CRUD toko dan produk di frontend, edit/hapus pesanan, persetujuan mitra/moderasi,
+Modul 1 (akun) dan Modul 2 (onboarding/geocoding serta CRUD toko) sudah tersedia.
+Ini belum implementasi lengkap seluruh 10 modul. CRUD produk di frontend,
+edit/hapus pesanan, persetujuan mitra/moderasi,
 moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
 offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
 demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Semua listing saat

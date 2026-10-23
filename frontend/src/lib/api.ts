@@ -32,6 +32,36 @@ export type Reservation = {
   created_at: string;
 };
 
+export type Store = {
+  id: number;
+  name: string;
+  description: string;
+  address: string;
+  opening_time: string;
+  closing_time: string;
+  latitude: number;
+  longitude: number;
+  is_open: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GeocodeResult = {
+  display_name: string;
+  latitude: number;
+  longitude: number;
+};
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function api<T>(
   path: string,
   method = "GET",
@@ -61,13 +91,14 @@ export async function api<T>(
     detail: "Server belum terhubung. Pastikan backend berjalan.",
   }));
   if (!response.ok)
-    throw new Error(
+    throw new ApiError(
       Object.entries(data)
         .map(
           ([key, value]) =>
             `${key === "detail" ? "" : `${key}: `}${Array.isArray(value) ? value.join(" ") : value}`,
         )
         .join(" "),
+      response.status,
     );
   return data as T;
 }
