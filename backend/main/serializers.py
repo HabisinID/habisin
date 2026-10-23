@@ -51,10 +51,11 @@ class ListingSerializer(serializers.ModelSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     listing = ListingSerializer(read_only=True)
+    pay_before = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "paid_at", "picked_up_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "pay_before", "paid_at", "picked_up_at"]
 
 
 class StrictIntegerField(serializers.IntegerField):

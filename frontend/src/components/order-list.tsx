@@ -11,6 +11,7 @@ const labelClass: Record<Reservation["status"], string> = {
   paid: "bg-[#eaf3e2] text-[#618348]",
   picked_up: "bg-light text-brand",
   cancelled: "bg-[#f1e8e4] text-[#9a7d6f]",
+  expired: "bg-[#e9ecef] text-[#5c6670]",
 };
 
 export default function OrderList({

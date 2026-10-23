@@ -178,9 +178,10 @@ perintah Python backend.
 
 `seed_demo` membuat atau memperbarui **enam listing contoh**, mengatur ulang stoknya,
 dan membuka waktu pengambilan selama **delapan jam** sejak perintah dijalankan.
-Perintah menolak pembaruan jika masih ada reservasi berstatus aktif, termasuk yang
-waktu pengambilannya sudah lewat. Batalkan pesanan melalui **Pesanan saya** sebelum
-menjalankan ulang seed.
+Pesanan yang belum dibayar lebih dari lima menit atau sudah melewati batas ambil
+otomatis menjadi **Kedaluwarsa** sebelum seed berjalan. Perintah tetap menolak
+pembaruan jika masih ada pesanan aktif yang belum lewat batas; batalkan melalui
+**Pesanan saya** sebelum menjalankan ulang seed.
 
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.

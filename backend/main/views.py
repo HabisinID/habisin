@@ -124,6 +124,7 @@ def password(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def listings(request):
+    Reservation.expire_overdue()
     items = Listing.objects.filter(active=True, pickup_end__gt=timezone.now())
     return Response(ListingSerializer(items, many=True).data)
 
@@ -147,6 +148,7 @@ def owned_reservation(view):
     """
     @wraps(view)
     def wrapper(request, pk, *args, **kwargs):
+        Reservation.expire_overdue()
         with transaction.atomic():
             reservation = Reservation.objects.select_for_update().filter(pk=pk, user=request.user).first()
             if reservation is None:
@@ -162,6 +164,7 @@ def conflict(reservation, action):
 @api_view(["GET", "POST"])
 @throttle_classes([OrderWriteThrottle])
 def reservations(request):
+    Reservation.expire_overdue()
     if request.method == "GET":
         return Response(ReservationSerializer(Reservation.objects.filter(user=request.user).select_related("listing").order_by("-created_at"), many=True).data)
     if UserSerializer(request.user).data["role"] != "buyer":
@@ -191,7 +194,7 @@ def reservation_detail(request, reservation):
     if request.method == "GET":
         return Response(ReservationSerializer(reservation).data)
     if request.method == "DELETE":
-        if reservation.status not in ["cancelled", "picked_up"]:
+        if reservation.status not in Reservation.FINISHED_STATUSES:
             return conflict(reservation, "dihapus; batalkan terlebih dahulu")
         reservation.delete()
         return Response(status=204)
@@ -219,8 +222,6 @@ def reservation_detail(request, reservation):
 def pay_reservation(request, reservation):
     if reservation.status != "pending":
         return conflict(reservation, "dibayar")
-    if reservation.listing.pickup_end <= timezone.now():
-        return Response({"detail": "Waktu pengambilan sudah berakhir. Batalkan pesanan ini."}, status=400)
     reservation.status = "paid"
     reservation.paid_at = timezone.now()
     reservation.save(update_fields=["status", "paid_at"])
@@ -231,7 +232,7 @@ def pay_reservation(request, reservation):
 @throttle_classes([OrderWriteThrottle])
 @owned_reservation
 def cancel_reservation(request, reservation):
-    if reservation.status == "picked_up":
+    if reservation.status in ["picked_up", "expired"]:
         return conflict(reservation, "dibatalkan")
     # Cancelling twice is harmless: stock is only released on the first call.
     if reservation.status in Reservation.ACTIVE_STATUSES:

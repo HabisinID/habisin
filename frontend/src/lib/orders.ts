@@ -11,6 +11,7 @@ export const statusLabel: Record<OrderStatus, string> = {
   paid: "Dipesan",
   picked_up: "Sudah diambil",
   cancelled: "Dibatalkan",
+  expired: "Kedaluwarsa",
 };
 
 // Pending and paid orders still hold stock; the others are history.

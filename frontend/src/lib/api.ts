@@ -29,8 +29,9 @@ export type Reservation = {
   total: number;
   code: string;
   note: string;
-  status: "pending" | "paid" | "picked_up" | "cancelled";
+  status: "pending" | "paid" | "picked_up" | "cancelled" | "expired";
   created_at: string;
+  pay_before: string;
   paid_at: string | null;
   picked_up_at: string | null;
 };

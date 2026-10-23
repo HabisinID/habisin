@@ -7,7 +7,9 @@ baru. Pesanan lama berstatus `reserved` otomatis menjadi `paid`.
 
 1. Masuk sebagai **Pembeli**, buka produk, pilih jumlah porsi (1–4), isi catatan
    pengambilan bila perlu, lalu pilih **Lanjut ke ringkasan**. Pesanan dibuat dengan
-   status **Menunggu pembayaran** dan stok langsung ditahan.
+   status **Menunggu pembayaran** dan stok ditahan selama **5 menit** (atau sampai batas
+   ambil bila lebih dekat, lihat `pay_before`). Jika tidak dibayar, pesanan menjadi
+   **Kedaluwarsa** dan stok kembali ke toko.
 2. Di **Ringkasan pesanan**, periksa alamat, jarak toko dari lokasi pencarian, jam
    ambil, jumlah porsi, catatan, dan total. Pilih **Ubah pesanan** untuk mengganti
    jumlah porsi atau catatan; stok bertambah/berkurang sesuai selisihnya.
@@ -29,6 +31,11 @@ lalu dikembalikan seperti semula disertai pesan error jika server menolak.
 | `paid` | Dipesan | Ya | Batal (verifikasi kasir di Modul 8) |
 | `picked_up` | Sudah diambil | Tidak | Hapus dari riwayat |
 | `cancelled` | Dibatalkan | Tidak | Hapus dari riwayat |
+| `expired` | Kedaluwarsa | Tidak | Hapus dari riwayat |
+
+Pesanan **Menunggu pembayaran** kedaluwarsa setelah 5 menit; pesanan **Dipesan** yang tidak
+diambil kedaluwarsa pada batas ambil. Karena PWS tidak menjalankan penjadwal, pemeriksaan
+ini berjalan setiap kali katalog atau pesanan dibaca (dan sebelum `seed_demo`).
 
 ## API
 
