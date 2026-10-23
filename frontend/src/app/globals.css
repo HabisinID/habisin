@@ -1,14 +1,37 @@
 @import "tailwindcss";
 
+/* Tokens from design.pen ("Fondasi" frame). The original names (brand, dark,
+   muted, cream, line, light, yellow) keep existing pages working. */
 @theme {
-  --color-brand: #236449;
-  --color-dark: #213c30;
-  --color-muted: #788077;
-  --color-cream: #fafaf6;
-  --color-line: #e7e9e0;
-  --color-light: #edf3e8;
-  --color-yellow: #f7d574;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-brand: #1f4d33;
+  --color-brand-hover: #173c27;
+  --color-brand-pressed: #0f2e1d;
+  --color-dark: #14301f;
+  --color-muted: #4d6455;
+  --color-cream: #f6f8f3;
+  --color-line: #dfe6df;
+  --color-light: #e1ece3;
+  --color-yellow: #f4d56a;
+  --color-surface: #ffffff;
+  --color-surface-2: #e8efe7;
+  --color-border: #7a8f80;
+  --color-urgency: #ff9300;
+  --color-urgency-text: #a34a00;
+  --color-urgency-tint: #fff1dd;
+  --color-success: #1d6b47;
+  --color-warning: #8a5a00;
+  --color-error: #b3261e;
+  --color-error-tint: #fbe9e7;
+  --color-inverse: #14301f;
+  --color-on-inverse: #eef3ec;
+  --radius-field: 6px;
+  --radius-control: 12px;
+}
+
+/* next/font sets these variables on <html> in the root layout. */
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 /* Preserve inclusive breakpoints and apply narrower overrides last. */
