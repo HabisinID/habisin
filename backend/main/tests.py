@@ -117,7 +117,9 @@ class ReservationTests(TestCase):
         self.assertEqual(self.client.post(f'/api/reservations/{order["id"]}/cancel').status_code, 404)
 
     def test_invalid_quantities_expiry_and_anonymous_access(self):
-        for quantity in [0, -1, 11, "2", True, 1.5]:
+        # Enough stock that only the 4-portion limit can reject 5.
+        Listing.objects.filter(pk=self.item.pk).update(stock=10)
+        for quantity in [0, -1, 5, 11, "2", True, 1.5]:
             self.assertEqual(self.reserve(quantity=quantity).status_code, 400)
         self.item.pickup_end = timezone.now() - timedelta(minutes=1)
         self.item.save()
@@ -173,10 +175,10 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(self.stock(), 3)
 
     def test_note_validation(self):
-        for note in ["x" * 201, 123, ["catatan"]]:
+        for note in ["x" * 141, 123, ["catatan"]]:
             self.assertEqual(self.reserve(note=note).status_code, 400)
         self.assertEqual(self.stock(), 5)
-        self.assertEqual(self.reserve(note="x" * 200).status_code, 201)
+        self.assertEqual(self.reserve(note="x" * 140).status_code, 201)
 
     def test_detail_is_owner_only(self):
         pk = self.order()
@@ -198,12 +200,13 @@ class ReservationFlowTests(TestCase):
 
     def test_edit_rejects_overselling_and_invalid_input(self):
         pk = self.order()
-        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 6}, format="json").status_code, 400)
-        for quantity in [0, 11, "3", True, 1.5]:
+        Listing.objects.filter(pk=self.item.pk).update(stock=1)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 4}, format="json").status_code, 400)
+        for quantity in [0, 5, "3", True, 1.5]:
             self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": quantity}, format="json").status_code, 400)
-        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"note": "x" * 201}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"note": "x" * 141}, format="json").status_code, 400)
         self.assertEqual(Reservation.objects.get(pk=pk).quantity, 2)
-        self.assertEqual(self.stock(), 3)
+        self.assertEqual(self.stock(), 1)
 
     def test_edit_only_while_pending(self):
         pk = self.order()
@@ -277,6 +280,12 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(self.client.get(f"/api/reservations/{pk}").status_code, 200)
         self.as_other_user()
         self.assertEqual(self.reserve().status_code, 201)
+
+    def test_ticket_codes_skip_look_alike_characters(self):
+        # No B/8, S/5, Z/2, G/6, O/0, I/1/L, Q: the cashier types the code by hand.
+        with patch("main.views.secrets.choice", side_effect=lambda alphabet: alphabet[0]) as choice:
+            self.reserve()
+        self.assertEqual(choice.call_args.args[0], "ACDEFHJKMNPRTUVWXY3479")
 
     def test_ticket_code_collision_retries_with_new_code(self):
         Reservation.objects.create(user=self.user, listing=self.item, quantity=1, total=15000, code="AAAAA", status="cancelled")
