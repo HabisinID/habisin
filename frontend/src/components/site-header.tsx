@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ThemeToggle from "./theme-toggle";
 
 export type NavItem = {
   label: string;
@@ -34,7 +35,15 @@ export default function SiteHeader({
             width={969}
             height={390}
             priority
-            className="h-10 w-auto mobile:h-8"
+            className="h-10 w-auto dark:hidden mobile:h-8"
+          />
+          <Image
+            src="/logo-dark.png"
+            alt="habisin"
+            width={969}
+            height={390}
+            priority
+            className="hidden h-10 w-auto dark:block mobile:h-8"
           />
         </Link>
         <nav
@@ -63,11 +72,10 @@ export default function SiteHeader({
             ),
           )}
         </nav>
-        {actions && (
-          <div className="flex items-center gap-3 tablet:ml-auto mobile:gap-2">
-            {actions}
-          </div>
-        )}
+        <div className="flex items-center gap-3 tablet:ml-auto mobile:gap-2">
+          <ThemeToggle />
+          {actions}
+        </div>
       </div>
     </header>
   );

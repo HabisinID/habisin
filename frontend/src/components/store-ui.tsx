@@ -6,9 +6,9 @@ import type { Store } from "@/lib/api";
 // Btn/Destructive and Input.
 const buttonBase =
   "inline-flex min-h-12 items-center justify-center gap-2 rounded-control px-5 py-3 text-base transition-colors disabled:opacity-55";
-export const primaryButton = `${buttonBase} bg-brand font-bold text-white hover:bg-brand-hover active:bg-brand-pressed`;
+export const primaryButton = `${buttonBase} bg-brand font-bold text-on-brand hover:bg-brand-hover active:bg-brand-pressed`;
 export const secondaryButton = `${buttonBase} border border-border bg-surface font-semibold text-dark hover:bg-surface-2`;
-export const destructiveButton = `${buttonBase} bg-error font-bold text-white hover:opacity-90`;
+export const destructiveButton = `${buttonBase} bg-error font-bold text-on-error hover:opacity-90`;
 export const fieldClass =
   "w-full rounded-field border border-border bg-surface px-3.5 py-3 text-base text-dark";
 export const errorClass =
@@ -34,7 +34,7 @@ export function StoreDetails({ store }: { store: Store }) {
           {store.name}
         </h1>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-[#f1e8e4] text-[#865b4c]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-error-tint text-error"}`}
         >
           {store.is_open ? "Toko aktif" : "Toko ditutup sementara"}
         </span>

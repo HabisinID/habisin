@@ -18,7 +18,7 @@ function Row({
 }) {
   return (
     <p
-      className={`flex justify-between gap-4 text-sm ${accent ? "font-bold text-yellow" : ""}`}
+      className={`flex justify-between gap-4 text-sm ${accent ? "font-bold text-inverse-accent" : ""}`}
     >
       <span>{label}</span>
       <span className="font-mono font-bold">{value}</span>
@@ -150,7 +150,7 @@ export default function OrderPayment({ id }: { id: string }) {
         <ol className="mt-3 grid grid-cols-3 gap-6 tablet:grid-cols-1">
           {steps.map((step, index) => (
             <li key={step} className="border-t-2 border-dark pt-4">
-              <span className="grid h-8 w-8 place-items-center rounded-field border-2 border-dark bg-yellow font-mono text-sm font-bold">
+              <span className="grid h-8 w-8 place-items-center rounded-field border-2 border-dark bg-yellow font-mono text-sm font-bold text-on-sticker">
                 {index + 1}
               </span>
               <p className="mt-3 text-sm">{step}</p>
@@ -189,7 +189,7 @@ export default function OrderPayment({ id }: { id: string }) {
         )}
         {order.status === "pending" && (
           <button
-            className="mt-8 inline-flex min-h-15 w-full items-center justify-center gap-2 rounded-control bg-yellow text-lg font-bold text-dark disabled:opacity-70"
+            className="mt-8 inline-flex min-h-15 w-full items-center justify-center gap-2 rounded-control bg-yellow text-lg font-bold text-on-sticker disabled:opacity-70"
             disabled={paying}
             onClick={pay}
           >

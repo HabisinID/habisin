@@ -111,7 +111,7 @@ export default function StoreManager() {
     );
   if (editing)
     return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-white p-7 mobile:p-4">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-surface p-7 mobile:p-4">
         <StoreForm
           store={store}
           onCancel={() => setEditing(false)}
@@ -158,7 +158,7 @@ export default function StoreManager() {
       {store ? (
         <>
           <section
-            className="space-y-6 rounded-2xl border border-line bg-white p-7 mobile:p-4"
+            className="space-y-6 rounded-2xl border border-line bg-surface p-7 mobile:p-4"
             aria-label="Profil toko saya"
           >
             <StoreDetails store={store} />
@@ -193,7 +193,7 @@ export default function StoreManager() {
               </button>
             </div>
           </section>
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#ead9d1] p-5">
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line p-5">
             <div>
               <h2 className="font-bold">Hapus toko</h2>
               <p className="mt-1 text-sm text-muted">
@@ -201,7 +201,7 @@ export default function StoreManager() {
               </p>
             </div>
             <button
-              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-[#a34337] hover:bg-[#fbeae4]"
+              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-error hover:bg-error-tint"
               onClick={() => {
                 setDeleting(true);
                 setConfirmation("");
@@ -215,7 +215,7 @@ export default function StoreManager() {
           </section>
         </>
       ) : (
-        <section className="rounded-2xl border border-line bg-white px-7 py-12 text-center">
+        <section className="rounded-2xl border border-line bg-surface px-7 py-12 text-center">
           <StoreIcon size={48} className="mx-auto mb-5 text-brand" />
           <h2 className="text-2xl font-bold">
             Kesempatan baik dimulai dari tokomu.
@@ -267,7 +267,7 @@ export default function StoreManager() {
             )}
             <div className="flex flex-wrap gap-3">
               <button
-                className="min-h-11 rounded-lg bg-[#a34337] px-4 py-3 font-semibold text-white"
+                className="min-h-11 rounded-lg bg-error px-4 py-3 font-semibold text-on-error"
                 disabled={busy || confirmation !== store.name}
               >
                 {busy ? "Menghapus…" : "Hapus toko permanen"}

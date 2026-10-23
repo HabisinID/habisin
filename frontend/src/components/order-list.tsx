@@ -15,7 +15,7 @@ import { errorClass, primaryButton } from "./store-ui";
 
 const statusBadge: Record<Reservation["status"], string> = {
   pending: "bg-urgency-tint text-urgency-text",
-  paid: "bg-yellow text-dark",
+  paid: "bg-yellow text-on-sticker",
   picked_up: "bg-light text-success",
   cancelled: "bg-error-tint text-error",
   expired: "bg-surface-2 text-muted",
@@ -86,7 +86,7 @@ function ActiveCard({
                 Kode
               </p>
               <p
-                className="mt-1 font-mono text-4xl font-bold text-yellow"
+                className="mt-1 font-mono text-4xl font-bold text-inverse-accent"
                 data-testid="ticket-code"
               >
                 {formatCode(order.code)}
@@ -99,7 +99,7 @@ function ActiveCard({
               </p>
               <Link
                 href={`/pesanan/${order.id}`}
-                className="mt-2 inline-flex min-h-11 items-center rounded-control bg-yellow px-4 font-bold text-dark"
+                className="mt-2 inline-flex min-h-11 items-center rounded-control bg-yellow px-4 font-bold text-on-sticker"
               >
                 Lanjutkan pembayaran
               </Link>
@@ -121,7 +121,7 @@ function ActiveCard({
           <span className="flex flex-wrap items-center gap-3">
             <span>Batalkan pesanan ini? Porsi dikembalikan ke toko.</span>
             <button
-              className="rounded-field bg-error px-3 py-1.5 font-bold text-white"
+              className="rounded-field bg-error px-3 py-1.5 font-bold text-on-error"
               disabled={busy}
               onClick={onCancel}
             >
@@ -146,7 +146,7 @@ function ActiveCard({
       </div>
       <div className="h-[3px] bg-on-inverse/15">
         <div
-          className={`h-full ${urgent ? "bg-urgency" : "bg-yellow"}`}
+          className={`h-full ${urgent ? "bg-urgency" : "bg-inverse-accent"}`}
           style={{ width: `${fuse(order, now) * 100}%` }}
         />
       </div>
@@ -273,7 +273,7 @@ export default function OrderList() {
       {banner && (
         <div className="bg-inverse text-on-inverse">
           <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-20 py-3 text-sm compact:px-8 tablet:px-4">
-            <Ticket size={20} className="shrink-0 text-yellow" />
+            <Ticket size={20} className="shrink-0 text-inverse-accent" />
             <span className="shrink-0 font-mono font-bold whitespace-nowrap">
               {formatCode(banner.code)}
             </span>

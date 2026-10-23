@@ -72,7 +72,7 @@ export default function StoreProfile({ id }: { id: string }) {
         </div>
       ) : (
         store && (
-          <article className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-line bg-white p-8 mobile:p-4">
+          <article className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-line bg-surface p-8 mobile:p-4">
             <p className="text-xs font-bold tracking-widest text-brand">
               KENALAN DENGAN MITRA
             </p>
