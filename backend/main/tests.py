@@ -91,11 +91,15 @@ class ReservationTests(TestCase):
         self.assertEqual(order.status_code, 201)
         self.assertEqual(order.json()["total"], 30000)
         self.assertEqual(len(order.json()["code"]), 5)
+        self.assertEqual(order.json()["status"], "paid")
+        self.assertIsNotNone(order.json()["paid_at"])
         self.assertEqual(self.reserve().status_code, 400)
         self.item.refresh_from_db()
         self.assertEqual(self.item.stock, 1)
         for _ in range(2):
-            self.assertEqual(self.client.post(f'/api/reservations/{order.json()["id"]}/cancel').status_code, 200)
+            cancelled = self.client.post(f'/api/reservations/{order.json()["id"]}/cancel')
+            self.assertEqual(cancelled.status_code, 200)
+            self.assertEqual(cancelled.json()["status"], "cancelled")
         self.item.refresh_from_db()
         self.assertEqual(self.item.stock, 3)
 
