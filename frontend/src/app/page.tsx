@@ -27,6 +27,7 @@ import {
   Search,
   SlidersHorizontal,
   Sprout,
+  Store,
   Ticket,
   Users,
   Utensils,
@@ -36,6 +37,7 @@ import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
 import OrderList from "@/components/order-list";
 import OrderSummary from "@/components/order-summary";
+import SiteHeader from "@/components/site-header";
 import {
   api,
   distance,
@@ -294,95 +296,78 @@ export default function Home() {
           Yuk, mulai dari piringmu <ArrowUpRight size={13} />
         </span>
       </div> */}
-      <header className="header h-22 bg-[#fafaf6f5] [border-bottom:1px_solid_var(--color-line)] [&_nav]:flex [&_nav]:items-center [&_nav]:gap-[30px] [&_nav]:h-full [&_nav]:text-[13px] [&_nav_>_a]:h-full [&_nav_>_a]:flex [&_nav_>_a]:items-center [&_nav_>_a]:gap-[7px] [&_nav_>_a]:relative [&_nav_>_a]:text-[#6a746c] [&_nav_>_button]:h-full [&_nav_>_button]:flex [&_nav_>_button]:items-center [&_nav_>_button]:gap-[7px] [&_nav_>_button]:relative [&_nav_>_button]:text-[#6a746c] [&_nav_.nav-active]:text-brand [&_nav_.nav-active]:font-bold compact:[&_nav]:gap-[18px] tablet:h-18 tablet:[&_nav]:hidden">
-        <div className="header-inner max-w-300 py-0 px-8 h-full m-auto flex items-center justify-between gap-[35px] min-[1450px]:max-w-320 compact:gap-5 tablet:py-0 tablet:px-[22px]">
-          <Link
-            className="brand text-[31px] [font-weight:850] tracking-[-1.8px] flex items-center tablet:text-[28px]"
-            href="/"
-            aria-label="Habisin beranda"
-          >
-            <span className="brand-icon grid place-items-center bg-brand text-white w-[35px] h-9 rounded-[12px_12px_12px_3px] mr-2 tablet:w-[30px] tablet:h-8">
-              <Sprout size={25} strokeWidth={2.5} />
-            </span>
-            habisin<span className="brand-dot text-brand">.</span>
-          </Link>
-          <nav aria-label="Navigasi utama">
-            <a
-              className='nav-active [&:after]:[content:""] [&:after]:absolute [&:after]:bottom-[21px] [&:after]:left-0 [&:after]:right-0 [&:after]:h-[2px] [&:after]:bg-brand'
-              href="#explore"
-            >
-              Jelajahi
-            </a>
-            <button onClick={() => setPanel("how")}>Cara kerja</button>
-            <button onClick={() => setPanel("impact")}>
-              Dampak kita{" "}
-              <span className="tiny-dot w-[5px] h-[5px] bg-[#c69e43] rounded-[50%] inline-block" />
-            </button>
-          </nav>
-          <div className="header-actions flex items-center gap-5 text-[12px] font-semibold compact:gap-[13px] tablet:gap-[14px] mobile:gap-2">
-            <button
-              className="partner-link flex gap-[6px] items-center compact:hidden"
-              onClick={openPartner}
-            >
-              {user?.role === "admin"
-                ? "Dasbor admin"
-                : user?.role === "partner"
-                  ? "Dasbor mitra"
-                  : "Jadi mitra"}
-              <ArrowUpRight size={15} />
-            </button>
-            <span className="header-divider h-[23px] w-[1px] bg-line compact:hidden" />
-            {user ? (
-              <>
-                {user.role === "partner" && (
-                  <Link
-                    href="/partner/store"
-                    className="text-xs font-semibold text-brand"
-                    aria-label="Toko saya"
-                  >
-                    Toko
-                  </Link>
-                )}
-                <button
-                  className="account-button flex items-center gap-[7px] mobile:[&_>_span:last-child]:max-w-[65px] mobile:[&_>_span:last-child]:overflow-hidden mobile:[&_>_span:last-child]:text-ellipsis"
-                  onClick={() => setPanel("profile")}
+      <SiteHeader
+        nav={[
+          { label: "Jelajahi", href: "/", current: true },
+          { label: "Cara kerja", onClick: () => setPanel("how") },
+          { label: "Dampak kita", onClick: () => setPanel("impact") },
+          ...(user ? [{ label: "Pesanan", onClick: showOrders }] : []),
+        ]}
+        actions={
+          user ? (
+            <>
+              {user.role === "partner" ? (
+                <Link
+                  href="/partner/store"
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-3.5 text-sm font-bold text-brand hover:bg-surface-2 compact:hidden"
                 >
-                  <span className="avatar small w-[45px] h-[45px] rounded-[50%] bg-[#e3eddb] text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
-                    {(user.name || user.username)[0].toUpperCase()}
-                  </span>
-                  <span>{user.name.split(" ")[0] || user.username}</span>
-                </button>
+                  <Store size={18} />
+                  Toko saya
+                </Link>
+              ) : (
                 <button
-                  className="icon-button inline-grid place-items-center p-[5px] text-[#708168] rounded-[5px] hover:bg-[#edf1e7]"
-                  onClick={signOut}
-                  aria-label="Keluar"
+                  className="text-sm font-semibold text-brand compact:hidden"
+                  onClick={openPartner}
                 >
-                  <LogOut size={18} />
+                  {user.role === "admin" ? "Dasbor admin" : "Untuk Mitra"}
                 </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="login-link"
-                  onClick={() => setPanel("login")}
-                >
-                  Masuk
-                </button>
-                <button
-                  className="button primary signup inline-flex items-center justify-center gap-3 rounded-2 py-[11px] px-[17px] text-[12px] font-semibold min-h-10 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] tablet:py-[9px] tablet:px-3 tablet:min-h-[35px] tablet:text-[10px] tablet:[&_svg]:hidden"
-                  onClick={() => {
-                    setRegistrationRole("buyer");
-                    setPanel("register");
-                  }}
-                >
-                  Daftar gratis
-                  <ArrowRight size={16} />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+              )}
+              <button
+                className="flex items-center gap-2 text-sm font-semibold"
+                onClick={() => setPanel("profile")}
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-light text-sm font-bold text-brand">
+                  {(user.name || user.username)[0].toUpperCase()}
+                </span>
+                <span className="max-w-24 truncate mobile:sr-only">
+                  {user.name.split(" ")[0] || user.username}
+                </span>
+              </button>
+              <button
+                className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2"
+                onClick={signOut}
+                aria-label="Keluar"
+              >
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="text-sm font-semibold text-brand compact:hidden"
+                onClick={openPartner}
+              >
+                Untuk Mitra
+              </button>
+              <button
+                className="h-11 px-2 text-sm font-semibold text-dark"
+                onClick={() => setPanel("login")}
+              >
+                Masuk
+              </button>
+              <button
+                className="inline-flex h-11 items-center rounded-control bg-brand px-4 text-sm font-bold text-white hover:bg-brand-hover"
+                onClick={() => {
+                  setRegistrationRole("buyer");
+                  setPanel("register");
+                }}
+              >
+                Daftar gratis
+              </button>
+            </>
+          )
+        }
+      />
 
       <main>
         <section className="hero wrap max-w-300 my-0 mx-auto px-8 grid grid-cols-[1.05fr_1fr] min-h-120 items-center gap-[30px] py-[45px] min-[1450px]:max-w-320 min-[1450px]:min-h-130 compact:gap-[10px] tablet:px-[22px] tablet:grid-cols-[1fr_1fr] tablet:min-h-95 tablet:pt-8 tablet:pb-[30px] tablet:gap-0 mobile:flex mobile:flex-col mobile:items-stretch mobile:pt-[31px] mobile:pb-5">
