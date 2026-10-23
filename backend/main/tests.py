@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -77,6 +78,7 @@ class AuthenticationTests(TestCase):
 
 class ReservationTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(username="buyer", password="Secure-Meal-927!")
         Profile.objects.create(user=self.user)
@@ -134,6 +136,7 @@ class ReservationTests(TestCase):
 
 class ReservationFlowTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(username="buyer", password="Secure-Meal-927!")
         Profile.objects.create(user=self.user)
@@ -256,3 +259,16 @@ class ReservationFlowTests(TestCase):
         self.client.force_authenticate(None)
         self.assertEqual(self.client.post(f"/api/reservations/{pk}/pay").status_code, 403)
         self.assertEqual(Reservation.objects.get(pk=pk).status, "pending")
+
+    def test_order_changes_are_rate_limited_per_user(self):
+        pk = self.order()
+        for _ in range(29):
+            self.assertEqual(self.client.post(f"/api/reservations/{pk}/cancel").status_code, 200)
+        throttled = self.client.post(f"/api/reservations/{pk}/cancel")
+        self.assertEqual(throttled.status_code, 429)
+        self.assertIn("Retry-After", throttled)
+        self.assertEqual(self.reserve().status_code, 429)
+        self.assertEqual(self.client.get("/api/reservations").status_code, 200)
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").status_code, 200)
+        self.as_other_user()
+        self.assertEqual(self.reserve().status_code, 201)
