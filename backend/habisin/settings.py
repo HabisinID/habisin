@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,8 +26,11 @@ load_dotenv('.env')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'local-demo-only-change-before-deployment')
 
+# PRODUCTION=True on PWS: PostgreSQL from ITF and debug off unless DEBUG is set.
+PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+DEBUG = os.getenv("DEBUG", str(not PRODUCTION)).lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 
@@ -80,12 +84,32 @@ WSGI_APPLICATION = 'habisin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if PRODUCTION:
+    missing = [name for name in ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"] if not os.getenv(name)]
+    if missing:
+        raise ImproperlyConfigured(f"PRODUCTION=True needs these environment variables: {', '.join(sorted(missing))}.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            # ITF gives each project schema (tugas_kelompok) inside a shared database.
+            'OPTIONS': {'options': f"-c search_path={os.getenv('SCHEMA', 'public')}"},
+            # Reuse connections between requests, but check them before use.
+            'CONN_MAX_AGE': 60,
+            'CONN_HEALTH_CHECKS': True,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation

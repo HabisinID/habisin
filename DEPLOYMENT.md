@@ -27,8 +27,14 @@ ke `main` secara terpisah. Perubahan yang sama dipasang pada branch deploy di pa
 Masukkan melalui dashboard environment PWS (bukan ke Git):
 
 ```dotenv
-DEBUG=False
+PRODUCTION=True
 SECRET_KEY=GANTI_DENGAN_SECRET_ACAK_BARU
+DB_NAME=<dari email ITF>
+DB_USER=<dari email ITF>
+DB_PASSWORD=<dari email ITF>
+DB_HOST=<dari email ITF>
+DB_PORT=<dari email ITF>
+SCHEMA=tugas_kelompok
 ALLOWED_HOSTS=rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
 CSRF_TRUSTED_ORIGINS=https://habisin-id.vercel.app,https://rozan-laudzai-habisin-backend.pws.cs.ui.ac.id
 WHITENOISE_USE_FINDERS=True
@@ -66,19 +72,28 @@ Tidak perlu menambahkan seed ke `runserver` atau menjalankan migrasi setiap requ
 Ikuti pengaturan binding/port milik PWS; instruksi di sini tidak mengganti entrypoint
 platform dengan server baru.
 
-### Penyimpanan database
+### Database dan pemisahan environment
 
-Kode saat ini tetap menggunakan SQLite sesuai stack proyek. *Persistensi filesystem
-PWS belum dikonfirmasi.* File database tidak boleh di-commit. Jika PWS menyediakan
-volume persisten yang writable, set `SQLITE_PATH` ke file di volume tersebut; direktori
-induknya harus sudah ada. Jangan menyalin contoh path tanpa memeriksa volume sebenarnya.
+| Environment | `PRODUCTION` | Database | `DEBUG` bawaan |
+| --- | --- | --- | --- |
+| Laptop dan CI | `False` (bawaan) | SQLite `backend/db.sqlite3` | `True` |
+| PWS | `True` | PostgreSQL ITF, schema dari `SCHEMA` | `False` |
 
-Jika PWS tidak menyediakan penyimpanan persisten, akun/pesanan SQLite bisa hilang saat
-container diganti. Gunakan database terkelola seperti PostgreSQL ITF setelah konfigurasi
-Django disesuaikan. Menambahkan `DB_NAME`/`DB_PASSWORD` saja belum akan mengalihkan
-backend ini ke PostgreSQL. [Tutorial PWS](https://pbp-fasilkom-ui.github.io/ganjil-2026/en/docs/tutorial-0)
-menjelaskan kredensial ITF dan schema `tugas_kelompok`; jangan menggunakan database
-produksi sebelum pilihan penyimpanan ini dipastikan.
+Kredensial `DB_*` dikirim ITF lewat email `noreply@cs.ui.ac.id` (lihat
+[tutorial PWS](https://pbp-fasilkom-ui.github.io/ganjil-2026/en/docs/tutorial-0)). Proyek
+kelompok memakai schema `tugas_kelompok`. Jika `PRODUCTION=True` tetapi salah satu
+`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, atau `DB_PORT` kosong, Django berhenti saat
+start dengan pesan yang menyebut variabel yang kurang, sehingga deploy tidak diam-diam
+memakai SQLite yang bisa hilang saat container diganti. Koneksi dipakai ulang hingga 60 detik
+dan diperiksa sebelum dipakai (`CONN_MAX_AGE`, `CONN_HEALTH_CHECKS`).
+
+Data SQLite lama di PWS tidak ikut pindah. Setelah deploy pertama dengan PostgreSQL,
+`migrate` membuat tabel baru; jalankan `seed_demo` untuk katalog contoh.
+
+`python manage.py check --deploy` dengan environment produksi hanya menyisakan dua
+peringatan HTTPS (HSTS dan `SECURE_SSL_REDIRECT`). Keduanya sengaja belum diaktifkan:
+TLS PWS berhenti di proxy, dan redirect HTTPS tanpa memastikan header
+`X-Forwarded-Proto` dari proxy dapat menyebabkan redirect berulang.
 
 ### Kirim branch backend
 
