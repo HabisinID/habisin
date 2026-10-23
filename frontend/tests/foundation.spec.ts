@@ -65,6 +65,10 @@ test("design tokens, fonts, logo and header apply across pages", async ({
 
   await page.goto("/stores/1", { waitUntil: "domcontentloaded" });
   await expectSharedHeader(page);
+  // A guest (403 from auth/me) sees the partner sign-in prompt.
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ status: 403, json: { detail: "Belum masuk." } }),
+  );
   await page.goto("/partner/store", { waitUntil: "domcontentloaded" });
   await expectSharedHeader(page);
   const button = page.getByRole("button", { name: "Masuk sebagai mitra" });
