@@ -139,7 +139,9 @@ test("cancel and delete update instantly and roll back when the server refuses",
   await expect(order).toContainText("Dibatalkan");
   release();
   await expect(order).toContainText("Dipesan");
-  await expect(page.getByRole("alert")).toContainText("Pesanan sudah diambil.");
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "Pesanan sudah diambil.",
+  );
   await page.unroute("**/api/reservations/*/cancel");
 
   await order.getByRole("button", { name: "Batalkan", exact: true }).click();
@@ -159,7 +161,7 @@ test("cancel and delete update instantly and roll back when the server refuses",
   await expect(page.locator(".order-item")).toHaveCount(0);
   releaseDelete();
   await expect(page.locator(".order-item")).toHaveCount(1);
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
     "Server sedang bermasalah.",
   );
 });
