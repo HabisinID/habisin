@@ -35,6 +35,8 @@ export default function OrderList({
 }) {
   const [error, setError] = useState("");
   const [inFlight, setInFlight] = useState<number[]>([]);
+  // Read the clock once per opening, not on every render.
+  const [openedAt] = useState(() => Date.now());
 
   // Optimistic update: show the result immediately, then confirm with the
   // server; restore only the affected order if the server refuses.
@@ -151,7 +153,12 @@ export default function OrderList({
                       <Ticket size={15} />
                     </button>
                   )}
-                  {order.status === "pending" || order.status === "paid" ? (
+                  {order.status === "paid" &&
+                  openedAt >= Date.parse(order.cancel_until) ? (
+                    <span className="ml-auto p-2 text-[11px] text-[#8a967e]">
+                      Pembatalan ditutup {pickup(order.cancel_until)}
+                    </span>
+                  ) : order.status === "pending" || order.status === "paid" ? (
                     <button
                       className="ml-auto p-2 text-[11px] text-[#ac7462]"
                       disabled={busy}

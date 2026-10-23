@@ -73,6 +73,8 @@ class Reservation(models.Model):
     FINISHED_STATUSES = ["picked_up", "cancelled", "expired"]
     # Unpaid orders hold stock only briefly, so nobody can lock a listing by not paying.
     PAYMENT_WINDOW = timedelta(minutes=5)
+    # Late cancellations leave the store no time to sell the portions again.
+    CANCEL_CUTOFF = timedelta(minutes=30)
     # A surplus listing is shared: one order may take at most this many portions.
     MAX_QUANTITY = 4
     NOTE_MAX_LENGTH = 140
@@ -93,6 +95,10 @@ class Reservation(models.Model):
     @property
     def pay_before(self):
         return min(self.created_at + self.PAYMENT_WINDOW, self.listing.pickup_end)
+
+    @property
+    def cancel_until(self):
+        return self.listing.pickup_end - self.CANCEL_CUTOFF
 
     @classmethod
     def expire_overdue(cls):

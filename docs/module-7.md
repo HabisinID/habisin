@@ -28,7 +28,7 @@ lalu dikembalikan seperti semula disertai pesan error jika server menolak.
 | Status | Label | Stok ditahan | Aksi yang diizinkan |
 | --- | --- | --- | --- |
 | `pending` | Menunggu pembayaran | Ya | Ubah, bayar, batal |
-| `paid` | Dipesan | Ya | Batal (verifikasi kasir di Modul 8) |
+| `paid` | Dipesan | Ya | Batal sampai 30 menit sebelum batas ambil (`cancel_until`); verifikasi kasir di Modul 8 |
 | `picked_up` | Sudah diambil | Tidak | Hapus dari riwayat |
 | `cancelled` | Dibatalkan | Tidak | Hapus dari riwayat |
 | `expired` | Kedaluwarsa | Tidak | Hapus dari riwayat |

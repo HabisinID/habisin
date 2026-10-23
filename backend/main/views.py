@@ -234,6 +234,9 @@ def pay_reservation(request, reservation):
 def cancel_reservation(request, reservation):
     if reservation.status in ["picked_up", "expired"]:
         return conflict(reservation, "dibatalkan")
+    if reservation.status == "paid" and timezone.now() >= reservation.cancel_until:
+        closed = timezone.localtime(reservation.cancel_until)
+        return Response({"detail": f"Pembatalan ditutup pukul {closed:%H.%M} (30 menit sebelum batas ambil)."}, status=409)
     # Cancelling twice is harmless: stock is only released on the first call.
     if reservation.status in Reservation.ACTIVE_STATUSES:
         reservation.status = "cancelled"
