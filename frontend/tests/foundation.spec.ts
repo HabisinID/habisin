@@ -87,7 +87,7 @@ test("header actions follow the signed-in role", async ({ page }) => {
   await expect(
     header
       .getByRole("navigation", { name: "Navigasi utama" })
-      .getByRole("button", { name: "Pesanan" }),
+      .getByRole("link", { name: "Pesanan" }),
   ).toBeVisible();
   await expect(header.getByRole("link", { name: "Toko saya" })).toHaveCount(0);
 
