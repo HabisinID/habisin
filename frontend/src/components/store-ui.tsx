@@ -1,34 +1,23 @@
-import Link from "next/link";
-import { ArrowLeft, Clock3, MapPin, Sprout } from "lucide-react";
+import { Clock3, MapPin } from "lucide-react";
+import SiteHeader from "./site-header";
 import type { Store } from "@/lib/api";
 
-export const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#174c36] disabled:opacity-55";
-export const secondaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-brand hover:bg-light";
+// Base components from design.pen: Btn/Primary, Btn/Secondary,
+// Btn/Destructive and Input.
+const buttonBase =
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-control px-5 py-3 text-base transition-colors disabled:opacity-55";
+export const primaryButton = `${buttonBase} bg-brand font-bold text-white hover:bg-brand-hover active:bg-brand-pressed`;
+export const secondaryButton = `${buttonBase} border border-border bg-surface font-semibold text-dark hover:bg-surface-2`;
+export const destructiveButton = `${buttonBase} bg-error font-bold text-white hover:opacity-90`;
 export const fieldClass =
-  "w-full rounded-lg border border-[#dfe5d7] bg-white px-3 py-3 text-sm text-dark";
+  "w-full rounded-field border border-border bg-surface px-3.5 py-3 text-base text-dark";
 export const errorClass =
-  "rounded-lg bg-[#fbeae4] p-3 text-sm leading-relaxed text-[#a34337]";
+  "rounded-field bg-error-tint p-3 text-sm leading-relaxed text-error";
 
 export function StoreShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <header className="border-b border-line bg-cream">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"
-          >
-            <Sprout className="text-brand" />
-            habisin<span className="-ml-2 text-brand">.</span>
-          </Link>
-          <Link href="/" className="flex items-center gap-2 text-xs text-brand">
-            <ArrowLeft size={16} />
-            Kembali jelajah
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="mx-auto max-w-5xl px-6 py-10 mobile:px-4 mobile:py-6">
         {children}
       </main>
