@@ -35,8 +35,6 @@ import {
 } from "lucide-react";
 import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
-import OrderList from "@/components/order-list";
-import OrderSummary from "@/components/order-summary";
 import SiteHeader from "@/components/site-header";
 import {
   api,
@@ -44,7 +42,6 @@ import {
   pickup,
   rupiah,
   type Listing,
-  type Reservation,
   type User,
 } from "@/lib/api";
 import demo from "@/lib/demo.json";
@@ -76,14 +73,7 @@ function readFavorites() {
 const categories = ["Semua", "Makanan berat", "Roti & kue", "Camilan", "Sehat"];
 const defaultOrigin: [number, number] = [-6.366, 106.829];
 type Panel =
-  | "login"
-  | "register"
-  | "profile"
-  | "orders"
-  | "how"
-  | "impact"
-  | "partner"
-  | null;
+  "login" | "register" | "profile" | "how" | "impact" | "partner" | null;
 
 export default function Home() {
   const router = useRouter();
@@ -122,16 +112,11 @@ export default function Home() {
     }
   }, [favoritesSnapshot]);
   const [savedOnly, setSavedOnly] = useState(false);
-  const [orders, setOrders] = useState<Reservation[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersError, setOrdersError] = useState("");
   const [orderError, setOrderError] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
-  const [summary, setSummary] = useState<Reservation | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [ticket, setTicket] = useState<Reservation | null>(null);
   const [dashboard, setDashboard] = useState<{
     users: number | null;
     listings: number;
@@ -213,27 +198,6 @@ export default function Home() {
       { timeout: 10000 },
     );
   }
-  function updateListing(listing: Listing) {
-    setItems((current) =>
-      current.map((item) => (item.id === listing.id ? listing : item)),
-    );
-  }
-  async function showOrders() {
-    if (!user) {
-      setPanel("login");
-      return;
-    }
-    setPanel("orders");
-    setOrdersLoading(true);
-    setOrdersError("");
-    try {
-      setOrders(await orderApi.list());
-    } catch (e) {
-      setOrdersError((e as Error).message);
-    } finally {
-      setOrdersLoading(false);
-    }
-  }
   async function book() {
     if (!user) {
       setSelected(null);
@@ -245,12 +209,9 @@ export default function Home() {
     setOrderError("");
     try {
       const order = await orderApi.create(selected!.id, quantity, note);
-      updateListing(order.listing);
-      setSelected(null);
-      setSummary(order);
+      router.push(`/pesanan/${order.id}`);
     } catch (e) {
       setOrderError((e as Error).message);
-    } finally {
       setBusy(false);
     }
   }
@@ -258,7 +219,6 @@ export default function Home() {
     try {
       await api("auth/logout", "POST");
       setUser(null);
-      setOrders([]);
       setDashboard(null);
       setNotice("Kamu berhasil keluar.");
     } catch (e) {
@@ -301,7 +261,7 @@ export default function Home() {
           { label: "Jelajahi", href: "/", current: true },
           { label: "Cara kerja", onClick: () => setPanel("how") },
           { label: "Dampak kita", onClick: () => setPanel("impact") },
-          ...(user ? [{ label: "Pesanan", onClick: showOrders }] : []),
+          ...(user ? [{ label: "Pesanan", href: "/pesanan" }] : []),
         ]}
         actions={
           user ? (
@@ -721,12 +681,12 @@ export default function Home() {
             <span>
               <Check size={15} /> Dibuat hari ini, dinikmati hari ini.
             </span>
-            <button
+            <Link
               className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"
-              onClick={showOrders}
+              href="/pesanan"
             >
               Pesanan saya <Ticket size={17} />
-            </button>
+            </Link>
           </div>
         </section>
         <section className="join-banner wrap max-w-284 my-9 mx-auto px-8 bg-[#ecf0e4] [border:1px_solid_#e4e9da] rounded-3 flex gap-[26px] items-center py-[29px] [&_h2]:text-[25px] [&_h2]:tracking-[-0.8px] [&_h2]:my-2 [&_h2]:mx-0 [&_p]:text-[11px] [&_p]:text-[#829076] [&_.button]:ml-auto [&_.button]:whitespace-nowrap [&_.eyebrow]:text-[8px] min-[1450px]:max-w-304 compact:mx-8 tablet:px-[23px] tablet:my-[30px] tablet:mx-[22px] tablet:gap-[14px] tablet:flex-wrap tablet:py-[23px] tablet:[&_h2]:text-[22px] tablet:[&_p]:text-[10px] tablet:[&_p]:leading-[1.7] tablet:[&_.button]:ml-16 tablet:[&_.button]:mt-1 tablet:[&_.button]:text-[11px] mobile:gap-3 mobile:p-5 mobile:[&_>_div:nth-child(2)]:[flex:1] mobile:[&_h2]:text-[19px] mobile:[&_.eyebrow]:text-[7px] mobile:[&_p]:text-[9px] mobile:[&_.button]:ml-0 mobile:[&_.button]:w-full">
@@ -1036,77 +996,6 @@ export default function Home() {
             <ArrowRight size={18} />
           </button>
         </Modal>
-      )}
-      {ticket && (
-        <Modal title="Makananmu sudah dipesan!" onClose={() => setTicket(null)}>
-          <div className="ticket text-center bg-[#edf3e4] [border:1px_dashed_#b6c9a7] rounded-[13px] py-[25px] px-[15px] [&_>_p:first-of-type]:text-[9px] [&_>_p:first-of-type]:tracking-[2px] [&_>_p:first-of-type]:text-[#839777] [&_>_strong]:block [&_>_strong]:text-[42px] [&_>_strong]:tracking-[8px] [&_>_strong]:mt-[10px] [&_>_strong]:mr-0 [&_>_strong]:mb-5 [&_>_strong]:ml-0 [&_>_strong]:text-brand [&_h3]:mb-[10px] [&_h3]:text-[16px] [&_>_span]:text-[12px] [&_>_span]:text-[#839477] [&_hr]:[border:0] [&_hr]:[border-top:1px_dashed_#c5d4b6] [&_hr]:my-[25px] [&_hr]:mx-0 [&_p]:text-[12px] [&_p]:my-[10px] [&_p]:mx-0 [&_p]:text-[#638350] [&_small]:text-[10px] [&_small]:text-[#839477]">
-            <span className="ticket-check w-[55px] h-[55px] rounded-[50%] bg-brand text-white grid place-items-center mt-0 mr-auto mb-5 ml-auto">
-              <Check size={30} />
-            </span>
-            <p>KODE PENGAMBILAN</p>
-            <strong>{ticket.code}</strong>
-            <h3>{ticket.listing.name}</h3>
-            <span>
-              {ticket.quantity} porsi · {rupiah(ticket.total)}
-            </span>
-            <hr />
-            <p>{ticket.listing.store}</p>
-            <small>{ticket.listing.address}</small>
-            <p>Ambil sebelum {pickup(ticket.listing.pickup_end)} WIB</p>
-          </div>
-          <p className="fine-print text-[10px] leading-[1.8] text-[#939b88] my-[15px] mx-0">
-            Tiket demo tersimpan di Pesanan saya. Verifikasi kasir belum
-            tersedia pada demo ini.
-          </p>
-          <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] w-full mt-[5px]"
-            onClick={() => {
-              setTicket(null);
-              showOrders();
-            }}
-          >
-            Lihat pesanan saya
-            <Ticket size={18} />
-          </button>
-        </Modal>
-      )}
-      {panel === "orders" && (
-        <OrderList
-          orders={orders}
-          setOrders={setOrders}
-          loading={ordersLoading}
-          loadError={ordersError}
-          onListing={updateListing}
-          onResume={(order) => {
-            setPanel(null);
-            setSummary(order);
-          }}
-          onTicket={(order) => {
-            setPanel(null);
-            setTicket(order);
-          }}
-          onClose={() => setPanel(null)}
-        />
-      )}
-      {summary && (
-        <OrderSummary
-          order={summary}
-          origin={origin}
-          onChange={(order) => {
-            setSummary(order);
-            updateListing(order.listing);
-          }}
-          onPaid={(order) => {
-            setSummary(null);
-            setTicket(order);
-          }}
-          onCancelled={(order) => {
-            setSummary(null);
-            updateListing(order.listing);
-            setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
-          }}
-          onClose={() => setSummary(null)}
-        />
       )}
     </>
   );
