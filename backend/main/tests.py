@@ -91,8 +91,8 @@ class ReservationTests(TestCase):
         self.assertEqual(order.status_code, 201)
         self.assertEqual(order.json()["total"], 30000)
         self.assertEqual(len(order.json()["code"]), 5)
-        self.assertEqual(order.json()["status"], "paid")
-        self.assertIsNotNone(order.json()["paid_at"])
+        self.assertEqual(order.json()["status"], "pending")
+        self.assertIsNone(order.json()["paid_at"])
         self.assertEqual(self.reserve().status_code, 400)
         self.item.refresh_from_db()
         self.assertEqual(self.item.stock, 1)
@@ -130,3 +130,129 @@ class ReservationTests(TestCase):
 
     def test_buyer_cannot_access_dashboard(self):
         self.assertEqual(self.client.get("/api/dashboard").status_code, 403)
+
+
+class ReservationFlowTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="buyer", password="Secure-Meal-927!")
+        Profile.objects.create(user=self.user)
+        self.client.force_authenticate(self.user)
+        self.item = Listing.objects.create(name="Lunch", store="Demo", category="Makanan berat", description="Demo", address="Depok", price=15000, original_price=30000, stock=5, image="/demo.jpg", latitude=-6.36, longitude=106.83, pickup_start=timezone.now(), pickup_end=timezone.now() + timedelta(hours=4))
+
+    def reserve(self, **changes):
+        return self.client.post("/api/reservations", {"listing_id": self.item.pk, "quantity": 2, **changes}, format="json")
+
+    def order(self, **changes):
+        return self.reserve(**changes).json()["id"]
+
+    def stock(self):
+        self.item.refresh_from_db()
+        return self.item.stock
+
+    def set_status(self, pk, status):
+        Reservation.objects.filter(pk=pk).update(status=status)
+
+    def as_other_user(self):
+        other = User.objects.create_user(username="other")
+        Profile.objects.create(user=other)
+        self.client.force_authenticate(other)
+
+    def test_create_pending_order_with_note(self):
+        response = self.reserve(note="  Tolong dibungkus terpisah  ")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["status"], "pending")
+        self.assertEqual(response.json()["note"], "Tolong dibungkus terpisah")
+        self.assertEqual(self.stock(), 3)
+
+    def test_note_validation(self):
+        for note in ["x" * 201, 123, ["catatan"]]:
+            self.assertEqual(self.reserve(note=note).status_code, 400)
+        self.assertEqual(self.stock(), 5)
+        self.assertEqual(self.reserve(note="x" * 200).status_code, 201)
+
+    def test_detail_is_owner_only(self):
+        pk = self.order()
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").json()["id"], pk)
+        self.as_other_user()
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").status_code, 404)
+
+    def test_edit_pending_order_moves_stock_and_total(self):
+        pk = self.order()
+        response = self.client.patch(f"/api/reservations/{pk}", {"quantity": 4, "note": "Jam 7 malam"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["quantity"], 4)
+        self.assertEqual(response.json()["total"], 60000)
+        self.assertEqual(response.json()["note"], "Jam 7 malam")
+        self.assertEqual(self.stock(), 1)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 1}, format="json").status_code, 200)
+        self.assertEqual(self.stock(), 4)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"note": ""}, format="json").json()["quantity"], 1)
+
+    def test_edit_rejects_overselling_and_invalid_input(self):
+        pk = self.order()
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 6}, format="json").status_code, 400)
+        for quantity in [0, 11, "3", True, 1.5]:
+            self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": quantity}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"note": "x" * 201}, format="json").status_code, 400)
+        self.assertEqual(Reservation.objects.get(pk=pk).quantity, 2)
+        self.assertEqual(self.stock(), 3)
+
+    def test_edit_only_while_pending(self):
+        pk = self.order()
+        for status in ["paid", "picked_up", "cancelled"]:
+            self.set_status(pk, status)
+            self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 1}, format="json").status_code, 409)
+        self.assertEqual(self.stock(), 3)
+
+    def test_pay_once(self):
+        pk = self.order()
+        response = self.client.post(f"/api/reservations/{pk}/pay")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "paid")
+        self.assertIsNotNone(response.json()["paid_at"])
+        self.assertEqual(self.client.post(f"/api/reservations/{pk}/pay").status_code, 409)
+        self.assertEqual(self.stock(), 3)
+
+    def test_cannot_pay_cancelled_or_expired_order(self):
+        cancelled = self.order()
+        self.client.post(f"/api/reservations/{cancelled}/cancel")
+        self.assertEqual(self.client.post(f"/api/reservations/{cancelled}/pay").status_code, 409)
+        expired = self.order()
+        Listing.objects.filter(pk=self.item.pk).update(pickup_end=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.client.post(f"/api/reservations/{expired}/pay").status_code, 400)
+        self.assertEqual(Reservation.objects.get(pk=expired).status, "pending")
+
+    def test_cancel_pending_and_paid_but_not_picked_up(self):
+        pending, paid, picked_up = self.order(quantity=1), self.order(quantity=1), self.order(quantity=1)
+        self.client.post(f"/api/reservations/{paid}/pay")
+        self.set_status(picked_up, "picked_up")
+        self.assertEqual(self.stock(), 2)
+        for pk in [pending, paid]:
+            self.assertEqual(self.client.post(f"/api/reservations/{pk}/cancel").json()["status"], "cancelled")
+        self.assertEqual(self.stock(), 4)
+        self.assertEqual(self.client.post(f"/api/reservations/{picked_up}/cancel").status_code, 409)
+        self.assertEqual(self.stock(), 4)
+
+    def test_delete_only_finished_orders_from_history(self):
+        pending, paid, cancelled, picked_up = (self.order(quantity=1) for _ in range(4))
+        self.client.post(f"/api/reservations/{paid}/pay")
+        self.client.post(f"/api/reservations/{cancelled}/cancel")
+        self.set_status(picked_up, "picked_up")
+        for pk in [pending, paid]:
+            self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 409)
+        stock = self.stock()
+        for pk in [cancelled, picked_up]:
+            self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 204)
+        self.assertEqual(self.stock(), stock)
+        self.assertEqual(set(Reservation.objects.values_list("pk", flat=True)), {pending, paid})
+
+    def test_other_users_cannot_touch_order(self):
+        pk = self.order()
+        self.as_other_user()
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 1}, format="json").status_code, 404)
+        self.assertEqual(self.client.post(f"/api/reservations/{pk}/pay").status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 404)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.post(f"/api/reservations/{pk}/pay").status_code, 403)
+        self.assertEqual(Reservation.objects.get(pk=pk).status, "pending")
