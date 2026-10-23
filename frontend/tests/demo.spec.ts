@@ -85,18 +85,21 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
       .click();
     await page.getByLabel("Jumlah porsi").fill("2");
     await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
+    await page.getByRole("button", { name: /^Bayar Rp/ }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
-    await expect(
-      page.getByRole("heading", { name: "Makananmu sudah dipesan!" }),
-    ).toBeVisible();
-    await expect(page.locator(".ticket > strong")).toHaveText(/^[A-Z2-9]{5}$/);
-    await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
-    await expect(page.locator(".order-item")).toHaveCount(1);
-    await page.getByRole("button", { name: "Batalkan", exact: true }).click();
+    await expect(page).toHaveURL(/\/pesanan$/);
+    const order = page.locator(".order-card");
+    await expect(order).toHaveCount(1);
+    await expect(order.getByTestId("ticket-code")).toHaveText(
+      /^[A-Z0-9]{3} · [A-Z0-9]{2}$/,
+    );
+    await order.getByRole("button", { name: "Batalkan pesanan" }).click();
+    await order.getByRole("button", { name: "Ya, batalkan" }).click();
+    await page.getByRole("tab", { name: /^Riwayat/ }).click();
     await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Tutup", exact: true }).click();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "B Browser", exact: true }).click();
     await page.getByLabel("Nama lengkap").fill("Updated Tester");
     await page.getByRole("button", { name: "Simpan perubahan" }).click();
