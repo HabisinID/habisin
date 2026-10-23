@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from io import StringIO
 from unittest.mock import patch
 from django.contrib.auth.models import User
@@ -230,8 +230,8 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(self.client.post(f"/api/reservations/{cancelled}/pay").status_code, 409)
         expired = self.order()
         Listing.objects.filter(pk=self.item.pk).update(pickup_end=timezone.now() - timedelta(minutes=1))
-        self.assertEqual(self.client.post(f"/api/reservations/{expired}/pay").status_code, 400)
-        self.assertEqual(Reservation.objects.get(pk=expired).status, "pending")
+        self.assertEqual(self.client.post(f"/api/reservations/{expired}/pay").status_code, 409)
+        self.assertEqual(Reservation.objects.get(pk=expired).status, "expired")
 
     def test_cancel_pending_and_paid_but_not_picked_up(self):
         pending, paid, picked_up = self.order(quantity=1), self.order(quantity=1), self.order(quantity=1)
@@ -296,11 +296,60 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(self.stock(), 3)
 
 
+    def age(self, pk, minutes):
+        Reservation.objects.filter(pk=pk).update(created_at=timezone.now() - timedelta(minutes=minutes))
+
+    def test_unpaid_order_expires_after_payment_window(self):
+        pk = self.order()
+        self.age(pk, 4)
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").json()["status"], "pending")
+        self.age(pk, 6)
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").json()["status"], "expired")
+        self.assertEqual(self.stock(), 5)
+        self.assertEqual(self.client.post(f"/api/reservations/{pk}/pay").status_code, 409)
+        self.assertEqual(self.client.post(f"/api/reservations/{pk}/cancel").status_code, 409)
+        self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 204)
+
+    def test_pay_before_is_capped_by_pickup_end(self):
+        order = self.reserve().json()
+        created = datetime.fromisoformat(order["created_at"])
+        self.assertEqual(datetime.fromisoformat(order["pay_before"]), created + timedelta(minutes=5))
+        end = timezone.now() + timedelta(minutes=2)
+        Listing.objects.filter(pk=self.item.pk).update(pickup_end=end)
+        pay_before = self.client.get(f"/api/reservations/{order['id']}").json()["pay_before"]
+        self.assertEqual(datetime.fromisoformat(pay_before), end)
+
+    def test_paid_order_expires_when_not_picked_up(self):
+        pk = self.order()
+        self.client.post(f"/api/reservations/{pk}/pay")
+        self.age(pk, 60)
+        self.assertEqual(self.client.get(f"/api/reservations/{pk}").json()["status"], "paid")
+        Listing.objects.filter(pk=self.item.pk).update(pickup_end=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.client.get("/api/reservations").json()[0]["status"], "expired")
+        self.assertEqual(self.stock(), 5)
+
+    def test_catalog_releases_stock_held_by_unpaid_orders(self):
+        pk = self.order()
+        self.age(pk, 6)
+        self.client.force_authenticate(None)
+        listing = next(item for item in self.client.get("/api/listings").json() if item["id"] == self.item.pk)
+        self.assertEqual(listing["stock"], 5)
+        self.assertEqual(Reservation.objects.get(pk=pk).status, "expired")
+
+
 class SeedDemoTests(TestCase):
     def test_seed_reads_demo_catalog_as_utf8(self):
         # Windows defaults to cp1252, which turns "·" into "Â·".
         call_command("seed_demo", stdout=StringIO())
         self.assertEqual(Listing.objects.get(pk=1).store, "Kopi Tuku · Margonda")
+
+    def test_seed_is_not_blocked_by_orders_past_pickup(self):
+        call_command("seed_demo", stdout=StringIO())
+        user = User.objects.create_user(username="buyer")
+        Listing.objects.filter(pk=1).update(pickup_end=timezone.now() - timedelta(minutes=1))
+        Reservation.objects.create(user=user, listing_id=1, quantity=1, total=18000, code="CCCCC", status="paid")
+        call_command("seed_demo", stdout=StringIO())
+        self.assertEqual(Reservation.objects.get().status, "expired")
 
 
 class ThrottleMessageTests(TestCase):
