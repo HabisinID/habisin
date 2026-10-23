@@ -10,9 +10,10 @@ class Command(BaseCommand):
     help = "Create or refresh six demo listings (no demo user credentials)."
 
     def handle(self, *args, **options):
-        if Reservation.objects.filter(status="reserved").exists():
+        Reservation.expire_overdue()
+        if Reservation.objects.filter(status__in=Reservation.ACTIVE_STATUSES).exists():
             raise CommandError("Cancel active demo reservations before refreshing catalog stock.")
-        items = json.loads((Path(__file__).resolve().parents[2] / "demo.json").read_text())
+        items = json.loads((Path(__file__).resolve().parents[2] / "demo.json").read_text(encoding="utf-8"))
         now = timezone.localtime()
         for item in items:
             pk = item.pop("id")

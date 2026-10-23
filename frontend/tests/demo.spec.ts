@@ -84,6 +84,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
       .getByRole("button", { name: "Pesan Surprise Pastry Box", exact: true })
       .click();
     await page.getByLabel("Jumlah porsi").fill("2");
+    await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();

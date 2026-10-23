@@ -178,9 +178,10 @@ perintah Python backend.
 
 `seed_demo` membuat atau memperbarui **enam listing contoh**, mengatur ulang stoknya,
 dan membuka waktu pengambilan selama **delapan jam** sejak perintah dijalankan.
-Perintah menolak pembaruan jika masih ada reservasi berstatus aktif, termasuk yang
-waktu pengambilannya sudah lewat. Batalkan pesanan melalui **Pesanan saya** sebelum
-menjalankan ulang seed.
+Pesanan yang belum dibayar lebih dari lima menit atau sudah melewati batas ambil
+otomatis menjadi **Kedaluwarsa** sebelum seed berjalan. Perintah tetap menolak
+pembaruan jika masih ada pesanan aktif yang belum lewat batas; batalkan melalui
+**Pesanan saya** sebelum menjalankan ulang seed.
 
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
@@ -266,10 +267,14 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 1. Daftar sebagai **Pembeli**. Ketersediaan username diperiksa otomatis.
 2. Cari/filter makanan, simpan favorit, atau pilih marker harga di tampilan **Peta**.
    Tombol lokasi meminta izin GPS dan menghitung ulang jarak dari lokasi pengguna.
-3. Buka produk, pilih jumlah porsi, lalu pilih **Simulasikan pembayaran berhasil**.
-   Tidak ada pembayaran sungguhan; stok berkurang dan kode tiket tersimpan di SQLite.
-4. Buka **Pesanan saya** untuk melihat tiket atau membatalkan pesanan. Pembatalan
-   mengembalikan stok dan tidak bisa menggandakan pengembalian stok.
+3. Buka produk, pilih jumlah porsi dan catatan pengambilan, lalu pilih
+   **Lanjut ke ringkasan**. Periksa atau ubah pesanan, lalu pilih
+   **Simulasikan pembayaran berhasil**. Tidak ada pembayaran sungguhan; stok ditahan
+   sejak pesanan dibuat dan kode tiket tersimpan di SQLite.
+4. Buka **Pesanan saya** untuk melanjutkan pembayaran, melihat tiket, membatalkan
+   pesanan, atau menghapus pesanan selesai/dibatalkan dari riwayat. Pembatalan
+   mengembalikan stok dan tidak bisa menggandakan pengembalian stok. Lihat
+   [panduan Modul 7](docs/module-7.md) untuk status pesanan dan API pemesanan.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.
 
@@ -303,9 +308,10 @@ Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 
 ### Status implementasi
 
-Modul 1 (akun) dan Modul 2 (onboarding/geocoding serta CRUD toko) sudah tersedia.
+Modul 1 (akun), Modul 2 (onboarding/geocoding serta CRUD toko), dan Modul 7
+(ringkasan, edit, mock payment, batal, dan hapus riwayat pesanan) sudah tersedia.
 Ini belum implementasi lengkap seluruh 10 modul. CRUD produk di frontend,
-edit/hapus pesanan, persetujuan mitra/moderasi,
+persetujuan mitra/moderasi,
 moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
 offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
 demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Semua listing saat
@@ -321,6 +327,15 @@ source .venv/bin/activate
 python manage.py test
 python manage.py check
 python manage.py makemigrations --check --dry-run
+```
+
+Untuk mengukur coverage tes backend, instal dependensi pengembangan sekali, lalu
+jalankan dari `backend` dengan `.venv` aktif:
+
+```bash
+python -m pip install -r requirements-dev.txt
+coverage run manage.py test
+coverage report
 ```
 
 ```bash
@@ -392,3 +407,15 @@ Bantuan AI digunakan untuk:
 - **Autentikasi:** registrasi, login/logout, role, sesi persisten, edit profil, ganti password, dan hapus akun.
 - **Demo responsif:** katalog makanan, pencarian/filter, peta interaktif, favorit, mock payment, reservasi, tiket pengambilan, dan pembatalan pesanan.
 - **Dokumentasi:** penyusunan instruksi setup, prasyarat, konfigurasi environment, seeding demo, perintah pengujian, troubleshooting, dan batasan demo di README ini.
+
+### Branch: `feat/pemesanan-dan-mock-payment`
+
+Tools: Claude Code (Anthropic), sesi lokal tanpa tautan chat publik.
+
+Bantuan AI digunakan untuk:
+
+- **Pemesanan (Modul 7):** status pesanan, migrasi data, endpoint ringkasan/edit/mock payment/batal/hapus riwayat, validasi serializer, decorator kepemilikan pesanan, dan rate limiting.
+- **Antarmuka:** komponen ringkasan pesanan dan daftar pesanan dengan optimistic update.
+- **Pengujian:** unit test backend dan tes browser Playwright yang ditulis lebih dahulu (TDD), serta pengukuran coverage.
+- **Perbaikan pendukung:** pembacaan katalog demo sebagai UTF-8 dan pesan 429 berbahasa Indonesia.
+- **Dokumentasi:** panduan Modul 7 dan pembaruan README ini.

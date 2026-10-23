@@ -12,6 +12,8 @@ urlpatterns = [
     path("auth/password", views.password),
     path("listings", views.listings),
     path("reservations", views.reservations),
+    path("reservations/<int:pk>", views.reservation_detail),
+    path("reservations/<int:pk>/pay", views.pay_reservation),
     path("reservations/<int:pk>/cancel", views.cancel_reservation),
     path("dashboard", views.dashboard),
     path("partner/geocode", store_views.geocode),

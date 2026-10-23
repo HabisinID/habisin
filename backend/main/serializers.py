@@ -51,10 +51,41 @@ class ListingSerializer(serializers.ModelSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     listing = ListingSerializer(read_only=True)
+    pay_before = serializers.DateTimeField(read_only=True)
+    cancel_until = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "pay_before", "cancel_until", "paid_at", "picked_up_at"]
+
+
+class StrictIntegerField(serializers.IntegerField):
+    # DRF accepts "2" and True as integers; orders only accept real JSON numbers.
+    def to_internal_value(self, data):
+        if type(data) is not int:
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+class StrictCharField(serializers.CharField):
+    # DRF converts numbers to strings; a note must be sent as text.
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+QUANTITY_ERRORS = {"invalid": "Jumlah porsi harus berupa angka bulat.", "min_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi.", "max_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi."}
+
+
+class ReservationUpdateSerializer(serializers.Serializer):
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, required=False, error_messages=QUANTITY_ERRORS)
+    note = StrictCharField(max_length=Reservation.NOTE_MAX_LENGTH, allow_blank=True, required=False, error_messages={"invalid": "Catatan harus berupa teks.", "max_length": f"Catatan maksimal {Reservation.NOTE_MAX_LENGTH} karakter."})
+
+
+class ReservationCreateSerializer(ReservationUpdateSerializer):
+    listing_id = StrictIntegerField(error_messages={"invalid": "Pilih produk yang valid."})
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, default=1, error_messages=QUANTITY_ERRORS)
 
 
 class GeocodeSerializer(serializers.Serializer):
