@@ -271,6 +271,7 @@ class ReservationFlowTests(TestCase):
         throttled = self.client.post(f"/api/reservations/{pk}/cancel")
         self.assertEqual(throttled.status_code, 429)
         self.assertIn("Retry-After", throttled)
+        self.assertRegex(throttled.json()["detail"], r"^Terlalu banyak permintaan\. Coba lagi dalam \d+ detik\.$")
         self.assertEqual(self.reserve().status_code, 429)
         self.assertEqual(self.client.get("/api/reservations").status_code, 200)
         self.assertEqual(self.client.get(f"/api/reservations/{pk}").status_code, 200)
@@ -291,3 +292,13 @@ class SeedDemoTests(TestCase):
         # Windows defaults to cp1252, which turns "·" into "Â·".
         call_command("seed_demo", stdout=StringIO())
         self.assertEqual(Listing.objects.get(pk=1).store, "Kopi Tuku · Margonda")
+
+
+class ThrottleMessageTests(TestCase):
+    def test_custom_throttle_message_keeps_text_and_waits_in_indonesian(self):
+        from rest_framework.exceptions import Throttled
+        from .exceptions import exception_handler
+
+        response = exception_handler(Throttled(wait=1.2, detail="Pencarian alamat sedang digunakan."), {})
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.data["detail"], "Pencarian alamat sedang digunakan. Coba lagi dalam 2 detik.")
