@@ -1,8 +1,10 @@
 from datetime import timedelta
+from io import StringIO
 from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -282,3 +284,10 @@ class ReservationFlowTests(TestCase):
         with patch("main.views.secrets.choice", return_value="A"), self.assertRaises(IntegrityError):
             self.reserve()
         self.assertEqual(self.stock(), 3)
+
+
+class SeedDemoTests(TestCase):
+    def test_seed_reads_demo_catalog_as_utf8(self):
+        # Windows defaults to cp1252, which turns "·" into "Â·".
+        call_command("seed_demo", stdout=StringIO())
+        self.assertEqual(Listing.objects.get(pk=1).store, "Kopi Tuku · Margonda")
