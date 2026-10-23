@@ -25,7 +25,6 @@ import {
   Map,
   MapPin,
   Search,
-  ShoppingBag,
   SlidersHorizontal,
   Sprout,
   Ticket,
@@ -35,6 +34,8 @@ import {
 } from "lucide-react";
 import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
+import OrderList from "@/components/order-list";
+import OrderSummary from "@/components/order-summary";
 import {
   api,
   distance,
@@ -45,6 +46,7 @@ import {
   type User,
 } from "@/lib/api";
 import demo from "@/lib/demo.json";
+import { orderApi } from "@/lib/orders";
 
 const FoodMap = dynamic(() => import("@/components/food-map"), {
   ssr: false,
@@ -120,8 +122,11 @@ export default function Home() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [orders, setOrders] = useState<Reservation[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
   const [orderError, setOrderError] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [note, setNote] = useState("");
+  const [summary, setSummary] = useState<Reservation | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [ticket, setTicket] = useState<Reservation | null>(null);
@@ -172,6 +177,7 @@ export default function Home() {
   );
   const selectItem = useCallback((item: Listing) => {
     setQuantity(1);
+    setNote("");
     setOrderError("");
     setSelected(item);
   }, []);
@@ -205,6 +211,11 @@ export default function Home() {
       { timeout: 10000 },
     );
   }
+  function updateListing(listing: Listing) {
+    setItems((current) =>
+      current.map((item) => (item.id === listing.id ? listing : item)),
+    );
+  }
   async function showOrders() {
     if (!user) {
       setPanel("login");
@@ -212,11 +223,11 @@ export default function Home() {
     }
     setPanel("orders");
     setOrdersLoading(true);
-    setOrderError("");
+    setOrdersError("");
     try {
-      setOrders(await api<Reservation[]>("reservations"));
+      setOrders(await orderApi.list());
     } catch (e) {
-      setOrderError((e as Error).message);
+      setOrdersError((e as Error).message);
     } finally {
       setOrdersLoading(false);
     }
@@ -231,46 +242,10 @@ export default function Home() {
     setBusy(true);
     setOrderError("");
     try {
-      const pending = await api<Reservation>("reservations", "POST", {
-        listing_id: selected!.id,
-        quantity,
-      });
-      const order = await api<Reservation>(
-        `reservations/${pending.id}/pay`,
-        "POST",
-      );
-      setTicket(order);
+      const order = await orderApi.create(selected!.id, quantity, note);
+      updateListing(order.listing);
       setSelected(null);
-      setItems((current) =>
-        current.map((item) =>
-          item.id === order.listing.id
-            ? { ...item, stock: order.listing.stock }
-            : item,
-        ),
-      );
-    } catch (e) {
-      setOrderError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function cancel(order: Reservation) {
-    setBusy(true);
-    setOrderError("");
-    try {
-      const updated = await api<Reservation>(
-        `reservations/${order.id}/cancel`,
-        "POST",
-      );
-      setOrders((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
-      setItems((current) =>
-        current.map((item) =>
-          item.id === updated.listing.id ? updated.listing : item,
-        ),
-      );
-      setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
+      setSummary(order);
     } catch (e) {
       setOrderError((e as Error).message);
     } finally {
@@ -1022,13 +997,23 @@ export default function Home() {
               onChange={(e) => setQuantity(Number(e.target.value))}
             />
           </div>
+          <label className="block space-y-2 text-[12px] font-semibold">
+            Catatan pengambilan{" "}
+            <small className="font-normal text-[#929c85]">(opsional)</small>
+            <textarea
+              className="block w-full min-h-16 resize-y rounded-[6px] border border-[#dce4d3] bg-white p-[10px] font-normal"
+              maxLength={200}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Misalnya: datang sekitar jam 7 malam"
+            />
+          </label>
           <div className="total-row flex justify-between pt-[18px] [border-top:1px_solid_var(--color-line)] [&_strong]:text-[20px] [&_strong]:text-brand">
             <span>Total</span>
             <strong>{rupiah(selected.price * quantity)}</strong>
           </div>
           <p className="fine-print text-[10px] leading-[1.8] text-[#939b88] my-[15px] mx-0">
-            Simulasi pembayaran demo. Tidak ada tagihan atau transaksi uang
-            sungguhan.
+            Periksa dan ubah pesanan di ringkasan sebelum simulasi pembayaran.
           </p>
           {orderError && (
             <p
@@ -1062,9 +1047,7 @@ export default function Home() {
                 ? "Backend belum terhubung"
                 : !user
                   ? "Masuk untuk memesan"
-                  : selected.price === 0
-                    ? "Klaim donasi gratis"
-                    : "Simulasikan pembayaran berhasil"}
+                  : "Lanjut ke ringkasan"}
             <ArrowRight size={18} />
           </button>
         </Modal>
@@ -1103,92 +1086,42 @@ export default function Home() {
         </Modal>
       )}
       {panel === "orders" && (
-        <Modal title="Pesanan saya" onClose={() => setPanel(null)}>
-          {ordersLoading ? (
-            <p className="modal-description text-[13px] leading-[1.85] text-[#7d8873] my-4 mx-0">
-              Memuat pesanan…
-            </p>
-          ) : orders.length === 0 ? (
-            <div className="empty-state flex flex-col items-center justify-center gap-4 text-center py-[55px] px-5 text-[#69815e] bg-[#f2f5ec] [border:1px_dashed_#d6dfca] rounded-3 [&_h3]:text-[18px] [&_p]:text-[12px] [&_p]:leading-[1.7] [&_p]:text-[#849477]">
-              <ShoppingBag size={35} />
-              <h3>Petualangan enakmu dimulai di sini.</h3>
-              <p>Belum ada pesanan. Yuk, selamatkan porsi pertamamu.</p>
-              <button
-                className="button primary inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)]"
-                onClick={() => setPanel(null)}
-              >
-                Jelajahi makanan
-              </button>
-            </div>
-          ) : (
-            <div className="order-list flex flex-col gap-[14px]">
-              {orders.map((order) => (
-                <div
-                  className="order-item p-[15px] [border:1px_solid_#dfe6d6] rounded-[9px] bg-[white] [&_p]:text-[10px] [&_p]:text-[#8a967e] [&_p]:my-[9px] [&_p]:mx-0 [&_>_small]:text-[9px] [&_>_small]:text-[#8a967e]"
-                  key={order.id}
-                >
-                  <div className="order-heading flex justify-between gap-[10px] text-[12px] items-center">
-                    <strong>{order.listing.name}</strong>
-                    <span
-                      className={
-                        order.status === "cancelled"
-                          ? "cancelled-label text-[8px] py-[5px] px-[7px] rounded-1 bg-[#f1e8e4] text-[#9a7d6f]"
-                          : "success-label text-[8px] py-[5px] px-[7px] rounded-1 bg-[#eaf3e2] text-[#618348]"
-                      }
-                    >
-                      {
-                        {
-                          pending: "Menunggu pembayaran",
-                          paid: "Dipesan",
-                          picked_up: "Sudah diambil",
-                          cancelled: "Dibatalkan",
-                        }[order.status]
-                      }
-                    </span>
-                  </div>
-                  <p>
-                    {order.quantity} porsi · {rupiah(order.total)} ·{" "}
-                    {order.listing.store}
-                  </p>
-                  <small>
-                    Ambil sebelum {pickup(order.listing.pickup_end)} WIB
-                  </small>
-                  {(order.status === "pending" || order.status === "paid") && (
-                    <div className="order-actions flex justify-between items-center mt-[10px]">
-                      {order.status === "paid" && (
-                        <button
-                          className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"
-                          onClick={() => {
-                            setPanel(null);
-                            setTicket(order);
-                          }}
-                        >
-                          Tiket {order.code}
-                          <Ticket size={15} />
-                        </button>
-                      )}
-                      <button
-                        className="cancel-button text-[10px] text-[#ac7462] p-2 ml-auto"
-                        disabled={busy}
-                        onClick={() => cancel(order)}
-                      >
-                        Batalkan
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {orderError && (
-            <p
-              className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[#fbeae4] text-[#a34337]"
-              role="alert"
-            >
-              {orderError}
-            </p>
-          )}
-        </Modal>
+        <OrderList
+          orders={orders}
+          setOrders={setOrders}
+          loading={ordersLoading}
+          loadError={ordersError}
+          onListing={updateListing}
+          onResume={(order) => {
+            setPanel(null);
+            setSummary(order);
+          }}
+          onTicket={(order) => {
+            setPanel(null);
+            setTicket(order);
+          }}
+          onClose={() => setPanel(null)}
+        />
+      )}
+      {summary && (
+        <OrderSummary
+          order={summary}
+          origin={origin}
+          onChange={(order) => {
+            setSummary(order);
+            updateListing(order.listing);
+          }}
+          onPaid={(order) => {
+            setSummary(null);
+            setTicket(order);
+          }}
+          onCancelled={(order) => {
+            setSummary(null);
+            updateListing(order.listing);
+            setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
+          }}
+          onClose={() => setSummary(null)}
+        />
       )}
     </>
   );
