@@ -10,15 +10,24 @@ from django.db.models import F
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from .models import Profile, Listing, Reservation
 from .serializers import UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer
 
 
 class AuthThrottle(AnonRateThrottle):
     rate = "30/min"
+
+
+class OrderWriteThrottle(UserRateThrottle):
+    """Limit order changes per account; reading orders is not counted."""
+    scope = "reservation_write"
+    rate = "30/min"
+
+    def allow_request(self, request, view):
+        return request.method in SAFE_METHODS or super().allow_request(request, view)
 
 
 @api_view(["GET"])
@@ -151,6 +160,7 @@ def conflict(reservation, action):
 
 
 @api_view(["GET", "POST"])
+@throttle_classes([OrderWriteThrottle])
 def reservations(request):
     if request.method == "GET":
         return Response(ReservationSerializer(Reservation.objects.filter(user=request.user).select_related("listing").order_by("-created_at"), many=True).data)
@@ -175,6 +185,7 @@ def reservations(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
+@throttle_classes([OrderWriteThrottle])
 @owned_reservation
 def reservation_detail(request, reservation):
     if request.method == "GET":
@@ -203,6 +214,7 @@ def reservation_detail(request, reservation):
 
 
 @api_view(["POST"])
+@throttle_classes([OrderWriteThrottle])
 @owned_reservation
 def pay_reservation(request, reservation):
     if reservation.status != "pending":
@@ -216,6 +228,7 @@ def pay_reservation(request, reservation):
 
 
 @api_view(["POST"])
+@throttle_classes([OrderWriteThrottle])
 @owned_reservation
 def cancel_reservation(request, reservation):
     if reservation.status == "picked_up":
