@@ -54,7 +54,7 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "paid_at", "picked_up_at"]
 
 
 class GeocodeSerializer(serializers.Serializer):

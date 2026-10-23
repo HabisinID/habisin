@@ -28,8 +28,11 @@ export type Reservation = {
   quantity: number;
   total: number;
   code: string;
-  status: string;
+  note: string;
+  status: "pending" | "paid" | "picked_up" | "cancelled";
   created_at: string;
+  paid_at: string | null;
+  picked_up_at: string | null;
 };
 
 export type Store = {

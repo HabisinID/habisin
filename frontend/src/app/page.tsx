@@ -1132,7 +1132,14 @@ export default function Home() {
                           : "success-label text-[8px] py-[5px] px-[7px] rounded-1 bg-[#eaf3e2] text-[#618348]"
                       }
                     >
-                      {order.status === "cancelled" ? "Dibatalkan" : "Dipesan"}
+                      {
+                        {
+                          pending: "Menunggu pembayaran",
+                          paid: "Dipesan",
+                          picked_up: "Sudah diambil",
+                          cancelled: "Dibatalkan",
+                        }[order.status]
+                      }
                     </span>
                   </div>
                   <p>
@@ -1142,7 +1149,7 @@ export default function Home() {
                   <small>
                     Ambil sebelum {pickup(order.listing.pickup_end)} WIB
                   </small>
-                  {order.status === "reserved" && (
+                  {order.status === "paid" && (
                     <div className="order-actions flex justify-between items-center mt-[10px]">
                       <button
                         className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"

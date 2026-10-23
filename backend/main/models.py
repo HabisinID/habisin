@@ -64,10 +64,16 @@ class Listing(models.Model):
 
 
 class Reservation(models.Model):
+    # Stock is held while an order is pending or paid; cancelling releases it.
+    ACTIVE_STATUSES = ["pending", "paid"]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     listing = models.ForeignKey(Listing, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     total = models.PositiveIntegerField()
     code = models.CharField(max_length=5, unique=True)
-    status = models.CharField(max_length=12, default="reserved", choices=[("reserved", "Dipesan"), ("cancelled", "Dibatalkan")])
+    note = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=12, default="pending", choices=[("pending", "Menunggu pembayaran"), ("paid", "Lunas"), ("picked_up", "Sudah diambil"), ("cancelled", "Dibatalkan")])
     created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    picked_up_at = models.DateTimeField(null=True, blank=True)

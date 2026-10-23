@@ -80,7 +80,7 @@ def me(request):
         if not isinstance(password, str) or not request.user.check_password(password):
             return Response({"detail": "Password salah."}, status=400)
         with transaction.atomic():
-            for reservation in Reservation.objects.filter(user=request.user, status="reserved"):
+            for reservation in Reservation.objects.filter(user=request.user, status__in=Reservation.ACTIVE_STATUSES):
                 Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
             user = request.user
             logout(request)
@@ -136,7 +136,7 @@ def reservations(request):
         for attempt in range(5):
             try:
                 with transaction.atomic():
-                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=quantity, total=quantity * listing.price, code="".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5)))
+                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=quantity, total=quantity * listing.price, status="paid", paid_at=timezone.now(), code="".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5)))
                 break
             except IntegrityError:
                 if attempt == 4:
@@ -150,7 +150,7 @@ def cancel_reservation(request, pk):
         reservation = Reservation.objects.filter(pk=pk, user=request.user).first()
         if not reservation:
             return Response({"detail": "Pesanan tidak ditemukan."}, status=404)
-        updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled")
+        updated = Reservation.objects.filter(pk=pk, user=request.user, status__in=Reservation.ACTIVE_STATUSES).update(status="cancelled")
         if updated:
             Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
         reservation.refresh_from_db()
