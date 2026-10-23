@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Book(models.Model):
@@ -14,6 +15,35 @@ class Book(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=10, choices=[("buyer", "Pembeli"), ("partner", "Mitra")], default="buyer")
+
+
+class Store(models.Model):
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="store")
+    name = models.CharField(max_length=120)
+    description = models.TextField(max_length=2000)
+    address = models.CharField(max_length=250)
+    opening_time = models.TimeField()
+    closing_time = models.TimeField()
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    is_open = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class GeocodingCache(models.Model):
+    query_hash = models.CharField(max_length=64, primary_key=True)
+    results = models.JSONField(default=list)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+
+class GeocodingQuota(models.Model):
+    # A single database row coordinates requests across all application workers.
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    available_at = models.DateTimeField(default=timezone.now)
 
 
 class Listing(models.Model):

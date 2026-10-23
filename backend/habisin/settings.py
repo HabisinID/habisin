@@ -139,6 +139,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org/search")
+NOMINATIM_USER_AGENT = os.getenv("NOMINATIM_USER_AGENT", "HABISIN/1.0 (partner store onboarding)")
 TIME_ZONE = "Asia/Jakarta"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 if not DEBUG and SECRET_KEY == "local-demo-only-change-before-deployment":

@@ -9,6 +9,8 @@ import {
 } from "react";
 import { ArrowLeft, Plus, PackageOpen } from "lucide-react";
 import Modal from "./modal";
+import { primaryButton, secondaryButton, errorClass } from "./store-ui";
+import styles from "./partner-listings.module.css";
 import {
   ApiError,
   listingCategories,
@@ -37,11 +39,14 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="listing-field">
+    <div className={styles["listing-field"]}>
       <label htmlFor={`listing-${name}`}>{label}</label>
       {children}
       {error && (
-        <small id={`listing-${name}-error`} className="listing-field-error">
+        <small
+          id={`listing-${name}-error`}
+          className={styles["listing-field-error"]}
+        >
           {error}
         </small>
       )}
@@ -136,10 +141,10 @@ function ListingForm({
     }
   }
   return (
-    <form className="listing-form" onSubmit={submit}>
+    <form className={styles["listing-form"]} onSubmit={submit}>
       <button
         type="button"
-        className="text-button listing-back"
+        className={`${styles["listing-back"]} text-sm font-semibold text-brand`}
         onClick={onCancel}
         disabled={busy}
       >
@@ -147,16 +152,16 @@ function ListingForm({
       </button>
       <div>
         <h3>{item ? "Ubah listing" : "Tambah listing"}</h3>
-        <p className="listing-hint">
+        <p className={styles["listing-hint"]}>
           Isi detail makanan dan lokasi pengambilan. Waktu menggunakan WIB.
         </p>
       </div>
       {error && (
-        <p className="error" role="alert">
+        <p className={errorClass} role="alert">
           {error}
         </p>
       )}
-      <fieldset disabled={busy} className="listing-fields">
+      <fieldset disabled={busy} className={styles["listing-fields"]}>
         <Field name="name" label="Nama makanan" error={errors.name}>
           <input
             {...inputProps("name")}
@@ -193,7 +198,7 @@ function ListingForm({
             defaultValue={item?.stock ?? 1}
           />
         </Field>
-        <div className="listing-span">
+        <div className={styles["listing-span"]}>
           <Field
             name="description"
             label="Deskripsi makanan"
@@ -207,7 +212,7 @@ function ListingForm({
             />
           </Field>
         </div>
-        <div className="listing-span">
+        <div className={styles["listing-span"]}>
           <Field name="image" label="URL foto makanan" error={errors.image}>
             <input
               {...inputProps("image")}
@@ -218,11 +223,13 @@ function ListingForm({
               defaultValue={item?.image}
             />
           </Field>
-          <p className="listing-hint">
+          <p className={styles["listing-hint"]}>
             Gunakan URL foto publik dengan awalan https:// atau http://.
           </p>
         </div>
-        <label className="listing-donation listing-span">
+        <label
+          className={styles["listing-donation"] + " " + styles["listing-span"]}
+        >
           <input
             type="checkbox"
             checked={free}
@@ -259,7 +266,11 @@ function ListingForm({
           </>
         )}
         {free && (errors.price || errors.original_price) && (
-          <p className="listing-field-error listing-span">
+          <p
+            className={
+              styles["listing-field-error"] + " " + styles["listing-span"]
+            }
+          >
             {errors.price || errors.original_price}
           </p>
         )}
@@ -287,7 +298,7 @@ function ListingForm({
             defaultValue={item ? localDate(item.pickup_end) : times.end}
           />
         </Field>
-        <div className="listing-span">
+        <div className={styles["listing-span"]}>
           <Field
             name="address"
             label="Alamat pengambilan"
@@ -327,20 +338,20 @@ function ListingForm({
           />
         </Field>
       </fieldset>
-      <p className="listing-hint">
+      <p className={styles["listing-hint"]}>
         Stok adalah jumlah yang masih dapat dipesan. Harga, alamat, koordinat,
         dan waktu ambil tidak dapat diubah selama ada pesanan aktif.
       </p>
-      <div className="listing-form-actions">
+      <div className={styles["listing-form-actions"]}>
         <button
           type="button"
-          className="button listing-secondary"
+          className={secondaryButton}
           onClick={onCancel}
           disabled={busy}
         >
           Batal
         </button>
-        <button className="button primary" disabled={busy}>
+        <button className={primaryButton} disabled={busy}>
           {busy
             ? "Menyimpan…"
             : item
@@ -449,7 +460,7 @@ export default function PartnerListings({
         if (!busy) onClose();
       }}
     >
-      <div className="partner-listings">
+      <div className={styles["partner-listings"]}>
         {form ? (
           <ListingForm
             key={form.item?.id ?? "new"}
@@ -461,13 +472,13 @@ export default function PartnerListings({
           />
         ) : (
           <>
-            <div className="listing-toolbar">
+            <div className={styles["listing-toolbar"]}>
               <p>
                 Kelola makanan surplus milik tokomu, termasuk listing nonaktif
                 dan kedaluwarsa.
               </p>
               <button
-                className="button primary"
+                className={primaryButton}
                 onClick={() => {
                   setForm({ item: null });
                   setMessage("");
@@ -479,16 +490,19 @@ export default function PartnerListings({
               </button>
             </div>
             {message && (
-              <p className="success" role="status">
+              <p
+                className="rounded-lg bg-[#e8f1e1] p-3 text-xs leading-relaxed text-[#477543]"
+                role="status"
+              >
                 {message}
               </p>
             )}
             {error && (
-              <p className="error" role="alert">
+              <p className={errorClass} role="alert">
                 {error}{" "}
                 {items.length === 0 && (
                   <button
-                    className="text-button"
+                    className="inline-flex items-center gap-2 py-1.5 text-xs font-semibold text-brand"
                     onClick={() => {
                       setLoading(true);
                       setError("");
@@ -501,11 +515,11 @@ export default function PartnerListings({
               </p>
             )}
             {loading ? (
-              <p className="listing-loading" role="status">
+              <p className={styles["listing-loading"]} role="status">
                 Memuat listing…
               </p>
             ) : items.length === 0 && !error ? (
-              <div className="empty-state">
+              <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-line bg-light px-5 py-12 text-center text-muted [&_h3]:text-lg [&_p]:text-xs">
                 <PackageOpen size={35} />
                 <h3>Belum ada listing.</h3>
                 <p>
@@ -514,8 +528,8 @@ export default function PartnerListings({
               </div>
             ) : (
               items.length > 0 && (
-                <div className="listing-table-wrap">
-                  <table className="listing-table">
+                <div className={styles["listing-table-wrap"]}>
+                  <table className={styles["listing-table"]}>
                     <caption className="sr-only">
                       Inventaris makanan surplus milik Anda
                     </caption>
@@ -541,9 +555,9 @@ export default function PartnerListings({
                           <Fragment key={item.id}>
                             <tr>
                               <td data-label="Produk">
-                                <div className="listing-product">
+                                <div className={styles["listing-product"]}>
                                   <div
-                                    className="listing-thumbnail"
+                                    className={styles["listing-thumbnail"]}
                                     style={{
                                       backgroundImage: `url(${JSON.stringify(item.image)})`,
                                     }}
@@ -570,13 +584,13 @@ export default function PartnerListings({
                               <td data-label="Stok">{item.stock} porsi</td>
                               <td data-label="Status">
                                 <span
-                                  className={`listing-status${status === "Aktif" ? " is-active" : ""}`}
+                                  className={`${styles["listing-status"]}${status === "Aktif" ? ` ${styles["is-active"]}` : ""}`}
                                 >
                                   {status}
                                 </span>
                               </td>
                               <td data-label="Aksi">
-                                <div className="listing-actions">
+                                <div className={styles["listing-actions"]}>
                                   <button
                                     onClick={() => {
                                       setForm({ item });
@@ -603,7 +617,7 @@ export default function PartnerListings({
                                     {item.active ? "Nonaktifkan" : "Aktifkan"}
                                   </button>
                                   <button
-                                    className="listing-delete"
+                                    className={styles["listing-delete"]}
                                     disabled={busy}
                                     onClick={() =>
                                       setConfirmation({
@@ -622,7 +636,7 @@ export default function PartnerListings({
                               <tr>
                                 <td colSpan={5}>
                                   <div
-                                    className="listing-confirm"
+                                    className={styles["listing-confirm"]}
                                     role="group"
                                     aria-label="Konfirmasi aksi listing"
                                   >
@@ -631,7 +645,7 @@ export default function PartnerListings({
                                         ? `Hapus ${item.name} permanen? Listing dengan riwayat pesanan hanya dapat dinonaktifkan.`
                                         : `Nonaktifkan ${item.name}? Pesanan yang sudah masuk tetap berlaku.`}
                                     </p>
-                                    <div className="listing-actions">
+                                    <div className={styles["listing-actions"]}>
                                       <button
                                         disabled={busy}
                                         onClick={() =>

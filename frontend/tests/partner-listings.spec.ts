@@ -1,9 +1,5 @@
-import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Page,
-} from "@playwright/test";
+import { type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const password = "Module3-Secure-927!";
 const image = "https://example.com/module3-photo.svg";

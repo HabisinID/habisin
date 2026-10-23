@@ -198,4 +198,4 @@ def dashboard(request):
     role = UserSerializer(request.user).data["role"]
     if role == "buyer":
         return Response({"detail": "Akses khusus mitra atau admin."}, status=403)
-    return Response({"role": role, "users": User.objects.count() if role == "admin" else None, "listings": Listing.objects.filter(active=True).count(), "message": "Katalog contoh HABISIN. Onboarding toko dan moderasi tersedia pada pengembangan berikutnya."})
+    return Response({"role": role, "users": User.objects.count() if role == "admin" else None, "listings": Listing.objects.filter(active=True).count(), "message": "Katalog contoh HABISIN. Mitra dapat mengelola profil dan lokasi toko serta listing makanan surplus. Moderasi tersedia pada pengembangan berikutnya."})

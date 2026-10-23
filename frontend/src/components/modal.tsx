@@ -29,7 +29,7 @@ export default function Modal({
   return (
     <dialog
       ref={ref}
-      className={`modal${wide ? " modal-wide" : ""}`}
+      className={`modal m-auto p-[27px] ${wide ? "w-[min(1040px,_calc(100%_-_28px))] rounded-xl tablet:p-5" : "w-[min(490px,_calc(100%_-_28px))] rounded-[18px] mobile:p-[22px]"} max-h-[calc(100dvh_-_40px)] overflow-auto bg-cream [border:1px_solid_#dfe6d8] text-dark shadow-[0_25px_100px_#10281740] backdrop:bg-[#162c236e] backdrop:[backdrop-filter:blur(5px)] [&_h2]:text-[23px] [&_h2]:font-bold [&_h2]:tracking-[-0.8px] [&_h3]:font-bold mobile:[&_h2]:text-[21px]`}
       aria-labelledby={id}
       onCancel={(event) => {
         event.preventDefault();
@@ -39,9 +39,13 @@ export default function Modal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-head">
+      <div className="modal-head flex items-center justify-between gap-[15px] mb-[23px]">
         <h2 id={id}>{title}</h2>
-        <button className="icon-button" aria-label="Tutup" onClick={onClose}>
+        <button
+          className="icon-button inline-grid place-items-center p-[5px] text-[#708168] rounded-[5px] hover:bg-[#edf1e7]"
+          aria-label="Tutup"
+          onClick={onClose}
+        >
           <X size={21} />
         </button>
       </div>

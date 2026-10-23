@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import store_views
 
 urlpatterns = [
     path("auth/csrf", views.csrf),
@@ -15,4 +16,7 @@ urlpatterns = [
     path("reservations", views.reservations),
     path("reservations/<int:pk>/cancel", views.cancel_reservation),
     path("dashboard", views.dashboard),
+    path("partner/geocode", store_views.geocode),
+    path("partner/store", store_views.partner_store),
+    path("stores/<int:pk>", store_views.public_store),
 ]

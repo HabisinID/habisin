@@ -1,11 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import type { Page } from "@playwright/test";
+
+async function openCatalog(page: Page) {
+  const ready = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/listings",
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // The catalog request starts in useEffect, after hydration attaches handlers.
+  await ready;
+}
 
 test("discovery filters, favorites, interactive map, and responsive layout", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await openCatalog(page);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "dihabisin",
   );
@@ -22,7 +32,7 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   await page
     .getByRole("button", { name: "Simpan Surprise Pastry Box ke favorit" })
     .click();
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("button", {
       name: "Hapus Surprise Pastry Box dari favorit",
@@ -53,7 +63,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
   const newPassword = "Demo-New-Secure-638!";
   let registered = false;
   let changed = false;
-  await page.goto("/");
+  await openCatalog(page);
   try {
     await page
       .getByRole("button", { name: "Daftar gratis", exact: true })
@@ -66,7 +76,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await page.getByRole("button", { name: "Buat akun", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     registered = true;
-    await page.reload();
+    await page.reload({ waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("button", { name: "B Browser", exact: true }),
     ).toBeVisible();
