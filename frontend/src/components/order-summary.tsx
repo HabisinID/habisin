@@ -3,7 +3,12 @@ import { useState } from "react";
 import { ArrowRight, Clock3, MapPin, Navigation, Pencil } from "lucide-react";
 import Modal from "./modal";
 import { distance, pickup, rupiah, type Reservation } from "@/lib/api";
-import { orderApi, statusLabel } from "@/lib/orders";
+import {
+  MAX_QUANTITY,
+  NOTE_MAX_LENGTH,
+  orderApi,
+  statusLabel,
+} from "@/lib/orders";
 import {
   errorClass,
   fieldClass,
@@ -31,7 +36,7 @@ export default function OrderSummary({
   const [error, setError] = useState("");
   const { listing } = order;
   // Stock already held by this order can be kept when editing.
-  const maxQuantity = Math.min(10, listing.stock + order.quantity);
+  const maxQuantity = Math.min(MAX_QUANTITY, listing.stock + order.quantity);
   const km = distance(listing.latitude, listing.longitude, origin);
 
   async function run(action: () => Promise<void>) {
@@ -119,7 +124,7 @@ export default function OrderSummary({
               <textarea
                 className={`${fieldClass} min-h-20 resize-y font-normal`}
                 name="note"
-                maxLength={200}
+                maxLength={NOTE_MAX_LENGTH}
                 defaultValue={order.note}
               />
             </label>

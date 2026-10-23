@@ -46,7 +46,7 @@ import {
   type User,
 } from "@/lib/api";
 import demo from "@/lib/demo.json";
-import { orderApi } from "@/lib/orders";
+import { MAX_QUANTITY, NOTE_MAX_LENGTH, orderApi } from "@/lib/orders";
 
 const FoodMap = dynamic(() => import("@/components/food-map"), {
   ssr: false,
@@ -992,7 +992,7 @@ export default function Home() {
               id="quantity"
               type="number"
               min={1}
-              max={Math.min(selected.stock, 10)}
+              max={Math.min(selected.stock, MAX_QUANTITY)}
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
             />
@@ -1002,7 +1002,7 @@ export default function Home() {
             <small className="font-normal text-[#929c85]">(opsional)</small>
             <textarea
               className="block w-full min-h-16 resize-y rounded-[6px] border border-[#dce4d3] bg-white p-[10px] font-normal"
-              maxLength={200}
+              maxLength={NOTE_MAX_LENGTH}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Misalnya: datang sekitar jam 7 malam"
@@ -1037,7 +1037,7 @@ export default function Home() {
               selected.stock < 1 ||
               !Number.isInteger(quantity) ||
               quantity < 1 ||
-              quantity > Math.min(selected.stock, 10) ||
+              quantity > Math.min(selected.stock, MAX_QUANTITY) ||
               (!!user && user.role !== "buyer")
             }
           >

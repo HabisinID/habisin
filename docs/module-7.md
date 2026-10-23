@@ -5,7 +5,7 @@ baru. Pesanan lama berstatus `reserved` otomatis menjadi `paid`.
 
 ## Alur penggunaan
 
-1. Masuk sebagai **Pembeli**, buka produk, pilih jumlah porsi (1–10), isi catatan
+1. Masuk sebagai **Pembeli**, buka produk, pilih jumlah porsi (1–4), isi catatan
    pengambilan bila perlu, lalu pilih **Lanjut ke ringkasan**. Pesanan dibuat dengan
    status **Menunggu pembayaran** dan stok langsung ditahan.
 2. Di **Ringkasan pesanan**, periksa alamat, jarak toko dari lokasi pencarian, jam
@@ -50,8 +50,9 @@ berakhir; **409** aksi tidak sesuai status pesanan; **429** terlalu banyak perub
 
 ## Validasi dan keamanan
 
-- `quantity` harus angka bulat JSON 1–10 (`"2"`, `true`, dan `1.5` ditolak);
-  `note` harus teks maksimal 200 karakter.
+- `quantity` harus angka bulat JSON 1–4 (`"2"`, `true`, dan `1.5` ditolak);
+  `note` harus teks maksimal 140 karakter. Kode tiket memakai alfabet
+  `ACDEFHJKMNPRTUVWXY3479` (tanpa karakter mirip seperti B/8, S/5, O/0) agar mudah diketik kasir.
 - Stok dikurangi dengan `UPDATE` bersyarat (`stock >= jumlah`) sehingga pesanan
   bersamaan tidak dapat melebihi stok.
 - Decorator `@owned_reservation` mengambil pesanan milik pengguna saat ini dan

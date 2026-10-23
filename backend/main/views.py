@@ -176,7 +176,7 @@ def reservations(request):
         for attempt in range(5):
             try:
                 with transaction.atomic():
-                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=data["quantity"], total=data["quantity"] * listing.price, note=data.get("note", ""), code="".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5)))
+                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=data["quantity"], total=data["quantity"] * listing.price, note=data.get("note", ""), code="".join(secrets.choice(Reservation.CODE_ALPHABET) for _ in range(5)))
                 break
             except IntegrityError:
                 if attempt == 4:

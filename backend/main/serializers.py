@@ -73,17 +73,17 @@ class StrictCharField(serializers.CharField):
         return super().to_internal_value(data)
 
 
-QUANTITY_ERRORS = {"invalid": "Jumlah porsi harus berupa angka bulat.", "min_value": "Pilih 1–10 porsi.", "max_value": "Pilih 1–10 porsi."}
+QUANTITY_ERRORS = {"invalid": "Jumlah porsi harus berupa angka bulat.", "min_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi.", "max_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi."}
 
 
 class ReservationUpdateSerializer(serializers.Serializer):
-    quantity = StrictIntegerField(min_value=1, max_value=10, required=False, error_messages=QUANTITY_ERRORS)
-    note = StrictCharField(max_length=200, allow_blank=True, required=False, error_messages={"invalid": "Catatan harus berupa teks.", "max_length": "Catatan maksimal 200 karakter."})
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, required=False, error_messages=QUANTITY_ERRORS)
+    note = StrictCharField(max_length=Reservation.NOTE_MAX_LENGTH, allow_blank=True, required=False, error_messages={"invalid": "Catatan harus berupa teks.", "max_length": f"Catatan maksimal {Reservation.NOTE_MAX_LENGTH} karakter."})
 
 
 class ReservationCreateSerializer(ReservationUpdateSerializer):
     listing_id = StrictIntegerField(error_messages={"invalid": "Pilih produk yang valid."})
-    quantity = StrictIntegerField(min_value=1, max_value=10, default=1, error_messages=QUANTITY_ERRORS)
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, default=1, error_messages=QUANTITY_ERRORS)
 
 
 class GeocodeSerializer(serializers.Serializer):

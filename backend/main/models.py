@@ -66,13 +66,18 @@ class Listing(models.Model):
 class Reservation(models.Model):
     # Stock is held while an order is pending or paid; cancelling releases it.
     ACTIVE_STATUSES = ["pending", "paid"]
+    # A surplus listing is shared: one order may take at most this many portions.
+    MAX_QUANTITY = 4
+    NOTE_MAX_LENGTH = 140
+    # Codes are typed by a cashier, so look-alikes (B/8, S/5, Z/2, G/6, O/0, I/1/L, Q) are left out.
+    CODE_ALPHABET = "ACDEFHJKMNPRTUVWXY3479"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     listing = models.ForeignKey(Listing, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     total = models.PositiveIntegerField()
     code = models.CharField(max_length=5, unique=True)
-    note = models.CharField(max_length=200, blank=True)
+    note = models.CharField(max_length=NOTE_MAX_LENGTH, blank=True)
     status = models.CharField(max_length=12, default="pending", choices=[("pending", "Menunggu pembayaran"), ("paid", "Lunas"), ("picked_up", "Sudah diambil"), ("cancelled", "Dibatalkan")])
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)

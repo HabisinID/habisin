@@ -2,6 +2,10 @@ import { api, type Reservation } from "./api";
 
 export type OrderStatus = Reservation["status"];
 
+// Must match Reservation.MAX_QUANTITY and NOTE_MAX_LENGTH in the backend.
+export const MAX_QUANTITY = 4;
+export const NOTE_MAX_LENGTH = 140;
+
 export const statusLabel: Record<OrderStatus, string> = {
   pending: "Menunggu pembayaran",
   paid: "Dipesan",
