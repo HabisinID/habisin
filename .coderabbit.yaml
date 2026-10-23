@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# AI review for every pull request. It complements, and never replaces, the
+# required review from a teammate.
+language: id-ID
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "backend/**/*.py"
+      instructions: |
+        Django REST Framework backend. Check that every view only reads or changes
+        data owned by the current user (other users' objects must answer 404), that
+        mutations keep CSRF protection, that serializers validate types and limits
+        strictly, and that stock changes use conditional updates inside a
+        transaction. Flag N+1 queries and missing select_related. New behaviour
+        needs a test in main/tests.py or main/test_*.py; the team works test-first.
+    - path: "backend/main/migrations/*.py"
+      instructions: |
+        Check that data migrations have a reverse function and that new non-null
+        fields have a safe default for existing rows.
+    - path: "frontend/src/**/*.tsx"
+      instructions: |
+        Next.js 16 App Router with React 19 and Tailwind 4 design tokens from
+        globals.css. Check accessibility (labels, roles, keyboard use, focus),
+        that optimistic updates roll back on errors and show the server message,
+        and that no secret or user data is exposed to the client. Prefer the
+        shared components (SiteHeader, store-ui buttons) over new ad-hoc styles.
+    - path: "frontend/tests/**/*.ts"
+      instructions: |
+        Playwright tests. Check that selectors are role- or label-based and
+        unambiguous, and that tests clean up the accounts they create.
+chat:
+  auto_reply: true
