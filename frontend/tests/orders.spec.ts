@@ -98,7 +98,9 @@ test("summary page edits the order, then mock payment shows the active order", a
 
   await page.getByRole("button", { name: /^Bayar Rp/ }).click();
   await expect(page).toHaveURL(/\/pesanan\/\d+\/bayar$/);
-  await expect(page.getByRole("heading", { name: "Pembayaran" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Pembayaran", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText(/2 porsi kami tahan buat kamu sampai \d{2}\.\d{2}/),
   ).toBeVisible();

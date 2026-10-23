@@ -98,7 +98,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await order.getByRole("button", { name: "Batalkan pesanan" }).click();
     await order.getByRole("button", { name: "Ya, batalkan" }).click();
     await page.getByRole("tab", { name: /^Riwayat/ }).click();
-    await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
+    await expect(order).toContainText("Dibatalkan");
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "B Browser", exact: true }).click();
     await page.getByLabel("Nama lengkap").fill("Updated Tester");
