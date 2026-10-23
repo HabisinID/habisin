@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import F, Q
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 
 
@@ -75,6 +75,8 @@ class Reservation(models.Model):
     PAYMENT_WINDOW = timedelta(minutes=5)
     # Late cancellations leave the store no time to sell the portions again.
     CANCEL_CUTOFF = timedelta(minutes=30)
+    # Donations are shared fairly: one buyer may claim this many free portions per day.
+    FREE_DAILY_LIMIT = 2
     # A surplus listing is shared: one order may take at most this many portions.
     MAX_QUANTITY = 4
     NOTE_MAX_LENGTH = 140
@@ -99,6 +101,15 @@ class Reservation(models.Model):
     @property
     def cancel_until(self):
         return self.listing.pickup_end - self.CANCEL_CUTOFF
+
+    @classmethod
+    def free_portions_today(cls, user, exclude=None):
+        """Free portions the user claimed since local midnight, ignoring cancelled or expired claims."""
+        midnight = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+        claims = cls.objects.filter(user=user, listing__price=0, created_at__gte=midnight).exclude(status__in=["cancelled", "expired"])
+        if exclude is not None:
+            claims = claims.exclude(pk=exclude.pk)
+        return claims.aggregate(total=Sum("quantity"))["total"] or 0
 
     @classmethod
     def expire_overdue(cls):

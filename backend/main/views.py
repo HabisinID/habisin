@@ -157,6 +157,19 @@ def owned_reservation(view):
     return wrapper
 
 
+def free_limit_error(user, listing, quantity, exclude=None):
+    """Return a 400 response when a free claim would exceed the daily limit."""
+    if listing.price != 0:
+        return None
+    # Lock the buyer so two parallel claims cannot both pass the check.
+    User.objects.select_for_update().get(pk=user.pk)
+    claimed = Reservation.free_portions_today(user, exclude)
+    if claimed + quantity <= Reservation.FREE_DAILY_LIMIT:
+        return None
+    limit = Reservation.FREE_DAILY_LIMIT
+    return Response({"detail": f"Maks. {limit} porsi gratis per hari agar donasi terbagi rata. Hari ini kamu sudah mengklaim {claimed} porsi."}, status=400)
+
+
 def conflict(reservation, action):
     return Response({"detail": f"Pesanan berstatus {reservation.get_status_display().lower()} tidak dapat {action}."}, status=409)
 
@@ -173,9 +186,13 @@ def reservations(request):
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
     with transaction.atomic():
+        listing = Listing.objects.filter(pk=data["listing_id"]).first()
+        error = listing and free_limit_error(request.user, listing, data["quantity"])
+        if error:
+            return error
         if not take_stock(data["listing_id"], data["quantity"]):
             return Response({"detail": STOCK_UNAVAILABLE}, status=400)
-        listing = Listing.objects.get(pk=data["listing_id"])
+        listing.refresh_from_db()
         for attempt in range(5):
             try:
                 with transaction.atomic():
@@ -205,6 +222,9 @@ def reservation_detail(request, reservation):
     data = serializer.validated_data
     quantity = data.get("quantity", reservation.quantity)
     change = quantity - reservation.quantity
+    error = change > 0 and free_limit_error(request.user, reservation.listing, quantity, exclude=reservation)
+    if error:
+        return error
     if change > 0 and not take_stock(reservation.listing_id, change):
         return Response({"detail": STOCK_UNAVAILABLE}, status=400)
     if change < 0:

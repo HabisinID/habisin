@@ -60,6 +60,9 @@ berakhir; **409** aksi tidak sesuai status pesanan; **429** terlalu banyak perub
 - `quantity` harus angka bulat JSON 1–4 (`"2"`, `true`, dan `1.5` ditolak);
   `note` harus teks maksimal 140 karakter. Kode tiket memakai alfabet
   `ACDEFHJKMNPRTUVWXY3479` (tanpa karakter mirip seperti B/8, S/5, O/0) agar mudah diketik kasir.
+- Donasi gratis dibatasi **2 porsi per pembeli per hari** (tanggal WIB), dihitung lintas
+  listing; klaim yang dibatalkan atau kedaluwarsa tidak dihitung. Baris akun pembeli dikunci
+  saat pengecekan agar dua permintaan bersamaan tidak bisa melewati batas.
 - Stok dikurangi dengan `UPDATE` bersyarat (`stock >= jumlah`) sehingga pesanan
   bersamaan tidak dapat melebihi stok.
 - Decorator `@owned_reservation` mengambil pesanan milik pengguna saat ini dan
