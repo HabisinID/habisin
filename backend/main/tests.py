@@ -1,5 +1,7 @@
 from datetime import timedelta
+from unittest.mock import patch
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
@@ -272,3 +274,11 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(self.client.get(f"/api/reservations/{pk}").status_code, 200)
         self.as_other_user()
         self.assertEqual(self.reserve().status_code, 201)
+
+    def test_ticket_code_collision_retries_with_new_code(self):
+        Reservation.objects.create(user=self.user, listing=self.item, quantity=1, total=15000, code="AAAAA", status="cancelled")
+        with patch("main.views.secrets.choice", side_effect=list("AAAAABBBBB")):
+            self.assertEqual(self.reserve().json()["code"], "BBBBB")
+        with patch("main.views.secrets.choice", return_value="A"), self.assertRaises(IntegrityError):
+            self.reserve()
+        self.assertEqual(self.stock(), 3)
