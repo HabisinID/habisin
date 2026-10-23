@@ -368,6 +368,43 @@ class ReservationFlowTests(TestCase):
         self.assertEqual(datetime.fromisoformat(order["cancel_until"]), end - timedelta(minutes=30))
 
 
+class FreeClaimTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="buyer")
+        Profile.objects.create(user=self.user)
+        self.client.force_authenticate(self.user)
+        listing = {"store": "Demo", "category": "Roti & kue", "description": "Demo", "address": "Depok", "original_price": 20000, "stock": 5, "image": "/demo.jpg", "latitude": -6.36, "longitude": 106.83, "pickup_start": timezone.now(), "pickup_end": timezone.now() + timedelta(hours=4)}
+        self.free = Listing.objects.create(name="Roti gratis", price=0, **listing)
+        self.other_free = Listing.objects.create(name="Kue gratis", price=0, **listing)
+        self.paid = Listing.objects.create(name="Roti diskon", price=8000, **listing)
+
+    def claim(self, listing, quantity):
+        return self.client.post("/api/reservations", {"listing_id": listing.pk, "quantity": quantity}, format="json")
+
+    def test_free_portions_are_limited_to_two_per_day_across_listings(self):
+        self.assertEqual(self.claim(self.free, 2).status_code, 201)
+        response = self.claim(self.other_free, 1)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("2 porsi gratis", response.json()["detail"])
+        self.assertEqual(self.claim(self.paid, 4).status_code, 201)
+        self.other_free.refresh_from_db()
+        self.assertEqual(self.other_free.stock, 5)
+
+    def test_cancelled_and_yesterdays_claims_do_not_count(self):
+        cancelled = self.claim(self.free, 2).json()["id"]
+        self.client.post(f"/api/reservations/{cancelled}/cancel")
+        yesterday = Reservation.objects.create(user=self.user, listing=self.free, quantity=2, total=0, code="CCCCC", status="picked_up")
+        Reservation.objects.filter(pk=yesterday.pk).update(created_at=timezone.now() - timedelta(days=1))
+        self.assertEqual(self.claim(self.other_free, 2).status_code, 201)
+
+    def test_editing_a_free_claim_respects_the_daily_limit(self):
+        pk = self.claim(self.free, 1).json()["id"]
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 3}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"/api/reservations/{pk}", {"quantity": 2}, format="json").status_code, 200)
+
+
 class SeedDemoTests(TestCase):
     def test_seed_reads_demo_catalog_as_utf8(self):
         # Windows defaults to cp1252, which turns "·" into "Â·".
