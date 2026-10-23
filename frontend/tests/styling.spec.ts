@@ -46,7 +46,7 @@ test("responsive catalog, active filters, and accessible dialogs retain their st
   await expect(page.locator(".food-card")).toHaveCount(1);
   await expect(page.locator(".discount-badge")).toHaveCSS(
     "background-color",
-    "rgb(228, 242, 221)",
+    "rgb(225, 236, 227)",
   );
   await donation.uncheck();
 
