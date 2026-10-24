@@ -41,7 +41,7 @@ export default function AuthenticatedDiscovery({
 }: {
   items: Listing[];
   now: number;
-  user: User;
+  user: User | null;
   origin: Origin;
   location: string;
   locating: boolean;
@@ -62,8 +62,10 @@ export default function AuthenticatedDiscovery({
   savedOnly?: boolean;
   onSavedOnlyChange?: (value: boolean) => void;
 }) {
-  const [view, setView] = useState(user.role === "buyer" ? "map" : "list");
-  const [mapMounted, setMapMounted] = useState(user.role === "buyer");
+  const [view, setView] = useState(
+    !user || user.role === "buyer" ? "map" : "list",
+  );
+  const [mapMounted, setMapMounted] = useState(!user || user.role === "buyer");
   const [localQuery, setLocalQuery] = useState("");
   const [category, setCategory] = useState("Semua");
   const [free, setFree] = useState(false);
@@ -186,7 +188,7 @@ export default function AuthenticatedDiscovery({
         </div>
         {controls}
       </div>
-      {user.role !== "buyer" && (
+      {user && user.role !== "buyer" && (
         <div className={styles.tools}>
           <input
             type="text"
@@ -210,7 +212,7 @@ export default function AuthenticatedDiscovery({
             {locating ? "Mencari lokasi…" : "Gunakan lokasi saya"}
           </button>
 
-          {user.role === "partner" && (
+          {user?.role === "partner" && (
             <button className={styles.link} onClick={onPartner}>
               Kelola listing
             </button>
@@ -276,7 +278,7 @@ export default function AuthenticatedDiscovery({
             : ""}
         </summary>
         <div className={styles.tools}>
-          {user.role !== "buyer" && (
+          {user && user.role !== "buyer" && (
             <button
               className={styles.chip}
               aria-pressed={savedOnly}
@@ -346,7 +348,9 @@ export default function AuthenticatedDiscovery({
               ? ""
               : hasServerData
                 ? "Katalog terakhir dapat dilihat. Pemesanan menunggu sambungan server."
-                : "Pratinjau demo, bukan data toko. Pemesanan menunggu sambungan server."}
+                : user
+                  ? "Pratinjau demo, bukan data toko. Pemesanan menunggu sambungan server."
+                  : "Katalog belum tersedia. Sambungkan kembali untuk melihat makanan dari toko."}
           </p>
           <button className={styles.link} onClick={onRefresh}>
             Coba lagi katalog

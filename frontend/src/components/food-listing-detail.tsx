@@ -34,7 +34,7 @@ export default function FoodListingDetail({
 }: {
   item: Listing;
   now: number;
-  user: User;
+  user: User | null;
   origin: Origin;
   available: boolean;
   online: boolean;
@@ -53,18 +53,24 @@ export default function FoodListingDetail({
   const free = item.price === 0;
   const policy = useReservationPolicy(
     item.id,
-    free && user.role === "buyer" && online,
+    free && user?.role === "buyer" && online,
     policyRevision,
   );
   const max = Math.max(
     0,
-    Math.min(item.stock, free ? (policy.data?.max_quantity ?? 0) : 10),
+    Math.min(
+      item.stock,
+      free ? (!user ? 2 : (policy.data?.max_quantity ?? 0)) : 10,
+    ),
   );
   const validQuantity =
     Number.isInteger(quantity) && quantity >= 1 && quantity <= max;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    const frame = requestAnimationFrame(() =>
+      heading.current?.focus({ preventScroll: true }),
+    );
+    return () => cancelAnimationFrame(frame);
   }, [item.id]);
   const savings = Math.max(0, item.original_price - item.price);
   return (
@@ -157,7 +163,7 @@ export default function FoodListingDetail({
                   gratis aktif pada satu waktu.
                 </p>
               )}
-              {free && user.role === "buyer" && (
+              {free && user?.role === "buyer" && (
                 <>
                   {policy.loading && <p role="status">Memuat kuota gratis…</p>}
                   {policy.error && (
@@ -198,7 +204,9 @@ export default function FoodListingDetail({
                   min={1}
                   max={Math.max(1, max)}
                   value={quantity}
-                  disabled={busy || max < 1 || user.role !== "buyer"}
+                  disabled={
+                    busy || max < 1 || (!!user && user.role !== "buyer")
+                  }
                   onChange={(e) => onQuantity(Number(e.target.value))}
                 />
               </div>
@@ -228,7 +236,7 @@ export default function FoodListingDetail({
                     : "Backend belum terhubung. Sambungkan kembali sebelum memesan."}
                 </p>
               )}
-              {user.role !== "buyer" && (
+              {!!user && user.role !== "buyer" && (
                 <p className={styles.error}>
                   Gunakan akun pembeli untuk memesan makanan.
                 </p>
@@ -238,7 +246,7 @@ export default function FoodListingDetail({
                   {error}
                 </p>
               )}
-              {user.role === "buyer" && (
+              {(!user || user.role === "buyer") && (
                 <button
                   className={styles.back}
                   style={{
@@ -263,8 +271,9 @@ export default function FoodListingDetail({
                   loading ||
                   !available ||
                   !validQuantity ||
-                  user.role !== "buyer" ||
+                  (!!user && user.role !== "buyer") ||
                   (free &&
+                    user?.role === "buyer" &&
                     (policy.loading ||
                       !!policy.error ||
                       !policy.data ||
@@ -273,9 +282,11 @@ export default function FoodListingDetail({
               >
                 {busy
                   ? "Memproses…"
-                  : free
-                    ? "Klaim donasi gratis"
-                    : "Simulasikan pembayaran berhasil"}
+                  : !user
+                    ? "Masuk untuk memesan"
+                    : free
+                      ? "Klaim donasi gratis"
+                      : "Simulasikan pembayaran berhasil"}
               </button>
               {!free && (
                 <p className={`${styles.small} ${styles.muted}`}>

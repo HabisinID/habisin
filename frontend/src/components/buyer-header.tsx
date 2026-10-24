@@ -23,8 +23,10 @@ export default function BuyerHeader({
   cartCount,
   onAccount,
   onLogout,
+  onLogin,
+  onRegister,
 }: {
-  user: User;
+  user: User | null;
   query: string;
   onQuery: (v: string) => void;
   location: string;
@@ -35,6 +37,8 @@ export default function BuyerHeader({
   cartCount: number;
   onAccount: () => void;
   onLogout: () => void;
+  onLogin?: () => void;
+  onRegister?: () => void;
 }) {
   return (
     <header className={`${s.buyerHeader} ${designFont.className}`}>
@@ -79,21 +83,34 @@ export default function BuyerHeader({
           </button>
         ))}
       </nav>
-      <button
-        className={s.avatar}
-        aria-label={`Akun ${user.name || user.username}`}
-        onClick={onAccount}
-      >
-        {(user.name || user.username)
-          .split(" ")
-          .map((v) => v[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase()}
-      </button>
-      <button aria-label="Keluar" className={s.icon} onClick={onLogout}>
-        <LogOut size={18} />
-      </button>
+      {user ? (
+        <>
+          <button
+            className={s.avatar}
+            aria-label={`Akun ${user.name || user.username}`}
+            onClick={onAccount}
+          >
+            {(user.name || user.username)
+              .split(" ")
+              .map((v) => v[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase()}
+          </button>
+          <button aria-label="Keluar" className={s.icon} onClick={onLogout}>
+            <LogOut size={18} />
+          </button>
+        </>
+      ) : (
+        <div className={s.guestActions}>
+          <button className={s.textButton} onClick={onLogin}>
+            Masuk
+          </button>
+          <button className={s.primary} onClick={onRegister}>
+            Daftar gratis
+          </button>
+        </div>
+      )}
     </header>
   );
 }
