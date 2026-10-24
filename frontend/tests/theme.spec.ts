@@ -56,6 +56,75 @@ test("the theme switcher cycles Sistem, Terang, Gelap and remembers the choice",
   await expect(page.locator("body")).toHaveCSS("background-color", lightPaper);
 });
 
+// Accessible names of the header controls, left to right.
+const headerControls = (page: Page) =>
+  page
+    .getByRole("banner")
+    .locator("button:visible, a:visible")
+    .evaluateAll((els) =>
+      els.map(
+        (el) =>
+          el.getAttribute("aria-label") ||
+          (el as HTMLElement).innerText.replace(/\s+/g, " ").trim(),
+      ),
+    );
+
+// TopNav in design.pen: the theme switcher is a bordered circle right before
+// the last header item (Daftar gratis for guests, the avatar once signed in).
+test("the theme switcher sits right before Daftar gratis for guests", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const controls = await headerControls(page);
+  expect(controls.slice(-3)).toEqual([
+    "Masuk",
+    "Tema tampilan: Sistem",
+    "Daftar gratis",
+  ]);
+  const toggle = page
+    .getByRole("banner")
+    .getByRole("button", { name: /^Tema tampilan/ });
+  expect(await toggle.boundingBox()).toMatchObject({ width: 44, height: 44 });
+  await expect(toggle).toHaveCSS("border-top-width", "1px");
+  await expect(toggle).toHaveCSS("border-radius", /9999px|50%/);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await headerControls(page)).slice(-3)).toEqual([
+    "Tema tampilan: Sistem",
+    "Masuk",
+    "Daftar gratis",
+  ]);
+  expect(await toggle.boundingBox()).toMatchObject({ width: 40, height: 40 });
+});
+
+test("the theme switcher sits right before the avatar once signed in", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: "rani",
+        name: "Rani Ayu",
+        email: "rani@example.com",
+        role: "buyer",
+      },
+    }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const path of ["/", "/pesanan"]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    const banner = page.getByRole("banner");
+    await expect(banner.getByText("R", { exact: true })).toBeVisible();
+    const toggle = banner.getByRole("button", { name: /^Tema tampilan/ });
+    const next = await toggle.evaluate(
+      (el) => el.nextElementSibling?.textContent?.trim() ?? "",
+    );
+    expect(next, path).toMatch(/^R/);
+  }
+});
+
 // WCAG AA: 4.5:1 for normal text, 3:1 for large text (24px, or 18.66px bold).
 async function lowContrastText(page: Page) {
   return page.evaluate(() => {
