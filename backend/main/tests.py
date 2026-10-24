@@ -25,6 +25,13 @@ class AuthenticationTests(TestCase):
         for path in ["/api/auth/register", "/api/auth/login"]:
             self.assertEqual(self.client.post(path, self.data, format="json").status_code, 403)
 
+    def test_preview_origin_still_requires_token_and_rejects_external_origin(self):
+        token = self.client.get("/api/auth/csrf").json()["csrfToken"]
+        payload = {"username": "missing_preview_user", "password": "Wrong-Preview-381!"}
+        self.assertEqual(self.client.post("/api/auth/login", payload, format="json", HTTP_ORIGIN="http://127.0.0.1:3001").status_code, 403)
+        self.assertEqual(self.client.post("/api/auth/login", payload, format="json", HTTP_ORIGIN="http://127.0.0.1:3001", HTTP_X_CSRFTOKEN=token).status_code, 400)
+        self.assertEqual(self.client.post("/api/auth/login", payload, format="json", HTTP_ORIGIN="https://untrusted.invalid", HTTP_X_CSRFTOKEN=token).status_code, 403)
+
     def test_registration_session_profile_logout_and_login(self):
         response = self.register()
         self.assertEqual(response.status_code, 201)
