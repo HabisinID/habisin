@@ -1,6 +1,6 @@
 import { Clock3, MapPin } from "lucide-react";
 import SiteHeader from "./site-header";
-import type { Store } from "@/lib/api";
+import type { Store, User } from "@/lib/api";
 
 // Base components from design.pen: Btn/Primary, Btn/Secondary,
 // Btn/Destructive and Input.
@@ -14,10 +14,23 @@ export const fieldClass =
 export const errorClass =
   "rounded-field bg-error-tint p-3 text-sm leading-relaxed text-error";
 
-export function StoreShell({ children }: { children: React.ReactNode }) {
+export function StoreShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user?: User | null;
+}) {
   return (
     <>
-      <SiteHeader />
+      <SiteHeader
+        nav={[
+          { label: "Jelajahi", href: "/jelajahi" },
+          ...(user?.role === "partner"
+            ? [{ label: "Toko saya", href: "/partner/store" }]
+            : []),
+        ]}
+      />
       <main className="mx-auto max-w-5xl px-6 py-10 mobile:px-4 mobile:py-6">
         {children}
       </main>
@@ -34,7 +47,7 @@ export function StoreDetails({ store }: { store: Store }) {
           {store.name}
         </h1>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-[#f1e8e4] text-[#865b4c]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-[var(--color-error-tint)] text-[var(--color-error)]"}`}
         >
           {store.is_open ? "Toko aktif" : "Toko ditutup sementara"}
         </span>

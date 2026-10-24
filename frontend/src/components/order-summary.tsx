@@ -83,12 +83,12 @@ export default function OrderSummary({
             <p className="text-xs text-muted">{listing.store}</p>
             <h3 className="mt-1 text-lg font-bold">{listing.name}</h3>
           </div>
-          <span className="shrink-0 rounded-full bg-[#fff5d9] px-3 py-1 text-xs font-semibold text-[#8b763e]">
+          <span className="shrink-0 rounded-full bg-[var(--color-urgency-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-warning)]">
             {statusLabel[order.status]}
           </span>
         </div>
 
-        <div className="space-y-2 rounded-lg bg-light p-4 text-xs text-[#6f8062]">
+        <div className="space-y-2 rounded-lg bg-light p-4 text-xs text-[var(--color-muted)]">
           <p className="flex items-center gap-2">
             <MapPin size={16} />
             {listing.address}
@@ -195,7 +195,7 @@ export default function OrderSummary({
                 Ubah pesanan
               </button>
               <button
-                className="text-xs text-[#ac7462]"
+                className="text-xs text-[var(--color-error)]"
                 disabled={busy}
                 onClick={() =>
                   run(async () => onCancelled(await orderApi.cancel(order.id)))

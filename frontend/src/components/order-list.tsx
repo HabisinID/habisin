@@ -7,11 +7,11 @@ import { orderApi, statusLabel } from "@/lib/orders";
 import { errorClass, primaryButton } from "./store-ui";
 
 const labelClass: Record<Reservation["status"], string> = {
-  pending: "bg-[#fff5d9] text-[#8b763e]",
-  paid: "bg-[#eaf3e2] text-[#618348]",
+  pending: "bg-[var(--color-urgency-tint)] text-[var(--color-warning)]",
+  paid: "bg-[var(--color-light)] text-[var(--color-brand)]",
   picked_up: "bg-light text-brand",
-  cancelled: "bg-[#f1e8e4] text-[#9a7d6f]",
-  expired: "bg-[#e9ecef] text-[#5c6670]",
+  cancelled: "bg-[var(--color-error-tint)] text-[var(--color-error)]",
+  expired: "bg-[var(--color-line)] text-[var(--color-muted)]",
 };
 
 export default function OrderList({
@@ -92,12 +92,12 @@ export default function OrderList({
           Memuat pesanan…
         </p>
       ) : orders.length === 0 && !error ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-[#d6dfca] bg-[#f2f5ec] px-5 py-12 text-center text-[#69815e]">
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-[var(--color-light)] bg-[var(--color-cream)] px-5 py-12 text-center text-[var(--color-muted)]">
           <ShoppingBag size={35} />
           <h3 className="text-lg font-bold">
             Petualangan enakmu dimulai di sini.
           </h3>
-          <p className="text-xs text-[#849477]">
+          <p className="text-xs text-[var(--color-muted)]">
             Belum ada pesanan. Yuk, selamatkan porsi pertamamu.
           </p>
           <button className={primaryButton} onClick={onClose}>
@@ -110,7 +110,7 @@ export default function OrderList({
             const busy = inFlight.includes(order.id);
             return (
               <li
-                className="order-item rounded-lg border border-[#dfe6d6] bg-white p-4 text-xs"
+                className="order-item rounded-lg border border-[var(--color-line)] bg-white p-4 text-xs"
                 key={order.id}
               >
                 <div className="flex items-center justify-between gap-3 text-sm">
@@ -121,16 +121,16 @@ export default function OrderList({
                     {statusLabel[order.status]}
                   </span>
                 </div>
-                <p className="my-2 text-[#8a967e]">
+                <p className="my-2 text-[var(--color-muted)]">
                   {order.quantity} porsi · {rupiah(order.total)} ·{" "}
                   {order.listing.store}
                 </p>
                 {order.note && (
-                  <p className="mb-2 break-words text-[#8a967e]">
+                  <p className="mb-2 break-words text-[var(--color-muted)]">
                     Catatan: {order.note}
                   </p>
                 )}
-                <small className="text-[10px] text-[#8a967e]">
+                <small className="text-[10px] text-[var(--color-muted)]">
                   Ambil sebelum {pickup(order.listing.pickup_end)} WIB
                 </small>
                 <div className="mt-2 flex items-center justify-between gap-3">
@@ -155,12 +155,12 @@ export default function OrderList({
                   )}
                   {order.status === "paid" &&
                   openedAt >= Date.parse(order.cancel_until) ? (
-                    <span className="ml-auto p-2 text-[11px] text-[#8a967e]">
+                    <span className="ml-auto p-2 text-[11px] text-[var(--color-muted)]">
                       Pembatalan ditutup {pickup(order.cancel_until)}
                     </span>
                   ) : order.status === "pending" || order.status === "paid" ? (
                     <button
-                      className="ml-auto p-2 text-[11px] text-[#ac7462]"
+                      className="ml-auto p-2 text-[11px] text-[var(--color-error)]"
                       disabled={busy}
                       onClick={() => cancel(order)}
                     >
@@ -168,7 +168,7 @@ export default function OrderList({
                     </button>
                   ) : (
                     <button
-                      className="ml-auto p-2 text-[11px] text-[#8a967e]"
+                      className="ml-auto p-2 text-[11px] text-[var(--color-muted)]"
                       disabled={busy}
                       onClick={() => remove(order)}
                     >
