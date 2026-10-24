@@ -16,6 +16,7 @@ from .models import CheckoutBatch, Listing, ListingStockAction, Reservation, Sto
 from .serializers import ListingSerializer, ReservationSerializer, UserSerializer
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
 from .reservation_policy import reservation_policy
+from django.shortcuts import get_object_or_404
 
 
 def require_role(request, role):
@@ -104,7 +105,7 @@ def partner_dashboard(request):
     for row in paid:
         day = row.created_at.astimezone(wib).date().isoformat()
         series[day] = series.get(day, 0) + row.quantity
-    pickups = owned.filter(listing__pickup_end__gte=datetime.combine(today,time.min,tzinfo=wib), listing__pickup_end__lt=end).exclude(status="cancelled").order_by("listing__pickup_end", "pk")
+    pickups = owned.filter(pickup_deadline__gt=now, pickup_deadline__lt=end).exclude(status="cancelled").order_by("pickup_deadline", "pk")
     stores = Store.objects.filter(owner=request.user).order_by("pk")
     return Response({
         "period": period, "booked_portions": sum(row.quantity for row in paid), "simulated_total": sum(row.total for row in paid),
@@ -147,3 +148,27 @@ def undo_sold_out(request, pk):
         action.used=True
         action.save(update_fields=["used"])
     return Response(ListingSerializer(item).data)
+
+
+@api_view(["POST"])
+def partner_cancel_reservation(request, pk):
+    require_role(request, "partner")
+    reason = request.data.get("reason")
+    if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 500:
+        raise ValidationError({"reason": "Isi alasan pembatalan (1–500 karakter)."})
+    with transaction.atomic():
+        before = get_object_or_404(Reservation, pk=pk, listing__owner=request.user)
+        User.objects.select_for_update().get(pk=before.user_id)
+        item = lock_listing(before.listing_id, request.user)
+        order = Reservation.objects.select_for_update().get(pk=pk)
+        if order.status == "reserved":
+            if order.deadline <= timezone.now():
+                raise ListingConflict("Pesanan sudah kedaluwarsa dan tidak dapat dibatalkan.")
+            order.status = "cancelled"
+            order.cancellation_note = reason.strip()
+            order.cancelled_by = "partner"
+            order.cancelled_at = timezone.now()
+            order.save(update_fields=["status", "cancellation_note", "cancelled_by", "cancelled_at"])
+            ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
+            Listing.objects.filter(pk=item.pk).update(stock=F("stock") + order.quantity)
+    return Response(ReservationSerializer(order).data)

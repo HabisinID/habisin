@@ -12,7 +12,7 @@ CANCELLATION_WINDOW = timedelta(minutes=30)
 def cancellation_reason(reservation, now=None):
     if reservation.status != "reserved":
         return ""
-    if reservation.listing.pickup_end - (now or timezone.now()) < CANCELLATION_WINDOW:
+    if reservation.deadline - (now or timezone.now()) < CANCELLATION_WINDOW:
         return "Pesanan tidak bisa dibatalkan karena waktu pengambilan tersisa kurang dari 30 menit atau sudah berakhir."
     return ""
 
@@ -20,7 +20,7 @@ def cancellation_reason(reservation, now=None):
 def reservation_policy(user, listing, now=None):
     now = now or timezone.now()
     free = Reservation.objects.filter(user=user, total=0, status="reserved")
-    active = free.filter(listing__pickup_end__gt=now).order_by("created_at").first()
+    active = free.filter(pickup_deadline__gt=now).order_by("created_at").first()
     day = now.astimezone(WIB).date()
     start = datetime.combine(day, time.min, tzinfo=WIB)
     daily = free.filter(created_at__gte=start, created_at__lt=start + timedelta(days=1))

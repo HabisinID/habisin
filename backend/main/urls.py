@@ -5,6 +5,7 @@ from . import store_views, commerce_views
 urlpatterns = [
     path("checkout", commerce_views.checkout),
     path("partner/dashboard", commerce_views.partner_dashboard),
+    path("partner/reservations/<int:pk>/cancel", commerce_views.partner_cancel_reservation),
     path("partner/listings/<int:pk>/sold-out", commerce_views.sold_out),
     path("partner/listings/<int:pk>/undo-sold-out", commerce_views.undo_sold_out),
     path("auth/csrf", views.csrf),

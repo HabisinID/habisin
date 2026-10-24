@@ -87,6 +87,19 @@ class Reservation(models.Model):
     code = models.CharField(max_length=5, unique=True)
     status = models.CharField(max_length=12, default="reserved", choices=[("reserved", "Dipesan"), ("cancelled", "Dibatalkan")])
     created_at = models.DateTimeField(auto_now_add=True)
+    pickup_deadline = models.DateTimeField(null=True, editable=False)
+    cancellation_note = models.CharField(max_length=500, blank=True)
+    cancelled_by = models.CharField(max_length=7, blank=True, choices=[("buyer", "Pembeli"), ("partner", "Mitra")])
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def deadline(self):
+        return self.pickup_deadline or self.listing.pickup_end
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.pickup_deadline is None:
+            self.pickup_deadline = self.listing.pickup_end
+        super().save(*args, **kwargs)
 
 
 class CheckoutBatch(models.Model):

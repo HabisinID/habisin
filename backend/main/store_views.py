@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -57,7 +58,7 @@ def _mutate_store(request, store):
     location_changed = any(field in serializer.validated_data and serializer.validated_data[field] != getattr(store, field) for field in ["name", "address", "latitude", "longitude"])
     if location_changed:
         listing_ids = list(Listing.objects.select_for_update().filter(store_profile=store).order_by("pk").values_list("pk", flat=True))
-        if Reservation.objects.filter(listing_id__in=listing_ids, status="reserved").exists():
+        if Reservation.objects.filter(listing_id__in=listing_ids, status="reserved", pickup_deadline__gt=timezone.now()).exists():
             return Response({"detail": "Nama dan lokasi toko tidak dapat diubah selama ada pesanan aktif."}, status=409)
     serializer.save()
     if location_changed:

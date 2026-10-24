@@ -137,7 +137,7 @@ class PartnerListingSerializer(ListingSerializer):
             errors["store_id"] = "Buka toko sebelum mengaktifkan listing."
         if target and (instance is None or store_id is not None):
             snapshot = dict(store=target.name, address=target.address, latitude=target.latitude, longitude=target.longitude)
-            if instance and instance.reservation_set.filter(status="reserved").exists() and instance.store_profile_id != target.pk:
+            if instance and instance.reservation_set.filter(status="reserved", pickup_deadline__gt=timezone.now()).exists() and instance.store_profile_id != target.pk:
                 same_legacy_location = instance.store_profile_id is None and all(getattr(instance, key) == val for key, val in snapshot.items())
                 if not same_legacy_location:
                     raise ListingConflict("Toko tidak dapat diganti selama ada pesanan aktif.")
@@ -155,7 +155,7 @@ class PartnerListingSerializer(ListingSerializer):
                 errors["prepared_at"] = "Waktu dibuat tidak boleh di masa depan."
             elif prepared > value("pickup_end"):
                 errors["prepared_at"] = "Waktu dibuat tidak boleh setelah batas pengambilan."
-        if self.instance and self.instance.reservation_set.filter(status="reserved").exists():
+        if self.instance and self.instance.reservation_set.filter(status="reserved", pickup_deadline__gt=timezone.now()).exists():
             for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
                 if field in attrs and attrs[field] != getattr(self.instance, field):
                     errors[field] = "Tidak dapat diubah selama ada pesanan aktif."
@@ -172,7 +172,16 @@ class PartnerListingSerializer(ListingSerializer):
 
 
 class ReservationSerializer(serializers.ModelSerializer):
-    listing = ListingSerializer(read_only=True)
+    listing = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    def get_listing(self, item):
+        data = dict(ListingSerializer(item.listing).data)
+        data["pickup_end"] = item.deadline.isoformat()
+        return data
+
+    def get_status(self, item):
+        return "expired" if item.status == "reserved" and item.deadline <= timezone.now() else item.status
     can_cancel = serializers.SerializerMethodField()
     cancellation_reason = serializers.SerializerMethodField()
 
@@ -184,7 +193,7 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at", "can_cancel", "cancellation_reason"]
+        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at", "can_cancel", "cancellation_reason", "cancellation_note", "cancelled_by", "cancelled_at"]
 
 
 class GeocodeSerializer(serializers.Serializer):

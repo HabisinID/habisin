@@ -89,7 +89,7 @@ class ReservationPolicyTests(TestCase):
 
     def test_expired_ticket_still_consumes_daily_quota_only_at_its_store(self):
         self.reserve(self.a, 2)
-        Listing.objects.filter(pk=self.a.pk).update(pickup_end=self.now-timedelta(seconds=1))
+        Reservation.objects.filter(listing=self.a).update(pickup_deadline=self.now-timedelta(seconds=1))
         sibling = self.food(self.store)
         self.assertEqual(self.reserve(sibling).status_code, 409)
         self.assertEqual(self.reserve(self.b).status_code, 201)
@@ -126,7 +126,7 @@ class ReservationPolicyTests(TestCase):
 
     def test_expired_single_portion_leaves_one_same_store_and_cancelled_retry_after_deadline(self):
         order = self.reserve(self.a, 1).data
-        Listing.objects.filter(pk=self.a.pk).update(pickup_end=self.now-timedelta(seconds=1))
+        Reservation.objects.filter(listing=self.a).update(pickup_deadline=self.now-timedelta(seconds=1))
         sibling = self.food(self.store)
         self.assertEqual(self.reserve(sibling, 2).status_code, 409)
         self.assertEqual(self.reserve(sibling, 1).status_code, 201)

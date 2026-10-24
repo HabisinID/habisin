@@ -87,7 +87,7 @@ def me(request):
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
             owned_ids = Listing.objects.filter(owner=user).values_list("pk", flat=True)
-            order_ids = Reservation.objects.filter(user=user, status="reserved").values_list("listing_id", flat=True)
+            order_ids = Reservation.objects.filter(user=user, status="reserved", pickup_deadline__gt=timezone.now()).values_list("listing_id", flat=True)
             ids = sorted(set(owned_ids) | set(order_ids))
             store_ids = set(Store.objects.filter(owner=user).values_list("pk", flat=True))
             store_ids.update(Listing.objects.filter(pk__in=ids).values_list("store_profile_id", flat=True))
@@ -95,7 +95,7 @@ def me(request):
             locked = list(Listing.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
             if any(item.store_profile_id and item.store_profile_id not in stores for item in locked):
                 raise ListingConflict()
-            for reservation in Reservation.objects.select_for_update().filter(user=user, status="reserved").order_by("pk"):
+            for reservation in Reservation.objects.select_for_update().filter(user=user, status="reserved", pickup_deadline__gt=timezone.now()).order_by("pk"):
                 Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
             Listing.objects.filter(owner=user).update(active=False, store_profile=None)
             logout(request)
@@ -229,7 +229,7 @@ def cancel_reservation(request, pk):
         reason = cancellation_reason(reservation)
         if reason:
             return Response({"detail": reason}, status=409)
-        updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled")
+        updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled", cancelled_by="buyer", cancelled_at=timezone.now())
         if updated:
             ListingStockAction.objects.filter(listing_id=reservation.listing_id, used=False).update(used=True)
             Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
