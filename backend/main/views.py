@@ -7,14 +7,17 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import F
 from django.db.models.deletion import ProtectedError
-from django.shortcuts import get_object_or_404
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
-from .models import Profile, Listing, Reservation
+from .models import Profile, Listing, Reservation, Store
+from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
+from .reservation_policy import reservation_policy, cancellation_reason
+from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
+from rest_framework import serializers as drf_serializers
 from .serializers import UserSerializer, RegisterSerializer, ListingSerializer, PartnerListingSerializer, ReservationSerializer
 
 
@@ -82,10 +85,19 @@ def me(request):
         if not isinstance(password, str) or not request.user.check_password(password):
             return Response({"detail": "Password salah."}, status=400)
         with transaction.atomic():
-            for reservation in Reservation.objects.filter(user=request.user, status="reserved"):
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            owned_ids = Listing.objects.filter(owner=user).values_list("pk", flat=True)
+            order_ids = Reservation.objects.filter(user=user, status="reserved").values_list("listing_id", flat=True)
+            ids = sorted(set(owned_ids) | set(order_ids))
+            store_ids = set(Store.objects.filter(owner=user).values_list("pk", flat=True))
+            store_ids.update(Listing.objects.filter(pk__in=ids).values_list("store_profile_id", flat=True))
+            stores = lock_stores(store_ids)
+            locked = list(Listing.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
+            if any(item.store_profile_id and item.store_profile_id not in stores for item in locked):
+                raise ListingConflict()
+            for reservation in Reservation.objects.select_for_update().filter(user=user, status="reserved").order_by("pk"):
                 Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
-            user = request.user
-            Listing.objects.filter(owner=user).update(active=False)
+            Listing.objects.filter(owner=user).update(active=False, store_profile=None)
             logout(request)
             user.delete()
         return Response(status=204)
@@ -117,8 +129,17 @@ def password(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def listings(request):
-    items = Listing.objects.filter(active=True, pickup_end__gt=timezone.now())
+    items = available_listings().select_related("store_profile")
     return Response(ListingSerializer(items, many=True).data)
+
+
+def _target_store_id(data):
+    if "store_id" not in data:
+        return None
+    try:
+        return drf_serializers.IntegerField(min_value=1).run_validation(data["store_id"])
+    except drf_serializers.ValidationError as exc:
+        raise drf_serializers.ValidationError({"store_id": exc.detail}) from exc
 
 
 @api_view(["GET", "POST"])
@@ -126,31 +147,38 @@ def partner_listings(request):
     if UserSerializer(request.user).data["role"] != "partner":
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
     if request.method == "GET":
-        items = Listing.objects.filter(owner=request.user).order_by("-id")
+        items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
         return Response(ListingSerializer(items, many=True).data)
-    serializer = PartnerListingSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.save(owner=request.user)
-    return Response(serializer.data, status=201)
+    with compensate_media_writes() as media, transaction.atomic():
+        target_id = _target_store_id(request.data)
+        lock_stores([target_id])
+        serializer = PartnerListingSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        item = save_listing_with_media(serializer, media, owner=request.user)
+        return Response(ListingSerializer(item).data, status=201)
 
 
 @api_view(["GET", "PATCH", "DELETE"])
 def partner_listing_detail(request, pk):
     if UserSerializer(request.user).data["role"] != "partner":
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
-    with transaction.atomic():
-        item = get_object_or_404(Listing.objects.select_for_update(), pk=pk, owner=request.user)
+    with compensate_media_writes() as media, transaction.atomic():
+        target_id = _target_store_id(request.data)
+        item = lock_listing(pk, request.user, target_id)
         if request.method == "DELETE":
+            name, storage = item.image_file.name, item.image_file.storage
             try:
                 item.delete()
             except ProtectedError:
                 return Response({"detail": "Listing memiliki riwayat pesanan dan tidak dapat dihapus. Nonaktifkan listing agar tidak ditawarkan lagi."}, status=409)
+            if name:
+                transaction.on_commit(lambda: delete_listing_file(storage, name))
             return Response(status=204)
         if request.method == "PATCH":
-            serializer = PartnerListingSerializer(item, data=request.data, partial=True)
+            serializer = PartnerListingSerializer(item, data=request.data, partial=True, context={"request": request})
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+            item = save_listing_with_media(serializer, media)
+            return Response(ListingSerializer(item).data)
         return Response(ListingSerializer(item).data)
 
 
@@ -165,7 +193,14 @@ def reservations(request):
     if type(quantity) is not int or not 1 <= quantity <= 10 or type(listing_id) is not int:
         return Response({"detail": "Pilih produk dan 1–10 porsi."}, status=400)
     with transaction.atomic():
-        updated = Listing.objects.filter(pk=listing_id, active=True, stock__gte=quantity, pickup_end__gt=timezone.now()).update(stock=F("stock") - quantity)
+        User.objects.select_for_update().get(pk=request.user.pk)
+        if not Listing.objects.filter(pk=listing_id).exists():
+            return Response({"detail": "Makanan tidak tersedia."}, status=400)
+        listing = lock_listing(listing_id)
+        policy = reservation_policy(request.user, listing)
+        if policy["reason"] or (listing.price == 0 and quantity > policy["max_quantity"]):
+            return Response({"detail": policy["reason"] or "Maksimal 2 porsi gratis per toko per hari WIB; pilih jumlah sesuai sisa kuota."}, status=409)
+        updated = available_listings().filter(pk=listing_id, stock__gte=quantity).update(stock=F("stock") - quantity)
         if not updated:
             return Response({"detail": "Stok tidak cukup atau waktu pengambilan sudah berakhir."}, status=400)
         listing = Listing.objects.get(pk=listing_id)
@@ -183,9 +218,15 @@ def reservations(request):
 @api_view(["POST"])
 def cancel_reservation(request, pk):
     with transaction.atomic():
-        reservation = Reservation.objects.filter(pk=pk, user=request.user).first()
-        if not reservation:
+        User.objects.select_for_update().get(pk=request.user.pk)
+        before = Reservation.objects.filter(pk=pk, user=request.user).only("listing_id").first()
+        if not before:
             return Response({"detail": "Pesanan tidak ditemukan."}, status=404)
+        lock_listing(before.listing_id)
+        reservation = Reservation.objects.select_for_update().get(pk=pk, user=request.user)
+        reason = cancellation_reason(reservation)
+        if reason:
+            return Response({"detail": reason}, status=409)
         updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled")
         if updated:
             Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
@@ -199,3 +240,13 @@ def dashboard(request):
     if role == "buyer":
         return Response({"detail": "Akses khusus mitra atau admin."}, status=403)
     return Response({"role": role, "users": User.objects.count() if role == "admin" else None, "listings": Listing.objects.filter(active=True).count(), "message": "Katalog contoh HABISIN. Mitra dapat mengelola profil dan lokasi toko serta listing makanan surplus. Moderasi tersedia pada pengembangan berikutnya."})
+
+
+@api_view(["GET"])
+def listing_reservation_policy(request, pk):
+    if UserSerializer(request.user).data["role"] != "buyer":
+        return Response({"detail": "Pemesanan hanya tersedia untuk akun pembeli."}, status=403)
+    item = Listing.objects.filter(pk=pk).first()
+    if item is None:
+        return Response({"detail": "Makanan tidak ditemukan."}, status=404)
+    return Response(reservation_policy(request.user, item))

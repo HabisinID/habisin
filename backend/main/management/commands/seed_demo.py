@@ -21,6 +21,7 @@ class Command(BaseCommand):
         now = timezone.localtime()
         for item in items:
             pk = item.pop("id")
+            item["prepared_at"] = now - timedelta(hours=1)
             item["pickup_start"] = now
             item["pickup_end"] = now + timedelta(hours=8)
             try:

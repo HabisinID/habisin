@@ -8,6 +8,9 @@ from django.utils import timezone
 from rest_framework import serializers
 from .models import Listing, Reservation, Store
 from .geocoding import normalize_address, validate_location_token
+from .listing_services import ListingConflict
+from .listing_media import normalize_listing_image
+from .reservation_policy import cancellation_reason
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,50 +48,113 @@ class RegisterSerializer(serializers.Serializer):
         return attrs
 
 
+class StoreSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Store
+        fields = ["id", "name", "address", "latitude", "longitude", "is_open"]
+
+
 class ListingSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    image_source = serializers.SerializerMethodField()
+
+    def get_image(self, item):
+        return item.image_file.url if item.image_file else item.image
+
+    def get_image_source(self, item):
+        return "upload" if item.image_file else "url"
+
+    store_id = serializers.IntegerField(source="store_profile_id", read_only=True, allow_null=True)
+    store_summary = StoreSummarySerializer(source="store_profile", read_only=True, allow_null=True)
+
     class Meta:
         model = Listing
-        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active"]
+        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active", "store_id", "store_summary", "image_source", "prepared_at", "packaging", "storage_notes", "allergens", "buyer_notes"]
 
 
 class PartnerListingSerializer(ListingSerializer):
-    image = serializers.URLField(max_length=250)
-    category = serializers.ChoiceField(choices=["Makanan berat", "Roti & kue", "Camilan", "Sehat"])
-    latitude = serializers.FloatField(min_value=-90, max_value=90)
-    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    prepared_at = serializers.DateTimeField(required=True, allow_null=False)
+    active = serializers.BooleanField(required=False, default=True)
+    store_id = serializers.IntegerField(write_only=True, required=False, min_value=1)
+    image = serializers.URLField(max_length=250, required=False)
+    image_file = serializers.FileField(write_only=True, required=False)
+    image_source = serializers.ChoiceField(choices=["url", "upload"], write_only=True, required=False)
+    category = serializers.ChoiceField(choices=["Makanan berat", "Roti & kue", "Camilan", "Sehat", "Minuman", "Katering", "Kue basah", "Sayur & buah", "Lainnya"])
     price = serializers.IntegerField(min_value=0)
     original_price = serializers.IntegerField(min_value=0)
     stock = serializers.IntegerField(min_value=0)
 
     class Meta(ListingSerializer.Meta):
-        read_only_fields = ["id"]
+        fields = ListingSerializer.Meta.fields + ["image_file"]
+        read_only_fields = ["id", "store", "address", "latitude", "longitude", "store_summary"]
+
+    def validate_name(self, value):
+        if len(value) > 60 and (self.instance is None or value != self.instance.name):
+            raise serializers.ValidationError("Nama makanan maksimal 60 karakter.")
+        return value
+
+    def validate_image_file(self, value):
+        return normalize_listing_image(value)
 
     def validate_image(self, value):
         if urlsplit(value).scheme.lower() not in ["http", "https"]:
             raise serializers.ValidationError("URL foto harus menggunakan HTTP atau HTTPS.")
         return value
 
-    def validate_latitude(self, value):
-        if not math.isfinite(value):
-            raise serializers.ValidationError("Latitude harus berupa angka yang valid.")
-        return value
-
-    def validate_longitude(self, value):
-        if not math.isfinite(value):
-            raise serializers.ValidationError("Longitude harus berupa angka yang valid.")
-        return value
-
     def validate(self, attrs):
         def value(field):
             return attrs.get(field, getattr(self.instance, field, None))
 
-        errors = {}
-        if value("price") > value("original_price"):
-            errors["price"] = "Harga jual tidak boleh melebihi harga normal."
+        errors = {field: "Ditentukan oleh toko. Gunakan pilihan toko." for field in ["store", "address", "latitude", "longitude"] if field in self.initial_data}
+        mode = attrs.pop("image_source", None)
+        has_url, has_file = "image" in attrs, "image_file" in attrs
+        if has_url and has_file:
+            errors["image"] = "Pilih satu sumber foto: upload atau URL."
+        elif has_file:
+            if mode not in [None, "upload"]:
+                errors["image"] = "Sumber foto tidak sesuai dengan file upload."
+            attrs["image"] = ""
+        elif has_url:
+            if mode not in [None, "url"]:
+                errors["image"] = "Sumber foto tidak sesuai dengan URL."
+            attrs["image_file"] = ""
+        elif mode is not None or self.instance is None or not (self.instance.image or self.instance.image_file):
+            errors["image"] = "Foto wajib. Unggah foto atau masukkan URL."
+        store_id = attrs.pop("store_id", None)
+        instance = self.instance
+        if store_id is None and (instance is None or instance.store_profile_id is None):
+            errors["store_id"] = "Pilih toko yang menjual makanan ini."
+        target = None
+        if store_id is not None:
+            target = Store.objects.filter(pk=store_id, owner=self.context["request"].user).first()
+            if target is None:
+                errors["store_id"] = "Toko tidak tersedia untuk akun ini. Muat ulang pilihan toko."
+            elif (instance is None or instance.store_profile_id != target.pk) and not target.is_open:
+                errors["store_id"] = "Toko ditutup sementara. Pilih toko yang aktif."
+        else:
+            target = instance.store_profile if instance and instance.store_profile_id else None
+        if target and attrs.get("active") is True and not target.is_open:
+            errors["store_id"] = "Buka toko sebelum mengaktifkan listing."
+        if target and (instance is None or store_id is not None):
+            snapshot = dict(store=target.name, address=target.address, latitude=target.latitude, longitude=target.longitude)
+            if instance and instance.reservation_set.filter(status="reserved").exists() and instance.store_profile_id != target.pk:
+                same_legacy_location = instance.store_profile_id is None and all(getattr(instance, key) == val for key, val in snapshot.items())
+                if not same_legacy_location:
+                    raise ListingConflict("Toko tidak dapat diganti selama ada pesanan aktif.")
+            attrs.update(snapshot, store_profile=target)
+        prices_changed = self.instance is None or any(field in attrs and attrs[field] != getattr(self.instance, field) for field in ["price", "original_price"])
+        if prices_changed and value("price") > 0 and value("price") >= value("original_price"):
+            errors["price"] = "Harga sekarang harus lebih rendah dari harga normal."
         if value("pickup_end") <= value("pickup_start"):
             errors["pickup_end"] = "Waktu akhir harus setelah waktu mulai."
         if (self.instance is None or {"pickup_start", "pickup_end"}.intersection(attrs)) and value("pickup_end") <= timezone.now():
             errors["pickup_end"] = "Batas pengambilan harus di masa depan."
+        prepared = value("prepared_at")
+        if prepared is not None and ("prepared_at" in attrs or "pickup_end" in attrs):
+            if prepared > timezone.now():
+                errors["prepared_at"] = "Waktu dibuat tidak boleh di masa depan."
+            elif prepared > value("pickup_end"):
+                errors["prepared_at"] = "Waktu dibuat tidak boleh setelah batas pengambilan."
         if self.instance and self.instance.reservation_set.filter(status="reserved").exists():
             for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
                 if field in attrs and attrs[field] != getattr(self.instance, field):
@@ -107,10 +173,18 @@ class PartnerListingSerializer(ListingSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     listing = ListingSerializer(read_only=True)
+    can_cancel = serializers.SerializerMethodField()
+    cancellation_reason = serializers.SerializerMethodField()
+
+    def get_can_cancel(self, item):
+        return item.status == "reserved" and not cancellation_reason(item)
+
+    def get_cancellation_reason(self, item):
+        return cancellation_reason(item)
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at", "can_cancel", "cancellation_reason"]
 
 
 class GeocodeSerializer(serializers.Serializer):

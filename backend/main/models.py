@@ -18,7 +18,7 @@ class Profile(models.Model):
 
 
 class Store(models.Model):
-    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="store")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stores")
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000)
     address = models.CharField(max_length=250)
@@ -48,6 +48,7 @@ class GeocodingQuota(models.Model):
 
 class Listing(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="listings")
+    store_profile = models.ForeignKey(Store, null=True, blank=True, on_delete=models.PROTECT, related_name="listings")
     name = models.CharField(max_length=160)
     store = models.CharField(max_length=120)
     category = models.CharField(max_length=30)
@@ -56,12 +57,26 @@ class Listing(models.Model):
     price = models.PositiveIntegerField()
     original_price = models.PositiveIntegerField()
     stock = models.PositiveIntegerField(default=5)
-    image = models.CharField(max_length=250)
+    image = models.CharField(max_length=250, blank=True)
+    image_file = models.ImageField(upload_to="listings/", blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
     pickup_start = models.DateTimeField()
     pickup_end = models.DateTimeField()
+    prepared_at = models.DateTimeField(null=True, blank=True)
+    buyer_notes = models.CharField(max_length=140, blank=True)
+    packaging = models.CharField(max_length=500, blank=True)
+    storage_notes = models.CharField(max_length=500, blank=True)
+    allergens = models.CharField(max_length=500, blank=True)
     active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(image_file="") & ~models.Q(image="")) | (~models.Q(image_file="") & models.Q(image="")),
+                name="listing_exactly_one_image_source",
+            ),
+        ]
 
 
 class Reservation(models.Model):

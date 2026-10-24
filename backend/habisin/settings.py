@@ -145,3 +145,7 @@ TIME_ZONE = "Asia/Jakarta"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 if not DEBUG and SECRET_KEY == "local-demo-only-change-before-deployment":
     raise RuntimeError("Set SECRET_KEY before running in production.")
+
+# Uploaded listing photos use Django storage; production requires persistent storage.
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
+MEDIA_URL = "/media/"

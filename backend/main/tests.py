@@ -5,7 +5,7 @@ from django.core.management import call_command, CommandError
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
-from .models import Listing, Profile, Reservation
+from .models import Listing, Profile, Reservation, Store
 
 
 class AuthenticationTests(TestCase):
@@ -144,10 +144,14 @@ class PartnerListingTests(TestCase):
             "description": "Roti layak makan hari ini", "address": "Beji, Depok",
             "price": 10000, "original_price": 20000, "stock": 4,
             "image": "https://example.com/roti.jpg", "latitude": -6.36, "longitude": 106.83,
+            "prepared_at": (timezone.now() - timedelta(hours=1)).isoformat(),
             "pickup_start": timezone.now().isoformat(),
             "pickup_end": (timezone.now() + timedelta(hours=4)).isoformat(),
         }
-        self.item = Listing.objects.create(owner=self.partner, **self.data)
+        self.store = Store.objects.create(owner=self.partner, name=self.data["store"], description="Toko roti", address=self.data["address"], opening_time="08:00", closing_time="20:00", latitude=self.data["latitude"], longitude=self.data["longitude"])
+        self.item = Listing.objects.create(owner=self.partner, store_profile=self.store, **self.data)
+        self.data = {key: value for key, value in self.data.items() if key not in ["store", "address", "latitude", "longitude"]}
+        self.data["store_id"] = self.store.pk
         self.path = f"/api/partner/listings/{self.item.pk}"
         self.client.force_authenticate(self.partner)
 
@@ -226,7 +230,7 @@ class PartnerListingTests(TestCase):
         self.assertEqual(self.client.delete(self.path).status_code, 409)
         order.status = "cancelled"
         order.save()
-        self.assertEqual(self.client.patch(self.path, {"price": 5000, "address": "Alamat baru"}, format="json").status_code, 200)
+        self.assertEqual(self.client.patch(self.path, {"price": 5000}, format="json").status_code, 200)
         self.assertEqual(self.client.delete(self.path).status_code, 409)
         self.assertTrue(Reservation.objects.filter(pk=order.pk).exists())
 

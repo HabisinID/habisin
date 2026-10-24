@@ -14,9 +14,13 @@ urlpatterns = [
     path("partner/listings", views.partner_listings),
     path("partner/listings/<int:pk>", views.partner_listing_detail),
     path("reservations", views.reservations),
+    path("listings/<int:pk>/reservation-policy", views.listing_reservation_policy),
     path("reservations/<int:pk>/cancel", views.cancel_reservation),
     path("dashboard", views.dashboard),
     path("partner/geocode", store_views.geocode),
     path("partner/store", store_views.partner_store),
+    path("partner/stores", store_views.partner_stores),
+    path("partner/stores/<int:pk>", store_views.partner_store_detail),
     path("stores/<int:pk>", store_views.public_store),
+    path("stores/<int:pk>/listings", store_views.public_store_listings),
 ]
