@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, Clock3, MapPin, Sprout } from "lucide-react";
+import { ArrowLeft, Clock3, MapPin } from "lucide-react";
 import type { Store } from "@/lib/api";
+import HabisinLogo from "./habisin-logo";
 
 export const primaryButton =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#174c36] disabled:opacity-55";
@@ -16,13 +17,7 @@ export function StoreShell({ children }: { children: React.ReactNode }) {
     <>
       <header className="border-b border-line bg-cream">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"
-          >
-            <Sprout className="text-brand" />
-            habisin<span className="-ml-2 text-brand">.</span>
-          </Link>
+          <HabisinLogo className="brand flex items-center text-2xl font-extrabold tracking-tight" />
           <Link href="/" className="flex items-center gap-2 text-xs text-brand">
             <ArrowLeft size={16} />
             Kembali jelajah

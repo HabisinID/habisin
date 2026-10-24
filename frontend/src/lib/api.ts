@@ -16,11 +16,22 @@ export type Listing = {
   original_price: number;
   stock: number;
   image: string;
+  image_source?: "url" | "upload";
   latitude: number;
   longitude: number;
+  prepared_at?: string | null;
+  buyer_notes?: string;
+  packaging?: string;
+  storage_notes?: string;
+  allergens?: string;
   pickup_start: string;
   pickup_end: string;
   active: boolean;
+  store_id?: number | null;
+  store_summary?: Pick<
+    Store,
+    "id" | "name" | "address" | "latitude" | "longitude" | "is_open"
+  > | null;
 };
 export type ListingInput = Omit<Listing, "id" | "active">;
 export const listingCategories = [
@@ -37,6 +48,19 @@ export type Reservation = {
   code: string;
   status: string;
   created_at: string;
+  can_cancel?: boolean;
+  cancellation_reason?: string;
+  cancellation_note?: string;
+  cancelled_by?: "buyer" | "partner" | "";
+  cancelled_at?: string | null;
+};
+
+export type ReservationPolicy = {
+  remaining_free_portions: number;
+  active_free_reservation_id: number | null;
+  max_quantity: number;
+  reason: string;
+  day: string;
 };
 
 export type Store = {
