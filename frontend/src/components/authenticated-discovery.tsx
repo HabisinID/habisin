@@ -33,8 +33,11 @@ export default function AuthenticatedDiscovery({
   onSelect,
   onRefresh,
   onLocate,
-  onOrders,
   onPartner,
+  query: headerQuery,
+  onQueryChange,
+  savedOnly: headerSaved,
+  onSavedOnlyChange,
 }: {
   items: Listing[];
   now: number;
@@ -54,15 +57,29 @@ export default function AuthenticatedDiscovery({
   onLocate: () => void;
   onOrders: () => void;
   onPartner: () => void;
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  savedOnly?: boolean;
+  onSavedOnlyChange?: (value: boolean) => void;
 }) {
-  const [view, setView] = useState("list");
-  const [mapMounted, setMapMounted] = useState(false);
-  const [query, setQuery] = useState("");
+  const [view, setView] = useState(user.role === "buyer" ? "map" : "list");
+  const [mapMounted, setMapMounted] = useState(user.role === "buyer");
+  const [localQuery, setLocalQuery] = useState("");
   const [category, setCategory] = useState("Semua");
   const [free, setFree] = useState(false);
   const [near, setNear] = useState(false);
   const [two, setTwo] = useState(false);
-  const [savedOnly, setSavedOnly] = useState(false);
+  const [localSavedOnly, setLocalSavedOnly] = useState(false);
+  const query = headerQuery ?? localQuery;
+  const setQuery = onQueryChange ?? setLocalQuery;
+  const savedOnly = headerSaved ?? localSavedOnly;
+  const setSavedOnly = onSavedOnlyChange ?? setLocalSavedOnly;
+  const [focused, setFocused] = useState<{
+    listingId: number;
+    key: string;
+    request: number;
+  } | null>(null);
+
   const [maxPrice, setMaxPrice] = useState(Infinity);
   const [sort, setSort] = useState("pickup");
   const [bounds, setBounds] = useState<MapBounds | null>(null);
@@ -101,6 +118,10 @@ export default function AuthenticatedDiscovery({
       now,
     ],
   );
+  const activeFocus =
+    focused && visibleListings.some((item) => item.id === focused.listingId)
+      ? focused
+      : null;
   function reset() {
     setQuery("");
     setCategory("Semua");
@@ -110,6 +131,7 @@ export default function AuthenticatedDiscovery({
     setSavedOnly(false);
     setMaxPrice(Infinity);
     setBounds(null);
+    setFocused(null);
   }
   const mapView = view === "map";
   const controls = (
@@ -164,33 +186,37 @@ export default function AuthenticatedDiscovery({
         </div>
         {controls}
       </div>
-      <div className={styles.tools}>
-        <input
-          type="text"
-          className={styles.search}
-          aria-label="Cari makanan atau toko"
-          placeholder="Cari makanan atau toko"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query && (
-          <button className={styles.link} onClick={() => setQuery("")}>
-            Hapus pencarian
+      {user.role !== "buyer" && (
+        <div className={styles.tools}>
+          <input
+            type="text"
+            className={styles.search}
+            aria-label="Cari makanan atau toko"
+            placeholder="Cari makanan atau toko"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button className={styles.link} onClick={() => setQuery("")}>
+              Hapus pencarian
+            </button>
+          )}
+          <button
+            className={styles.link}
+            onClick={onLocate}
+            disabled={locating}
+          >
+            <LocateFixed size={16} />
+            {locating ? "Mencari lokasi…" : "Gunakan lokasi saya"}
           </button>
-        )}
-        <button className={styles.link} onClick={onLocate} disabled={locating}>
-          <LocateFixed size={16} />
-          {locating ? "Mencari lokasi…" : "Gunakan lokasi saya"}
-        </button>
-        <button className={styles.link} onClick={onOrders}>
-          Pesanan saya
-        </button>
-        {user.role === "partner" && (
-          <button className={styles.link} onClick={onPartner}>
-            Kelola listing
-          </button>
-        )}
-      </div>
+
+          {user.role === "partner" && (
+            <button className={styles.link} onClick={onPartner}>
+              Kelola listing
+            </button>
+          )}
+        </div>
+      )}
       <div className={styles.chips} aria-label="Filter makanan">
         <button
           className={styles.chip}
@@ -250,14 +276,15 @@ export default function AuthenticatedDiscovery({
             : ""}
         </summary>
         <div className={styles.tools}>
-          <button
-            className={styles.chip}
-            aria-pressed={savedOnly}
-            onClick={() => setSavedOnly(!savedOnly)}
-          >
-            Favorit
-          </button>
-
+          {user.role !== "buyer" && (
+            <button
+              className={styles.chip}
+              aria-pressed={savedOnly}
+              onClick={() => setSavedOnly(!savedOnly)}
+            >
+              Favorit
+            </button>
+          )}
           <label>
             Kategori
             <select
@@ -355,6 +382,7 @@ export default function AuthenticatedDiscovery({
           <div className={mapView ? "" : styles.grid}>
             {visibleListings.map((item) => (
               <FoodPostCard
+                favoritesView={savedOnly}
                 key={item.id}
                 item={item}
                 now={now}
@@ -363,6 +391,23 @@ export default function AuthenticatedDiscovery({
                 onSave={() => onSave(item.id)}
                 onSelect={onSelect}
                 compact={mapView}
+                selected={mapView && activeFocus?.listingId === item.id}
+                onFocus={
+                  mapView
+                    ? (row) => {
+                        const group = storeGroups.find((g) =>
+                          g.items.some((i) => i.id === row.id),
+                        );
+                        if (group)
+                          setFocused({
+                            listingId: row.id,
+                            key: group.key,
+                            request: Date.now(),
+                          });
+                        else onSelect(row);
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -372,6 +417,22 @@ export default function AuthenticatedDiscovery({
             <MapBoundary onFallback={() => setView("list")}>
               <FoodMap
                 groups={storeGroups}
+                focus={activeFocus}
+                onFocusChange={(key) => {
+                  setFocused((old) =>
+                    key
+                      ? old?.key === key
+                        ? old
+                        : {
+                            key,
+                            listingId:
+                              storeGroups.find((g) => g.key === key)?.items[0]
+                                ?.id ?? 0,
+                            request: 0,
+                          }
+                      : null,
+                  );
+                }}
                 origin={origin}
                 recenterKey={recenterKey}
                 visible={mapView}

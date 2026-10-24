@@ -30,6 +30,7 @@ export default function FoodListingDetail({
   onBook,
   onClose,
   onOrders,
+  onAddToCart,
 }: {
   item: Listing;
   now: number;
@@ -46,6 +47,7 @@ export default function FoodListingDetail({
   onBook: () => void;
   onClose: () => void;
   onOrders: () => void;
+  onAddToCart: () => void;
 }) {
   const time = listingTime(item, now);
   const free = item.price === 0;
@@ -235,6 +237,23 @@ export default function FoodListingDetail({
                 <p role="alert" className={styles.error}>
                   {error}
                 </p>
+              )}
+              {user.role === "buyer" && (
+                <button
+                  className={styles.back}
+                  style={{
+                    background: "white",
+                    border: "1px solid #7a8872",
+                    borderRadius: 6,
+                    minHeight: 48,
+                    width: "100%",
+                    fontWeight: 700,
+                  }}
+                  onClick={onAddToCart}
+                  disabled={busy || loading || !available || !validQuantity}
+                >
+                  Masukkan keranjang
+                </button>
               )}
               <button
                 className={styles.primary}
