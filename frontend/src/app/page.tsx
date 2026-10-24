@@ -282,6 +282,28 @@ export default function Home() {
                   {user.role === "admin" ? "Dasbor admin" : "Untuk Mitra"}
                 </button>
               )}
+            </>
+          ) : (
+            <>
+              <button
+                className="text-sm font-semibold text-brand compact:hidden"
+                onClick={openPartner}
+              >
+                Untuk Mitra
+              </button>
+              {/* Desktop puts Masuk before the theme switcher; mobile puts it after (see `end`). */}
+              <button
+                className="h-11 px-2 text-sm font-semibold text-dark mobile:hidden"
+                onClick={() => setPanel("login")}
+              >
+                Masuk
+              </button>
+            </>
+          )
+        }
+        end={
+          user ? (
+            <>
               <button
                 className="flex items-center gap-2 text-sm font-semibold"
                 onClick={() => setPanel("profile")}
@@ -304,13 +326,7 @@ export default function Home() {
           ) : (
             <>
               <button
-                className="text-sm font-semibold text-brand compact:hidden"
-                onClick={openPartner}
-              >
-                Untuk Mitra
-              </button>
-              <button
-                className="h-11 px-2 text-sm font-semibold text-dark"
+                className="hidden h-11 px-2 text-sm font-semibold text-dark mobile:inline-block"
                 onClick={() => setPanel("login")}
               >
                 Masuk

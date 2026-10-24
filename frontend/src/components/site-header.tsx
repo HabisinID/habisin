@@ -12,14 +12,17 @@ export type NavItem = {
 const navItemClass =
   "inline-flex h-11 items-center rounded-full px-3.5 text-sm font-medium text-dark hover:bg-surface-2 aria-[current=page]:bg-light aria-[current=page]:font-bold aria-[current=page]:text-brand";
 
-// Shared top bar from the design (TopNav/Pembeli): logo, page links, and the
-// actions each page owns (account, auth, partner shortcut).
+// Shared top bar from the design (TopNav/Pembeli): logo, page links, the
+// actions each page owns (partner shortcut, Masuk), then the theme switcher,
+// then `end`, the last item (Daftar gratis or the avatar).
 export default function SiteHeader({
   nav = [{ label: "Jelajahi", href: "/" }],
   actions,
+  end,
 }: {
   nav?: NavItem[];
   actions?: React.ReactNode;
+  end?: React.ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-[900] border-b border-line bg-surface">
@@ -73,8 +76,9 @@ export default function SiteHeader({
           )}
         </nav>
         <div className="flex items-center gap-3 tablet:ml-auto mobile:gap-2">
-          <ThemeToggle />
           {actions}
+          <ThemeToggle />
+          {end}
         </div>
       </div>
     </header>

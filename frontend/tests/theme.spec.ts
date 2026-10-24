@@ -87,7 +87,11 @@ test("the theme switcher sits right before Daftar gratis for guests", async ({
     .getByRole("button", { name: /^Tema tampilan/ });
   expect(await toggle.boundingBox()).toMatchObject({ width: 44, height: 44 });
   await expect(toggle).toHaveCSS("border-top-width", "1px");
-  await expect(toggle).toHaveCSS("border-radius", /9999px|50%/);
+  // A circle: Tailwind's rounded-full computes to a huge px radius.
+  const radius = await toggle.evaluate((el) =>
+    parseFloat(getComputedStyle(el).borderTopLeftRadius),
+  );
+  expect(radius).toBeGreaterThanOrEqual(22);
 
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await headerControls(page)).slice(-3)).toEqual([
@@ -161,13 +165,11 @@ async function lowContrastText(page: Page) {
         if (color.a > 0) layers.push(color);
         if (color.a === 1) break;
       }
-      return layers
-        .reverse()
-        .reduce((under, layer) => over(layer, under), {
-          r: 255,
-          g: 255,
-          b: 255,
-        });
+      return layers.reverse().reduce((under, layer) => over(layer, under), {
+        r: 255,
+        g: 255,
+        b: 255,
+      });
     };
     const failures: string[] = [];
     for (const element of document.querySelectorAll("body *")) {

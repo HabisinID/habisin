@@ -47,7 +47,7 @@ export default function OrderShell({
           { label: "Jelajahi", href: "/" },
           { label: "Pesanan", href: "/pesanan", current: true },
         ]}
-        actions={
+        end={
           user && (
             <span
               className="grid h-10 w-10 place-items-center rounded-full bg-light text-sm font-bold text-brand"

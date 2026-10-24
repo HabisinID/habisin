@@ -41,7 +41,7 @@ export default function ThemeToggle() {
   const Icon = icons[preference];
   return (
     <button
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-dark transition-transform hover:bg-surface-2 active:scale-90"
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border text-dark transition-transform hover:bg-surface-2 active:scale-90 mobile:h-10 mobile:w-10"
       aria-label={`Tema tampilan: ${themeLabel[preference]}`}
       title={`Tema: ${themeLabel[preference]} (klik untuk ganti)`}
       onClick={() => {
@@ -55,7 +55,7 @@ export default function ThemeToggle() {
         window.dispatchEvent(new Event(THEME_EVENT));
       }}
     >
-      <Icon size={18} />
+      <Icon size={20} />
     </button>
   );
 }
