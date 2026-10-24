@@ -87,3 +87,22 @@ class Reservation(models.Model):
     code = models.CharField(max_length=5, unique=True)
     status = models.CharField(max_length=12, default="reserved", choices=[("reserved", "Dipesan"), ("cancelled", "Dibatalkan")])
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CheckoutBatch(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    key = models.UUIDField()
+    fingerprint = models.CharField(max_length=64)
+    reservation_ids = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "key"], name="checkout_user_key_unique")]
+
+
+class ListingStockAction(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    token = models.UUIDField(unique=True)
+    previous_stock = models.PositiveIntegerField()
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)

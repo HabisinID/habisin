@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
-from .models import Profile, Listing, Reservation, Store
+from .models import ListingStockAction, Profile, Listing, Reservation, Store
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
 from .reservation_policy import reservation_policy, cancellation_reason
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
@@ -178,6 +178,8 @@ def partner_listing_detail(request, pk):
             serializer = PartnerListingSerializer(item, data=request.data, partial=True, context={"request": request})
             serializer.is_valid(raise_exception=True)
             item = save_listing_with_media(serializer, media)
+            if "stock" in request.data:
+                ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
             return Response(ListingSerializer(item).data)
         return Response(ListingSerializer(item).data)
 
@@ -229,6 +231,7 @@ def cancel_reservation(request, pk):
             return Response({"detail": reason}, status=409)
         updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled")
         if updated:
+            ListingStockAction.objects.filter(listing_id=reservation.listing_id, used=False).update(used=True)
             Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
         reservation.refresh_from_db()
     return Response(ReservationSerializer(reservation).data)
