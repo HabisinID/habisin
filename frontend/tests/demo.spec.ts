@@ -17,39 +17,49 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   page.on("pageerror", (error) => errors.push(error.message));
   await openCatalog(page);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "dihabisin",
+    "Roti, nasi, dan kue",
   );
+  await expect(
+    page
+      .getByRole("region", { name: "Makanan di sekitarmu" })
+      .locator(".food-card"),
+  ).toHaveCount(4);
+  await page
+    .getByRole("link", { name: "Lihat makanan di sekitar saya", exact: true })
+    .click();
   await expect(page.locator(".food-card")).toHaveCount(6);
   await page
     .getByRole("textbox", { name: "Cari makanan atau toko" })
     .fill("pastry");
   await expect(page.locator(".food-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Hapus pencarian" }).click();
-  await page.getByLabel("Donasi gratis", { exact: true }).check();
+  await page.getByRole("button", { name: "Gratis", exact: true }).click();
   await expect(page.locator(".food-card")).toHaveCount(1);
-  await expect(page.locator(".card-title")).toHaveText("Roti Berbagi");
-  await page.getByLabel("Donasi gratis", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Gratis", exact: true }).click();
   await page
     .getByRole("button", { name: "Simpan Surprise Pastry Box ke favorit" })
     .click();
-  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("button", {
-      name: "Hapus Surprise Pastry Box dari favorit",
-    }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Peta", exact: true }).click();
-  await expect(page.locator(".leaflet-marker-icon.food-pin")).toHaveCount(6);
-  await page.locator(".leaflet-marker-icon.food-pin").first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Tutup", exact: true }).click();
+    page.getByRole("dialog", { name: "Senang kamu kembali." }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".food-pin")).toHaveCount(6);
+  await page.locator(".food-pin").first().click();
+  await expect(page.getByText("Profil toko belum terhubung.")).toBeVisible();
+  await page
+    .getByRole("region", { name: /^Pilihan makanan/ })
+    .getByRole("button", { name: /Surprise Pastry Box/ })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Detail makanan", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Tutup popup toko" }).click();
   await page.getByRole("button", { name: "Daftar", exact: true }).click();
-  await page.screenshot({ path: "/tmp/habisin-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "/tmp/habisin-mobile.png", fullPage: true });
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
+      () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
   expect(errors).toEqual([]);
@@ -78,25 +88,30 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     registered = true;
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole("button", { name: "B Browser", exact: true }),
+      page.getByRole("button", { name: "Akun Browser Tester", exact: true }),
     ).toBeVisible();
+    await page.getByRole("button", { name: "Daftar", exact: true }).click();
     await page
       .getByRole("button", { name: "Pesan Surprise Pastry Box", exact: true })
       .click();
-    await page.getByLabel("Jumlah porsi").fill("2");
+    await page.getByLabel("Jumlah porsi", { exact: true }).fill("2");
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
     await expect(
       page.getByRole("heading", { name: "Makananmu sudah dipesan!" }),
     ).toBeVisible();
-    await expect(page.locator(".ticket > strong")).toHaveText(/^[A-Z2-9]{5}$/);
+    await expect(page.locator('[class*="claim"]>strong')).toHaveText(
+      /^[A-Z2-9]{5}$/,
+    );
     await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
     await expect(page.locator(".order-item")).toHaveCount(1);
     await page.getByRole("button", { name: "Batalkan", exact: true }).click();
     await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Tutup", exact: true }).click();
-    await page.getByRole("button", { name: "B Browser", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Akun Browser Tester", exact: true })
+      .click();
     await page.getByLabel("Nama lengkap").fill("Updated Tester");
     await page.getByRole("button", { name: "Simpan perubahan" }).click();
     await expect(page.getByText("Profil berhasil disimpan.")).toBeVisible();
@@ -116,7 +131,9 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
       .getByRole("button", { name: "Masuk", exact: true })
       .click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    await page.getByRole("button", { name: "U Updated", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Akun Updated Tester", exact: true })
+      .click();
     await page.getByRole("button", { name: "Hapus akun", exact: true }).click();
     await page.getByLabel("Konfirmasi password").fill(newPassword);
     await page.getByRole("dialog").getByRole("checkbox").check();

@@ -18,6 +18,8 @@ const partner = {
 
 async function mockApi(page: Page, user: typeof partner | null = partner) {
   let store: Store | null = null;
+  const stores = new Map<number, Store>();
+  let nextId = 7;
   const writes: { method: string; data: Record<string, unknown> }[] = [];
   let lookups = 0;
   await page.route("**/api/auth/me", (route) =>
@@ -39,24 +41,30 @@ async function mockApi(page: Page, user: typeof partner | null = partner) {
       json: { results: [result], geocode_token: "test-geocode-token" },
     });
   });
-  await page.route("**/api/partner/store", async (route) => {
+  await page.route(/\/api\/partner\/stores(?:\/\d+)?$/, async (route) => {
     const request = route.request();
-    if (request.method() === "GET") return route.fulfill({ json: { store } });
+    const id = Number(new URL(request.url()).pathname.split("/")[4]);
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: id ? stores.get(id) : { stores: [...stores.values()] },
+      });
     const data = request.postDataJSON();
     writes.push({ method: request.method(), data });
     if (request.method() === "DELETE") {
-      expect(data.confirmation_name).toBe(store?.name);
+      expect(data.confirmation_name).toBe(stores.get(id)?.name);
+      stores.delete(id);
       store = null;
       return route.fulfill({ status: 204 });
     }
     store = {
-      id: 7,
+      id: id || nextId++,
       created_at: "2026-10-22T00:00:00Z",
       updated_at: "2026-10-22T00:00:00Z",
       is_open: true,
-      ...store,
+      ...(id ? stores.get(id) : {}),
       ...data,
     } as Store;
+    stores.set(store.id, store);
     await route.fulfill({
       status: request.method() === "POST" ? 201 : 200,
       json: store,
@@ -67,7 +75,7 @@ async function mockApi(page: Page, user: typeof partner | null = partner) {
       store ? { json: store } : { status: 404, json: { detail: "Not found" } },
     ),
   );
-  return { writes, store: () => store, lookups: () => lookups };
+  return { writes, store: () => store, stores, lookups: () => lookups };
 }
 async function start(page: Page) {
   await page.goto("/partner/store");
@@ -261,4 +269,52 @@ test("anonymous visitors can sign in and buyers cannot manage stores", async ({
   await expect(
     page.getByRole("button", { name: "Daftarkan toko" }),
   ).toHaveCount(0);
+});
+
+test("partner keeps two stores separate when editing and closing a branch", async ({
+  page,
+}) => {
+  const api = await mockApi(page);
+  await start(page);
+  await confirm(page);
+  await page
+    .getByRole("button", { name: "Daftarkan toko", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Tambah toko", exact: true }).click();
+  await page.getByLabel("Nama toko", { exact: true }).fill("Dapur Cabang Dua");
+  await page.getByLabel("Deskripsi toko").fill("Cabang kedua yang terpisah.");
+  await page.getByLabel("Alamat toko", { exact: true }).fill(address);
+  await confirm(page);
+  await page
+    .getByRole("button", { name: "Daftarkan toko", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Dapur Cabang Dua", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Tutup toko sementara" }).click();
+  await expect(
+    page.getByText("Toko ditutup sementara", { exact: true }),
+  ).toBeVisible();
+  expect(api.stores.get(7)?.is_open).toBe(true);
+  expect(api.stores.get(8)?.is_open).toBe(false);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Kelola toko Dapur Berkah", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Dapur Berkah", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Toko aktif", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", {
+      name: "Kelola toko Dapur Cabang Dua",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
