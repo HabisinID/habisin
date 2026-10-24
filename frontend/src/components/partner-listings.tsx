@@ -1,372 +1,28 @@
 "use client";
 
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import { ArrowLeft, Plus, PackageOpen } from "lucide-react";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { Plus, PackageOpen } from "lucide-react";
 import Modal from "./modal";
-import { primaryButton, secondaryButton, errorClass } from "./store-ui";
+import { designFont } from "@/lib/design-font";
+import ListingComposer from "./listing-composer";
+import { primaryButton, errorClass } from "./store-ui";
 import styles from "./partner-listings.module.css";
-import {
-  ApiError,
-  listingCategories,
-  partnerListingApi,
-  rupiah,
-  type Listing,
-  type ListingInput,
-} from "@/lib/api";
-
-function localDate(value: string) {
-  return new Date(value)
-    .toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" })
-    .replace(" ", "T")
-    .slice(0, 16);
-}
-
-function Field({
-  name,
-  label,
-  error,
-  children,
-}: {
-  name: string;
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={styles["listing-field"]}>
-      <label htmlFor={`listing-${name}`}>{label}</label>
-      {children}
-      {error && (
-        <small
-          id={`listing-${name}-error`}
-          className={styles["listing-field-error"]}
-        >
-          {error}
-        </small>
-      )}
-    </div>
-  );
-}
-
-function ListingForm({
-  item,
-  busy,
-  setBusy,
-  onSaved,
-  onCancel,
-}: {
-  item: Listing | null;
-  busy: boolean;
-  setBusy: (value: boolean) => void;
-  onSaved: (item: Listing) => void;
-  onCancel: () => void;
-}) {
-  const [free, setFree] = useState(item?.price === 0);
-  const [error, setError] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [times] = useState(() => {
-    const start = new Date();
-    return {
-      start: localDate(start.toISOString()),
-      end: localDate(
-        new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-      ),
-    };
-  });
-  const inputProps = (name: string) => ({
-    id: `listing-${name}`,
-    name,
-    "aria-invalid": !!errors[name],
-    "aria-describedby": errors[name] ? `listing-${name}-error` : undefined,
-  });
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const text = (name: string) => String(form.get(name) ?? "").trim();
-    const payload: ListingInput = {
-      name: text("name"),
-      store: text("store"),
-      category: text("category"),
-      description: text("description"),
-      address: text("address"),
-      image: text("image"),
-      price: free ? 0 : Number(text("price")),
-      original_price: free
-        ? (item?.original_price ?? 0)
-        : Number(text("original_price")),
-      stock: Number(text("stock")),
-      latitude: Number(text("latitude")),
-      longitude: Number(text("longitude")),
-      pickup_start: new Date(`${text("pickup_start")}+07:00`).toISOString(),
-      pickup_end: new Date(`${text("pickup_end")}+07:00`).toISOString(),
-    };
-    setBusy(true);
-    setError("");
-    setErrors({});
-    try {
-      const changes = item
-        ? Object.fromEntries(
-            Object.entries(payload).filter(([key, value]) => {
-              if (key === "pickup_start" || key === "pickup_end")
-                return text(key) !== localDate(item[key]);
-              return value !== item[key as keyof ListingInput];
-            }),
-          )
-        : payload;
-      onSaved(
-        item
-          ? await partnerListingApi.update(item.id, changes)
-          : await partnerListingApi.create(payload),
-      );
-    } catch (e) {
-      if (e instanceof ApiError) {
-        setErrors(
-          Object.fromEntries(
-            Object.entries(e.details).map(([key, value]) => [
-              key,
-              Array.isArray(value) ? value.join(" ") : String(value),
-            ]),
-          ),
-        );
-      }
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form className={styles["listing-form"]} onSubmit={submit}>
-      <button
-        type="button"
-        className={`${styles["listing-back"]} text-sm font-semibold text-brand`}
-        onClick={onCancel}
-        disabled={busy}
-      >
-        <ArrowLeft size={16} /> Kembali ke listing
-      </button>
-      <div>
-        <h3>{item ? "Ubah listing" : "Tambah listing"}</h3>
-        <p className={styles["listing-hint"]}>
-          Isi detail makanan dan lokasi pengambilan. Waktu menggunakan WIB.
-        </p>
-      </div>
-      {error && (
-        <p className={errorClass} role="alert">
-          {error}
-        </p>
-      )}
-      <fieldset disabled={busy} className={styles["listing-fields"]}>
-        <Field name="name" label="Nama makanan" error={errors.name}>
-          <input
-            {...inputProps("name")}
-            defaultValue={item?.name}
-            required
-            maxLength={160}
-          />
-        </Field>
-        <Field name="store" label="Nama toko" error={errors.store}>
-          <input
-            {...inputProps("store")}
-            defaultValue={item?.store}
-            required
-            maxLength={120}
-          />
-        </Field>
-        <Field name="category" label="Kategori" error={errors.category}>
-          <select
-            {...inputProps("category")}
-            defaultValue={item?.category || listingCategories[0]}
-          >
-            {listingCategories.map((category) => (
-              <option key={category}>{category}</option>
-            ))}
-          </select>
-        </Field>
-        <Field name="stock" label="Stok tersedia (porsi)" error={errors.stock}>
-          <input
-            {...inputProps("stock")}
-            type="number"
-            min={0}
-            step={1}
-            required
-            defaultValue={item?.stock ?? 1}
-          />
-        </Field>
-        <div className={styles["listing-span"]}>
-          <Field
-            name="description"
-            label="Deskripsi makanan"
-            error={errors.description}
-          >
-            <textarea
-              {...inputProps("description")}
-              required
-              rows={3}
-              defaultValue={item?.description}
-            />
-          </Field>
-        </div>
-        <div className={styles["listing-span"]}>
-          <Field name="image" label="URL foto makanan" error={errors.image}>
-            <input
-              {...inputProps("image")}
-              type="url"
-              required
-              maxLength={250}
-              placeholder="https://contoh.com/foto-makanan.jpg"
-              defaultValue={item?.image}
-            />
-          </Field>
-          <p className={styles["listing-hint"]}>
-            Gunakan URL foto publik dengan awalan https:// atau http://.
-          </p>
-        </div>
-        <label
-          className={styles["listing-donation"] + " " + styles["listing-span"]}
-        >
-          <input
-            type="checkbox"
-            checked={free}
-            onChange={(e) => setFree(e.target.checked)}
-          />{" "}
-          Gratis (donasi)
-        </label>
-        {!free && (
-          <>
-            <Field
-              name="original_price"
-              label="Harga normal (Rp)"
-              error={errors.original_price}
-            >
-              <input
-                {...inputProps("original_price")}
-                type="number"
-                min={0}
-                step={1}
-                required
-                defaultValue={item?.original_price}
-              />
-            </Field>
-            <Field name="price" label="Harga jual (Rp)" error={errors.price}>
-              <input
-                {...inputProps("price")}
-                type="number"
-                min={1}
-                step={1}
-                required
-                defaultValue={item?.price || undefined}
-              />
-            </Field>
-          </>
-        )}
-        {free && (errors.price || errors.original_price) && (
-          <p
-            className={
-              styles["listing-field-error"] + " " + styles["listing-span"]
-            }
-          >
-            {errors.price || errors.original_price}
-          </p>
-        )}
-        <Field
-          name="pickup_start"
-          label="Mulai pengambilan (WIB)"
-          error={errors.pickup_start}
-        >
-          <input
-            {...inputProps("pickup_start")}
-            type="datetime-local"
-            required
-            defaultValue={item ? localDate(item.pickup_start) : times.start}
-          />
-        </Field>
-        <Field
-          name="pickup_end"
-          label="Batas pengambilan (WIB)"
-          error={errors.pickup_end}
-        >
-          <input
-            {...inputProps("pickup_end")}
-            type="datetime-local"
-            required
-            defaultValue={item ? localDate(item.pickup_end) : times.end}
-          />
-        </Field>
-        <div className={styles["listing-span"]}>
-          <Field
-            name="address"
-            label="Alamat pengambilan"
-            error={errors.address}
-          >
-            <textarea
-              {...inputProps("address")}
-              required
-              maxLength={250}
-              rows={2}
-              defaultValue={item?.address}
-            />
-          </Field>
-        </div>
-        <Field name="latitude" label="Latitude toko" error={errors.latitude}>
-          <input
-            {...inputProps("latitude")}
-            type="number"
-            min={-90}
-            max={90}
-            step="any"
-            required
-            defaultValue={item?.latitude}
-            placeholder="-6.366"
-          />
-        </Field>
-        <Field name="longitude" label="Longitude toko" error={errors.longitude}>
-          <input
-            {...inputProps("longitude")}
-            type="number"
-            min={-180}
-            max={180}
-            step="any"
-            required
-            defaultValue={item?.longitude}
-            placeholder="106.829"
-          />
-        </Field>
-      </fieldset>
-      <p className={styles["listing-hint"]}>
-        Stok adalah jumlah yang masih dapat dipesan. Harga, alamat, koordinat,
-        dan waktu ambil tidak dapat diubah selama ada pesanan aktif.
-      </p>
-      <div className={styles["listing-form-actions"]}>
-        <button
-          type="button"
-          className={secondaryButton}
-          onClick={onCancel}
-          disabled={busy}
-        >
-          Batal
-        </button>
-        <button className={primaryButton} disabled={busy}>
-          {busy
-            ? "Menyimpan…"
-            : item
-              ? "Simpan perubahan"
-              : "Tayangkan listing"}
-        </button>
-      </div>
-    </form>
-  );
-}
+import { partnerListingApi, rupiah, type Listing } from "@/lib/api";
 
 export default function PartnerListings({
   onClose,
   onCatalogChange,
+  userId,
+  onViewListing,
+  onAccount,
+  startWithCreate = false,
+  startWithCopy = false,
 }: {
+  userId: number;
+  startWithCreate?: boolean;
+  startWithCopy?: boolean;
+  onViewListing: (item: Listing) => void;
+  onAccount: () => void;
   onClose: () => void;
   onCatalogChange: (item: Listing | null, id: number) => void;
 }) {
@@ -374,7 +30,11 @@ export default function PartnerListings({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [form, setForm] = useState<{ item: Listing | null } | null>(null);
+  const [form, setForm] = useState<{
+    item: Listing | null;
+    session?: number;
+    copy?: boolean;
+  } | null>(startWithCreate ? { item: null, copy: startWithCopy } : null);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<{
     id: number;
@@ -409,7 +69,7 @@ export default function PartnerListings({
       ...current.filter((row) => row.id !== item.id),
     ]);
     onCatalogChange(item, item.id);
-    setForm(null);
+    if (form?.item) setForm(null);
     setMessage(
       form?.item
         ? "Perubahan listing berhasil disimpan."
@@ -454,17 +114,31 @@ export default function PartnerListings({
   }
   return (
     <Modal
-      title="Kelola listing"
+      title={
+        form
+          ? form.item
+            ? "Ubah listing"
+            : "Tambah listing"
+          : "Kelola listing"
+      }
       wide
+      fullscreen={!!form}
       onClose={() => {
         if (!busy) onClose();
       }}
     >
-      <div className={styles["partner-listings"]}>
+      <div className={`${styles["partner-listings"]} ${designFont.className}`}>
         {form ? (
-          <ListingForm
-            key={form.item?.id ?? "new"}
+          <ListingComposer
+            key={`${form.item?.id ?? "new"}-${form.session ?? 0}`}
+            userId={userId}
+            now={now}
+            items={items}
+            onView={onViewListing}
+            onAccount={onAccount}
+            onNew={() => setForm({ item: null, session: Date.now() })}
             item={form.item}
+            initialCopyOpen={!!form.copy}
             busy={busy}
             setBusy={setBusy}
             onSaved={saved}

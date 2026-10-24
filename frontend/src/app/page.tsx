@@ -912,6 +912,9 @@ export default function Home() {
       )}
       {panel === "partner" && user?.role === "partner" && (
         <PartnerListings
+          userId={user.id}
+          onViewListing={selectItem}
+          onAccount={() => setPanel("profile")}
           onClose={() => setPanel(null)}
           onCatalogChange={updateCatalog}
         />
