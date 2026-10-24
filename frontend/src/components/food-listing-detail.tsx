@@ -30,7 +30,8 @@ export default function FoodListingDetail({
   onBook,
   onClose,
   onOrders,
-  onAddToCart,
+  note,
+  onNote,
 }: {
   item: Listing;
   now: number;
@@ -47,7 +48,8 @@ export default function FoodListingDetail({
   onBook: () => void;
   onClose: () => void;
   onOrders: () => void;
-  onAddToCart: () => void;
+  note: string;
+  onNote: (value: string) => void;
 }) {
   const time = listingTime(item, now);
   const free = item.price === 0;
@@ -60,7 +62,7 @@ export default function FoodListingDetail({
     0,
     Math.min(
       item.stock,
-      free ? (!user ? 2 : (policy.data?.max_quantity ?? 0)) : 10,
+      free ? (!user ? 2 : (policy.data?.max_quantity ?? 0)) : 4,
     ),
   );
   const validQuantity =
@@ -159,8 +161,8 @@ export default function FoodListingDetail({
             <div className={styles.booking}>
               {free && (
                 <p className={`${styles.small} ${styles.muted}`}>
-                  Maksimal 2 porsi gratis per toko per hari WIB. Hanya 1 tiket
-                  gratis aktif pada satu waktu.
+                  Maksimal 2 porsi gratis per pembeli per hari WIB untuk seluruh
+                  toko.
                 </p>
               )}
               {free && user?.role === "buyer" && (
@@ -177,7 +179,7 @@ export default function FoodListingDetail({
                   {policy.data && (
                     <>
                       <p>
-                        Sisa kuota toko hari ini:{" "}
+                        Sisa kuota gratis hari ini:{" "}
                         {policy.data.remaining_free_portions} porsi
                       </p>
                       {policy.data.reason && (
@@ -223,10 +225,11 @@ export default function FoodListingDetail({
                   )}
                 </strong>
               </div>
-              {time.remaining < 1800000 && (
+              {time.remaining <= 1800000 && (
                 <p className={`${styles.small} ${styles.urgent}`}>
-                  Pesanan ini tidak bisa dibatalkan karena waktu ambil tersisa
-                  kurang dari 30 menit atau sudah berakhir.
+                  Pesanan lunas tidak bisa dibatalkan karena waktu ambil tersisa
+                  30 menit atau kurang. Pesanan belum dibayar tetap dapat
+                  dibatalkan.
                 </p>
               )}
               {!available && (
@@ -246,23 +249,16 @@ export default function FoodListingDetail({
                   {error}
                 </p>
               )}
-              {(!user || user.role === "buyer") && (
-                <button
-                  className={styles.back}
-                  style={{
-                    background: "white",
-                    border: "1px solid #7a8872",
-                    borderRadius: 6,
-                    minHeight: 48,
-                    width: "100%",
-                    fontWeight: 700,
-                  }}
-                  onClick={onAddToCart}
-                  disabled={busy || loading || !available || !validQuantity}
-                >
-                  Masukkan keranjang
-                </button>
-              )}
+              <label className={styles.small}>
+                Catatan pengambilan (opsional)
+                <textarea
+                  className={styles.select}
+                  maxLength={140}
+                  value={note}
+                  onChange={(e) => onNote(e.target.value)}
+                  disabled={busy}
+                />
+              </label>
               <button
                 className={styles.primary}
                 onClick={onBook}
@@ -284,9 +280,7 @@ export default function FoodListingDetail({
                   ? "Memproses…"
                   : !user
                     ? "Masuk untuk memesan"
-                    : free
-                      ? "Klaim donasi gratis"
-                      : "Simulasikan pembayaran berhasil"}
+                    : "Lanjut ke ringkasan"}
               </button>
               {!free && (
                 <p className={`${styles.small} ${styles.muted}`}>

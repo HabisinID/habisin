@@ -24,6 +24,7 @@ import { isActiveReservation } from "@/lib/reservation";
 import { eligible } from "@/lib/discovery";
 import { designFont } from "@/lib/design-font";
 import { PickupProgress } from "./food-post-card";
+import SiteHeader from "./site-header";
 import HabisinLogo from "./habisin-logo";
 import ListingImage from "./listing-image";
 import s from "./workspace.module.css";
@@ -71,8 +72,6 @@ export default function PartnerDashboard({
     } | null>(null),
     [message, setMessage] = useState("");
   const [history, setHistory] = useState(false);
-  const [cancelling, setCancelling] = useState<number | null>(null);
-  const [reason, setReason] = useState("");
   const generation = useRef(0);
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -112,29 +111,6 @@ export default function PartnerDashboard({
       clearInterval(timer);
     };
   }, [load, revision]);
-  async function cancelOrder(order: PartnerOrder) {
-    if (busy || !reason.trim()) return;
-    setBusy(true);
-    setError("");
-    try {
-      const result = await api<Reservation>(
-        `partner/reservations/${order.id}/cancel`,
-        "POST",
-        { reason: reason.trim() },
-      );
-      setCancelling(null);
-      setReason("");
-      setMessage(
-        `Pesanan ${order.listing.name} dibatalkan. Stok dikembalikan.`,
-      );
-      onChanged(result.listing, result.listing.id);
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   async function sold(item: Listing) {
     setBusy(true);
     setError("");
@@ -234,7 +210,7 @@ export default function PartnerDashboard({
         </button>
       </aside>
       <div className={s.partnerMain}>
-        <header className={s.partnerHeader}>
+        <SiteHeader nav={[]} className={s.partnerHeader}>
           <div>
             <p className={s.eyebrow}>
               {new Date(now).toLocaleString("id-ID", {
@@ -270,7 +246,7 @@ export default function PartnerDashboard({
               Tambah listing
             </button>
           </div>
-        </header>
+        </SiteHeader>
         {section === "dashboard" && (
           <section className={s.performance} aria-label="Performa penjualan">
             <div className={s.row}>
@@ -433,71 +409,6 @@ export default function PartnerDashboard({
                               : "Menunggu pengambilan"}
                         </small>
                       </div>
-                      {order.cancellation_note && (
-                        <p className={s.orderCancel}>
-                          Dibatalkan oleh mitra: {order.cancellation_note}
-                        </p>
-                      )}
-                      {isActiveReservation(order, now) && (
-                        <>
-                          <button
-                            className={s.danger}
-                            disabled={busy}
-                            aria-label={`Batalkan pesanan ${order.code}`}
-                            onClick={() => {
-                              setCancelling(order.id);
-                              setReason("");
-                            }}
-                          >
-                            Batalkan
-                          </button>
-                          {cancelling === order.id && (
-                            <form
-                              className={s.orderCancel}
-                              aria-label={`Pembatalan ${order.code}`}
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                void cancelOrder(order);
-                              }}
-                            >
-                              <label htmlFor={`cancel-reason-${order.id}`}>
-                                Alasan pembatalan (wajib)
-                              </label>
-                              <textarea
-                                id={`cancel-reason-${order.id}`}
-                                required
-                                maxLength={500}
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                disabled={busy}
-                              />
-                              <small>
-                                Pembeli akan melihat alasan ini. Stok
-                                dikembalikan setelah pembatalan berhasil.
-                              </small>
-                              <div className={s.row}>
-                                <button
-                                  type="button"
-                                  className={s.secondary}
-                                  disabled={busy}
-                                  onClick={() => setCancelling(null)}
-                                >
-                                  Kembali
-                                </button>
-                                <button
-                                  type="submit"
-                                  className={s.danger}
-                                  disabled={busy || !reason.trim()}
-                                >
-                                  {busy
-                                    ? "Membatalkan…"
-                                    : "Konfirmasi pembatalan"}
-                                </button>
-                              </div>
-                            </form>
-                          )}
-                        </>
-                      )}
                     </article>
                   ))
                 )}

@@ -197,7 +197,7 @@ class LinkedListingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.get("/api/listings").json(), [])
         self.assertEqual(len(self.client.get("/api/partner/listings").json()), 1)
-        self.assertEqual(Reservation.objects.get(pk=order["id"]).status, "reserved")
+        self.assertEqual(Reservation.objects.get(pk=order["id"]).status, "pending")
         self.client.force_authenticate(self.buyer)
         self.assertEqual(self.client.post("/api/reservations", {"listing_id": self.item.pk}, format="json").status_code, 400)
         self.client.force_authenticate(self.partner)

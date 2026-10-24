@@ -1,5 +1,4 @@
 "use client";
-import { isActiveReservation } from "@/lib/reservation";
 
 import {
   useCallback,
@@ -17,11 +16,9 @@ import LandingPage, {
 } from "@/components/landing-page";
 import {
   ArrowRight,
-  ArrowUpRight,
   Compass,
+  Check,
   Leaf,
-  LogOut,
-  ShoppingBag,
   Sprout,
   Ticket,
   Users,
@@ -31,14 +28,13 @@ import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
 import AuthenticatedDiscovery from "@/components/authenticated-discovery";
 import FoodListingDetail from "@/components/food-listing-detail";
-import { URGENT_WINDOW } from "@/lib/listing-time";
 import PartnerListings from "@/components/partner-listings";
 import BuyerHeader from "@/components/buyer-header";
-import HabisinLogo from "@/components/habisin-logo";
-import BuyerTicket from "@/components/buyer-ticket";
-import CartPanel from "@/components/cart-panel";
+import OrderList from "@/components/order-list";
+import OrderSummary from "@/components/order-summary";
+import SiteHeader from "@/components/site-header";
+import { orderApi } from "@/lib/orders";
 import PartnerDashboard from "@/components/partner-dashboard";
-import { useCart } from "@/lib/cart";
 import {
   api,
   pickup,
@@ -81,7 +77,6 @@ type Panel =
   | "register"
   | "profile"
   | "orders"
-  | "cart"
   | "how"
   | "impact"
   | "partner"
@@ -133,14 +128,7 @@ export default function Home() {
   const [partnerRevision, setPartnerRevision] = useState(0);
   const [partnerCopy, setPartnerCopy] = useState(false);
   const [partnerStart, setPartnerStart] = useState(false);
-  const cart = useCart(user?.role === "buyer" ? user.id : undefined);
   const [orders, setOrders] = useState<Reservation[]>([]);
-  const [ordersHistory, setOrdersHistory] = useState(false);
-  const shownOrders = orders.filter((order) =>
-    ordersHistory
-      ? !isActiveReservation(order, now)
-      : isActiveReservation(order, now),
-  );
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -148,6 +136,8 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const { origin, location, locating, recenterKey, locate } =
     useBrowserLocation(setNotice);
+  const [summary, setSummary] = useState<Reservation | null>(null);
+  const [note, setNote] = useState("");
   const [ticket, setTicket] = useState<Reservation | null>(null);
   const [dashboard, setDashboard] = useState<{
     users: number | null;
@@ -254,6 +244,7 @@ export default function Home() {
         : null;
     catalogScroll.current = window.scrollY;
     setQuantity(1);
+    setNote("");
     setOrderError("");
     setSelected(item);
   }, []);
@@ -279,7 +270,6 @@ export default function Home() {
       return;
     }
     setPanel("orders");
-    setOrdersHistory(false);
     setOrdersLoading(true);
     setOrderError("");
     try {
@@ -301,12 +291,9 @@ export default function Home() {
     setBusy(true);
     setOrderError("");
     try {
-      const order = await api<Reservation>("reservations", "POST", {
-        listing_id: selected!.id,
-        quantity,
-      });
+      const order = await orderApi.create(selected!.id, quantity, note);
       setPolicyRevision((n) => n + 1);
-      setTicket(order);
+      setSummary(order);
       setSelected(null);
       if (new URLSearchParams(window.location.search).has("listing"))
         router.replace(pathname, { scroll: false });
@@ -326,39 +313,19 @@ export default function Home() {
       setBusy(false);
     }
   }
-  async function cancel(order: Reservation) {
-    setBusy(true);
-    setOrderError("");
-    try {
-      const updated = await api<Reservation>(
-        `reservations/${order.id}/cancel`,
-        "POST",
-      );
-      setTicket((current) => (current?.id === order.id ? updated : current));
-      setOrders((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
-      setItems((current) =>
-        current.map((item) =>
-          item.id === updated.listing.id ? updated.listing : item,
-        ),
-      );
-      setPolicyRevision((n) => n + 1);
-      setOrdersHistory(true);
-      setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
-      refresh();
-    } catch (e) {
-      setOrderError((e as Error).message);
-      setPolicyRevision((n) => n + 1);
-      refresh();
-    } finally {
-      setBusy(false);
-    }
+  function updateListing(listing: Listing) {
+    setItems((current) =>
+      current.map((item) => (item.id === listing.id ? listing : item)),
+    );
+    setPolicyRevision((n) => n + 1);
+    refresh();
   }
   async function signOut() {
     try {
       await api("auth/logout", "POST");
       setSelected(null);
+      setSummary(null);
+      setTicket(null);
       setPolicyRevision((n) => n + 1);
       previousDetail.current = false;
       setUser(null);
@@ -402,10 +369,7 @@ export default function Home() {
     }
     setTicket(null);
     closeDetail();
-    if (destination === "cart") {
-      setPanel("cart");
-      refresh();
-    } else if (destination === "orders") void showOrders();
+    if (destination === "orders") void showOrders();
     else {
       setPanel(null);
       setBuyerFavorites(destination === "favorites");
@@ -429,14 +393,11 @@ export default function Home() {
         active={
           ticket || panel === "orders"
             ? "orders"
-            : panel === "cart"
-              ? "cart"
-              : buyerFavorites
-                ? "favorites"
-                : "explore"
+            : buyerFavorites
+              ? "favorites"
+              : "explore"
         }
         onNavigate={buyerNavigate}
-        cartCount={cart.items.reduce((n, r) => n + r.quantity, 0)}
         onAccount={() => {
           setTicket(null);
           setPanel("profile");
@@ -472,95 +433,31 @@ export default function Home() {
         </span>
       </div> */}
       {user?.role === "buyer" || (!user && (guestExplore || !!selected)) ? (
-        panel === "cart" || panel === "orders" || ticket ? null : (
-          buyerHeader
-        )
+        buyerHeader
       ) : user?.role === "partner" ? null : !user ? (
         <LandingHeader
           location={location}
           locating={locating}
           onLocate={locate}
-          onLogin={() => {
-            setRegistrationRole("buyer");
-            setPanel("login");
-          }}
+          onLogin={() => setPanel("login")}
           onRegister={() => {
             setRegistrationRole("buyer");
             setPanel("register");
           }}
         />
       ) : (
-        <header className="header h-22 bg-[#fafaf6f5] [border-bottom:1px_solid_var(--color-line)] [&_nav]:flex [&_nav]:items-center [&_nav]:gap-[30px] [&_nav]:h-full [&_nav]:text-[13px] [&_nav_>_a]:h-full [&_nav_>_a]:flex [&_nav_>_a]:items-center [&_nav_>_a]:gap-[7px] [&_nav_>_a]:relative [&_nav_>_a]:text-[#6a746c] [&_nav_>_button]:h-full [&_nav_>_button]:flex [&_nav_>_button]:items-center [&_nav_>_button]:gap-[7px] [&_nav_>_button]:relative [&_nav_>_button]:text-[#6a746c] [&_nav_.nav-active]:text-brand [&_nav_.nav-active]:font-bold compact:[&_nav]:gap-[18px] tablet:h-18 tablet:[&_nav]:hidden">
-          <div className="header-inner max-w-300 py-0 px-8 h-full m-auto flex items-center justify-between gap-[35px] min-[1450px]:max-w-320 compact:gap-5 tablet:py-0 tablet:px-[22px]">
-            <HabisinLogo />
-            <nav aria-label="Navigasi utama">
-              <a
-                className='nav-active [&:after]:[content:""] [&:after]:absolute [&:after]:bottom-[21px] [&:after]:left-0 [&:after]:right-0 [&:after]:h-[2px] [&:after]:bg-brand'
-                href="#explore"
-              >
-                Jelajahi
-              </a>
-              <button onClick={() => setPanel("how")}>Cara kerja</button>
-              <button onClick={() => setPanel("impact")}>
-                Dampak kita{" "}
-                <span className="tiny-dot w-[5px] h-[5px] bg-[#c69e43] rounded-[50%] inline-block" />
-              </button>
-            </nav>
-            <div className="header-actions flex items-center gap-5 text-[12px] font-semibold compact:gap-[13px] tablet:gap-[14px] mobile:gap-2">
-              <button
-                className="partner-link flex gap-[6px] items-center compact:hidden"
-                onClick={openPartner}
-              >
-                {user?.role === "admin"
-                  ? "Dasbor admin"
-                  : user?.role === "partner"
-                    ? "Dasbor mitra"
-                    : "Jadi mitra"}
-                <ArrowUpRight size={15} />
-              </button>
-              <span className="header-divider h-[23px] w-[1px] bg-line compact:hidden" />
-              {user ? (
-                <>
-                  <button
-                    className="account-button flex items-center gap-[7px] mobile:[&_>_span:last-child]:max-w-[65px] mobile:[&_>_span:last-child]:overflow-hidden mobile:[&_>_span:last-child]:text-ellipsis"
-                    onClick={() => setPanel("profile")}
-                  >
-                    <span className="avatar small w-[45px] h-[45px] rounded-[50%] bg-[#e3eddb] text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
-                      {(user.name || user.username)[0].toUpperCase()}
-                    </span>
-                    <span>{user.name.split(" ")[0] || user.username}</span>
-                  </button>
-                  <button
-                    className="icon-button inline-grid place-items-center p-[5px] text-[#708168] rounded-[5px] hover:bg-[#edf1e7]"
-                    onClick={signOut}
-                    aria-label="Keluar"
-                  >
-                    <LogOut size={18} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="login-link"
-                    onClick={() => setPanel("login")}
-                  >
-                    Masuk
-                  </button>
-                  <button
-                    className="button primary signup inline-flex items-center justify-center gap-3 rounded-2 py-[11px] px-[17px] text-[12px] font-semibold min-h-10 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] tablet:py-[9px] tablet:px-3 tablet:min-h-[35px] tablet:text-[10px] tablet:[&_svg]:hidden"
-                    onClick={() => {
-                      setRegistrationRole("buyer");
-                      setPanel("register");
-                    }}
-                  >
-                    Daftar gratis
-                    <ArrowRight size={16} />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        <SiteHeader
+          nav={[
+            { label: "Jelajahi", href: "/jelajahi" },
+            { label: "Dasbor admin", onClick: openPartner },
+          ]}
+          actions={
+            <>
+              <button onClick={() => setPanel("profile")}>Akun</button>
+              <button onClick={signOut}>Keluar</button>
+            </>
+          }
+        />
       )}
 
       <main>
@@ -635,34 +532,8 @@ export default function Home() {
                 onBook={book}
                 onClose={closeDetail}
                 onOrders={showOrders}
-                onAddToCart={() => {
-                  if (!user) {
-                    setRegistrationRole("buyer");
-                    setPanel("login");
-                    return;
-                  }
-                  if (!detail || user.role !== "buyer") return;
-                  cart.update((rows) => {
-                    const existing = rows.find((r) => r.item.id === detail.id);
-                    return existing
-                      ? rows.map((r) =>
-                          r.item.id === detail.id
-                            ? {
-                                ...r,
-                                item: detail,
-                                quantity: Math.min(
-                                  10,
-                                  detail.stock,
-                                  r.quantity + quantity,
-                                ),
-                                selected: true,
-                              }
-                            : r,
-                        )
-                      : [...rows, { item: detail, quantity, selected: true }];
-                  });
-                  setNotice(`${detail.name} dimasukkan ke keranjang.`);
-                }}
+                note={note}
+                onNote={setNote}
               />
             )}
           </>
@@ -735,7 +606,7 @@ export default function Home() {
           title="Makan enak. Caranya gampang."
           onClose={() => setPanel(null)}
         >
-          <div className="steps flex flex-col gap-[23px] mb-7 [&_>_div]:flex [&_>_div]:gap-[15px] [&_>_div_>_span]:text-[13px] [&_>_div_>_span]:font-bold [&_>_div_>_span]:bg-[#e8efdd] [&_>_div_>_span]:shrink-0 [&_>_div_>_span]:w-9 [&_>_div_>_span]:h-9 [&_>_div_>_span]:rounded-[50%] [&_>_div_>_span]:grid [&_>_div_>_span]:place-items-center [&_>_div_>_span]:text-brand [&_h3]:text-[13px] [&_h3]:mt-1 [&_h3]:mr-0 [&_h3]:mb-[7px] [&_h3]:ml-0 [&_p]:text-[12px] [&_p]:text-[#8a957f] [&_p]:leading-[1.8]">
+          <div className="steps flex flex-col gap-[23px] mb-7 [&_>_div]:flex [&_>_div]:gap-[15px] [&_>_div_>_span]:text-[13px] [&_>_div_>_span]:font-bold [&_>_div_>_span]:bg-[var(--color-light)] [&_>_div_>_span]:shrink-0 [&_>_div_>_span]:w-9 [&_>_div_>_span]:h-9 [&_>_div_>_span]:rounded-[50%] [&_>_div_>_span]:grid [&_>_div_>_span]:place-items-center [&_>_div_>_span]:text-brand [&_h3]:text-[13px] [&_h3]:mt-1 [&_h3]:mr-0 [&_h3]:mb-[7px] [&_h3]:ml-0 [&_p]:text-[12px] [&_p]:text-[var(--color-muted)] [&_p]:leading-[1.8]">
             {[
               [
                 "01",
@@ -763,7 +634,7 @@ export default function Home() {
             ))}
           </div>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => {
               setPanel(null);
               document
@@ -778,14 +649,14 @@ export default function Home() {
       )}
       {panel === "impact" && (
         <Modal title="Satu porsi punya arti." onClose={() => setPanel(null)}>
-          <div className="impact-icon grid place-items-center w-[90px] h-[90px] rounded-[50%] bg-[#eaf0e0] text-brand my-[25px] mx-auto">
+          <div className="impact-icon grid place-items-center w-[90px] h-[90px] rounded-[50%] bg-[var(--color-light)] text-brand my-[25px] mx-auto">
             <Sprout size={44} />
           </div>
-          <p className="modal-description text-[13px] leading-[1.85] text-[#7d8873] my-4 mx-0">
+          <p className="modal-description text-[13px] leading-[1.85] text-[var(--color-muted)] my-4 mx-0">
             Dengan menghabiskan makanan layak santap, kita membantu mengurangi
             sampah makanan dan menghargai sumber daya untuk membuatnya.
           </p>
-          <div className="impact-grid flex gap-3 my-5 mx-0 [&_>_div]:[flex:1] [&_>_div]:bg-[#ecf1e4] [&_>_div]:[border:1px_solid_#dfe6d7] [&_>_div]:rounded-[10px] [&_>_div]:text-center [&_>_div]:py-[23px] [&_>_div]:px-[10px] [&_strong]:block [&_strong]:text-[28px] [&_strong]:text-brand [&_span]:block [&_span]:text-[10px] [&_span]:text-[#859478] [&_span]:mt-[9px]">
+          <div className="impact-grid flex gap-3 my-5 mx-0 [&_>_div]:[flex:1] [&_>_div]:bg-[var(--color-light)] [&_>_div]:[border:1px_solid_var(--color-line)] [&_>_div]:rounded-[10px] [&_>_div]:text-center [&_>_div]:py-[23px] [&_>_div]:px-[10px] [&_strong]:block [&_strong]:text-[28px] [&_strong]:text-brand [&_span]:block [&_span]:text-[10px] [&_span]:text-[var(--color-border)] [&_span]:mt-[9px]">
             <div>
               <strong>0,5 kg</strong>
               <span>Asumsi berat per porsi</span>
@@ -795,13 +666,13 @@ export default function Home() {
               <span>Estimasi CO₂e per porsi</span>
             </div>
           </div>
-          <p className="fine-print text-[10px] leading-[1.8] text-[#939b88] my-[15px] mx-0">
+          <p className="fine-print text-[10px] leading-[1.8] text-[var(--color-muted)] my-[15px] mx-0">
             Ilustrasi kalkulator: berat makanan × 2,5 kg CO₂e. Ini estimasi
             demo, bukan pengukuran dampak aktual. Pesanan demo tidak dihitung
             sebagai makanan terselamatkan.
           </p>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => setPanel(null)}
           >
             Mulai dari makananmu
@@ -830,18 +701,18 @@ export default function Home() {
           }
           onClose={() => setPanel(null)}
         >
-          <div className="impact-icon grid place-items-center w-[90px] h-[90px] rounded-[50%] bg-[#eaf0e0] text-brand my-[25px] mx-auto">
+          <div className="impact-icon grid place-items-center w-[90px] h-[90px] rounded-[50%] bg-[var(--color-light)] text-brand my-[25px] mx-auto">
             <Users size={40} />
           </div>
           {user && user.role !== "buyer" ? (
             <>
-              <p className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[#e8f1e1] text-[#477543]">
+              <p className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[var(--color-light)] text-[var(--color-brand)]">
                 Kamu masuk sebagai {user.role === "admin" ? "admin" : "mitra"}.
                 Akses ini diverifikasi oleh server.
               </p>
               {dashboard ? (
                 <>
-                  <div className="impact-grid flex gap-3 my-5 mx-0 [&_>_div]:[flex:1] [&_>_div]:bg-[#ecf1e4] [&_>_div]:[border:1px_solid_#dfe6d7] [&_>_div]:rounded-[10px] [&_>_div]:text-center [&_>_div]:py-[23px] [&_>_div]:px-[10px] [&_strong]:block [&_strong]:text-[28px] [&_strong]:text-brand [&_span]:block [&_span]:text-[10px] [&_span]:text-[#859478] [&_span]:mt-[9px]">
+                  <div className="impact-grid flex gap-3 my-5 mx-0 [&_>_div]:[flex:1] [&_>_div]:bg-[var(--color-light)] [&_>_div]:[border:1px_solid_var(--color-line)] [&_>_div]:rounded-[10px] [&_>_div]:text-center [&_>_div]:py-[23px] [&_>_div]:px-[10px] [&_strong]:block [&_strong]:text-[28px] [&_strong]:text-brand [&_span]:block [&_span]:text-[10px] [&_span]:text-[var(--color-border)] [&_span]:mt-[9px]">
                     <div>
                       <strong>{dashboard.listings}</strong>
                       <span>Listing demo aktif</span>
@@ -853,7 +724,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <p className="modal-description text-[13px] leading-[1.85] text-[#7d8873] my-4 mx-0">
+                  <p className="modal-description text-[13px] leading-[1.85] text-[var(--color-muted)] my-4 mx-0">
                     {dashboard.message}
                   </p>
                 </>
@@ -863,17 +734,17 @@ export default function Home() {
             </>
           ) : (
             <>
-              <p className="modal-description text-[13px] leading-[1.85] text-[#7d8873] my-4 mx-0">
+              <p className="modal-description text-[13px] leading-[1.85] text-[var(--color-muted)] my-4 mx-0">
                 Makanan berlebih punya kesempatan baru. Buat akun mitra untuk
                 menjadi bagian dari HABISIN.
               </p>
-              <p className="fine-print text-[10px] leading-[1.8] text-[#939b88] my-[15px] mx-0">
+              <p className="fine-print text-[10px] leading-[1.8] text-[var(--color-muted)] my-[15px] mx-0">
                 Buat akun mitra, lengkapi profil toko dan konfirmasi lokasinya
                 di peta, lalu kelola listing makanan surplusmu.
               </p>
               {!user && (
                 <button
-                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
                   onClick={() => {
                     setRegistrationRole("partner");
                     setPanel("register");
@@ -887,196 +758,76 @@ export default function Home() {
           )}
         </Modal>
       )}
-      {panel === "cart" && user?.role === "buyer" && (
-        <Modal title="Keranjang" fullscreen onClose={() => setPanel(null)}>
-          <div className="h-dvh overflow-auto">
-            {buyerHeader}
-            <CartPanel
-              userId={user.id}
-              items={items}
-              now={now}
-              loading={catalogLoading}
-              online={online}
-              onRefresh={refresh}
-              onPaid={(result) => {
-                setPanel(null);
-                setTicket(result[0]);
-                setPolicyRevision((n) => n + 1);
-                setNotice(`${result.length} tiket tersimpan di Pesanan saya.`);
-              }}
-            />
-          </div>
-        </Modal>
-      )}
       {ticket && (
-        <Modal
-          title="Makananmu sudah dipesan!"
-          fullscreen
-          onClose={() => setTicket(null)}
-        >
-          <div className="h-dvh overflow-auto">
-            {buyerHeader}
-            <BuyerTicket
-              order={ticket}
-              now={now}
-              busy={busy}
-              error={orderError}
-              onClose={() => setTicket(null)}
-              onOrders={() => {
-                setTicket(null);
-                void showOrders();
-              }}
-              onCancel={() => void cancel(ticket)}
-            />
+        <Modal title="Makananmu sudah dipesan!" onClose={() => setTicket(null)}>
+          <div className="ticket text-center bg-[var(--color-light)] [border:1px_dashed_var(--color-light)] rounded-[13px] py-[25px] px-[15px] [&_>_p:first-of-type]:text-[9px] [&_>_p:first-of-type]:tracking-[2px] [&_>_p:first-of-type]:text-[var(--color-muted)] [&_>_strong]:block [&_>_strong]:text-[42px] [&_>_strong]:tracking-[8px] [&_>_strong]:mt-[10px] [&_>_strong]:mr-0 [&_>_strong]:mb-5 [&_>_strong]:ml-0 [&_>_strong]:text-brand [&_h3]:mb-[10px] [&_h3]:text-[16px] [&_>_span]:text-[12px] [&_>_span]:text-[var(--color-muted)] [&_hr]:[border:0] [&_hr]:[border-top:1px_dashed_var(--color-light)] [&_hr]:my-[25px] [&_hr]:mx-0 [&_p]:text-[12px] [&_p]:my-[10px] [&_p]:mx-0 [&_p]:text-[var(--color-brand)] [&_small]:text-[10px] [&_small]:text-[var(--color-muted)]">
+            <span className="ticket-check w-[55px] h-[55px] rounded-[50%] bg-brand text-white grid place-items-center mt-0 mr-auto mb-5 ml-auto">
+              <Check size={30} />
+            </span>
+            <p>KODE PENGAMBILAN</p>
+            <strong>{ticket.code}</strong>
+            <h3>{ticket.listing.name}</h3>
+            <span>
+              {ticket.quantity} porsi · {rupiah(ticket.total)}
+            </span>
+            <hr />
+            <p>{ticket.listing.store}</p>
+            <small>{ticket.listing.address}</small>
+            <p>Ambil sebelum {pickup(ticket.listing.pickup_end)} WIB</p>
           </div>
+          <p className="fine-print text-[10px] leading-[1.8] text-[var(--color-muted)] my-[15px] mx-0">
+            Tiket demo tersimpan di Pesanan saya. Verifikasi kasir belum
+            tersedia pada demo ini.
+          </p>
+          <button
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            onClick={() => {
+              setTicket(null);
+              showOrders();
+            }}
+          >
+            Lihat pesanan saya
+            <Ticket size={18} />
+          </button>
         </Modal>
       )}
       {panel === "orders" && (
-        <Modal title="Pesanan saya" fullscreen onClose={() => setPanel(null)}>
-          <div className="h-dvh overflow-auto bg-[#fbf7ec]">
-            {buyerHeader}
-            <div className="mx-auto max-w-5xl p-6">
-              <h1 className="mb-6 text-2xl font-bold">Pesanan saya</h1>
-              <button
-                className="mb-4 min-h-11 text-[#3e6b26]"
-                aria-label="Tutup"
-                onClick={() => setPanel(null)}
-              >
-                ← Jelajahi
-              </button>
-              <div
-                className="mb-5 flex gap-2"
-                aria-label="Filter pesanan pembeli"
-              >
-                <button
-                  className="min-h-11 rounded-lg border px-4"
-                  aria-pressed={!ordersHistory}
-                  onClick={() => setOrdersHistory(false)}
-                >
-                  Aktif
-                </button>
-                <button
-                  className="min-h-11 rounded-lg border px-4"
-                  aria-pressed={ordersHistory}
-                  onClick={() => setOrdersHistory(true)}
-                >
-                  Riwayat
-                </button>
-              </div>
-              {ordersLoading ? (
-                <p className="modal-description text-[13px] leading-[1.85] text-[#7d8873] my-4 mx-0">
-                  Memuat pesanan…
-                </p>
-              ) : shownOrders.length === 0 ? (
-                <div className="empty-state flex flex-col items-center justify-center gap-4 text-center py-[55px] px-5 text-[#69815e] bg-[#f2f5ec] [border:1px_dashed_#d6dfca] rounded-3 [&_h3]:text-[18px] [&_p]:text-[12px] [&_p]:leading-[1.7] [&_p]:text-[#849477]">
-                  <ShoppingBag size={35} />
-                  <h3>Petualangan enakmu dimulai di sini.</h3>
-                  <p>
-                    {ordersHistory
-                      ? "Belum ada riwayat pesanan."
-                      : "Belum ada pesanan aktif. Yuk, selamatkan porsi pertamamu."}
-                  </p>
-                  <button
-                    className="button primary inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[#174c36] hover:[transform:translateY(-1px)]"
-                    onClick={() => setPanel(null)}
-                  >
-                    Jelajahi makanan
-                  </button>
-                </div>
-              ) : (
-                <div className="order-list flex flex-col gap-[14px]">
-                  {shownOrders.map((order) => (
-                    <div
-                      className="order-item p-[15px] [border:1px_solid_#dfe6d6] rounded-[9px] bg-[white] [&_p]:text-[10px] [&_p]:text-[#8a967e] [&_p]:my-[9px] [&_p]:mx-0 [&_>_small]:text-[9px] [&_>_small]:text-[#8a967e]"
-                      key={order.id}
-                    >
-                      <div className="order-heading flex justify-between gap-[10px] text-[12px] items-center">
-                        <strong>{order.listing.name}</strong>
-                        <span
-                          className={
-                            order.status === "cancelled"
-                              ? "cancelled-label text-[8px] py-[5px] px-[7px] rounded-1 bg-[#f1e8e4] text-[#9a7d6f]"
-                              : "success-label text-[8px] py-[5px] px-[7px] rounded-1 bg-[#eaf3e2] text-[#618348]"
-                          }
-                        >
-                          {order.status === "cancelled"
-                            ? "Dibatalkan"
-                            : !isActiveReservation(order, now)
-                              ? "Kedaluwarsa"
-                              : "Dipesan"}
-                        </span>
-                      </div>
-                      <p>
-                        {order.quantity} porsi · {rupiah(order.total)} ·{" "}
-                        {order.listing.store}
-                      </p>
-                      <small>
-                        Ambil sebelum {pickup(order.listing.pickup_end)} WIB
-                      </small>
-                      {!isActiveReservation(order, now) && (
-                        <button
-                          className="min-h-11 text-[#3e6b26]"
-                          onClick={() => {
-                            setPanel(null);
-                            setTicket(order);
-                          }}
-                        >
-                          Tiket {order.code}
-                        </button>
-                      )}
-                      {order.cancellation_note && (
-                        <p>Alasan mitra: {order.cancellation_note}</p>
-                      )}
-                      {isActiveReservation(order, now) && (
-                        <div className="order-actions flex justify-between items-center mt-[10px]">
-                          <button
-                            className="text-button inline-flex gap-2 items-center text-brand text-[11px] font-semibold py-[6px] px-0"
-                            onClick={() => {
-                              setPanel(null);
-                              setTicket(order);
-                            }}
-                          >
-                            Tiket {order.code}
-                            <Ticket size={15} />
-                          </button>
-                          <button
-                            className="cancel-button text-[10px] text-[#ac7462] p-2"
-                            disabled={
-                              busy ||
-                              order.can_cancel === false ||
-                              Date.parse(order.listing.pickup_end) - now <
-                                URGENT_WINDOW
-                            }
-                            onClick={() => cancel(order)}
-                          >
-                            Batalkan
-                          </button>
-                        </div>
-                      )}
-                      {order.status === "reserved" &&
-                        (order.can_cancel === false ||
-                          Date.parse(order.listing.pickup_end) - now <
-                            URGENT_WINDOW) && (
-                          <p>
-                            {order.cancellation_reason ||
-                              "Tidak bisa dibatalkan: waktu pengambilan tersisa kurang dari 30 menit atau sudah berakhir."}
-                          </p>
-                        )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {orderError && (
-                <p
-                  className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[#fbeae4] text-[#a34337]"
-                  role="alert"
-                >
-                  {orderError}
-                </p>
-              )}
-            </div>
-          </div>
-        </Modal>
+        <OrderList
+          orders={orders}
+          setOrders={setOrders}
+          loading={ordersLoading}
+          loadError={orderError}
+          onListing={updateListing}
+          onResume={(order) => {
+            setPanel(null);
+            setSummary(order);
+          }}
+          onTicket={(order) => {
+            setPanel(null);
+            setTicket(order);
+          }}
+          onClose={() => setPanel(null)}
+        />
+      )}
+      {summary && (
+        <OrderSummary
+          order={summary}
+          origin={origin}
+          onChange={(order) => {
+            setSummary(order);
+            updateListing(order.listing);
+          }}
+          onPaid={(order) => {
+            setSummary(null);
+            setTicket(order);
+          }}
+          onCancelled={(order) => {
+            setSummary(null);
+            updateListing(order.listing);
+            setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
+          }}
+          onClose={() => setSummary(null)}
+        />
       )}
     </>
   );

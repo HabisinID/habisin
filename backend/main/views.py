@@ -1,28 +1,38 @@
 import re
 import secrets
+from functools import wraps
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import F
-from django.db.models.deletion import ProtectedError
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
-from .models import ListingStockAction, Profile, Listing, Reservation, Store
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from .models import Profile, Listing, Reservation, Store, ListingStockAction
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
-from .reservation_policy import reservation_policy, cancellation_reason
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
+from .reservation_policy import reservation_policy
+from django.db.models.deletion import ProtectedError
 from rest_framework import serializers as drf_serializers
-from .serializers import UserSerializer, RegisterSerializer, ListingSerializer, PartnerListingSerializer, ReservationSerializer
+from .serializers import PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer
 
 
 class AuthThrottle(AnonRateThrottle):
     rate = "30/min"
+
+
+class OrderWriteThrottle(UserRateThrottle):
+    """Limit order changes per account; reading orders is not counted."""
+    scope = "reservation_write"
+    rate = "30/min"
+
+    def allow_request(self, request, view):
+        return request.method in SAFE_METHODS or super().allow_request(request, view)
 
 
 @api_view(["GET"])
@@ -84,10 +94,11 @@ def me(request):
         password = request.data.get("password")
         if not isinstance(password, str) or not request.user.check_password(password):
             return Response({"detail": "Password salah."}, status=400)
+        Reservation.expire_overdue()
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
             owned_ids = Listing.objects.filter(owner=user).values_list("pk", flat=True)
-            order_ids = Reservation.objects.filter(user=user, status="reserved", pickup_deadline__gt=timezone.now()).values_list("listing_id", flat=True)
+            order_ids = Reservation.objects.filter(user=user, status__in=Reservation.ACTIVE_STATUSES).values_list("listing_id", flat=True)
             ids = sorted(set(owned_ids) | set(order_ids))
             store_ids = set(Store.objects.filter(owner=user).values_list("pk", flat=True))
             store_ids.update(Listing.objects.filter(pk__in=ids).values_list("store_profile_id", flat=True))
@@ -95,8 +106,8 @@ def me(request):
             locked = list(Listing.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
             if any(item.store_profile_id and item.store_profile_id not in stores for item in locked):
                 raise ListingConflict()
-            for reservation in Reservation.objects.select_for_update().filter(user=user, status="reserved", pickup_deadline__gt=timezone.now()).order_by("pk"):
-                Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
+            for reservation in Reservation.objects.select_for_update().filter(user=user, status__in=Reservation.ACTIVE_STATUSES).order_by("pk"):
+                release_stock(reservation.listing_id, reservation.quantity)
             Listing.objects.filter(owner=user).update(active=False, store_profile=None)
             logout(request)
             user.delete()
@@ -129,6 +140,7 @@ def password(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def listings(request):
+    Reservation.expire_overdue()
     items = available_listings().select_related("store_profile")
     return Response(ListingSerializer(items, many=True).data)
 
@@ -149,6 +161,7 @@ def partner_listings(request):
     if request.method == "GET":
         items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
         return Response(ListingSerializer(items, many=True).data)
+    Reservation.expire_overdue()
     with compensate_media_writes() as media, transaction.atomic():
         target_id = _target_store_id(request.data)
         lock_stores([target_id])
@@ -162,6 +175,7 @@ def partner_listings(request):
 def partner_listing_detail(request, pk):
     if UserSerializer(request.user).data["role"] != "partner":
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
+    Reservation.expire_overdue()
     with compensate_media_writes() as media, transaction.atomic():
         target_id = _target_store_id(request.data)
         item = lock_listing(pk, request.user, target_id)
@@ -184,32 +198,82 @@ def partner_listing_detail(request, pk):
         return Response(ListingSerializer(item).data)
 
 
+STOCK_UNAVAILABLE = "Stok tidak cukup atau waktu pengambilan sudah berakhir."
+
+
+def take_stock(listing_id, quantity):
+    # A conditional UPDATE cannot oversell, even with concurrent orders.
+    updated = available_listings().filter(pk=listing_id, stock__gte=quantity).update(stock=F("stock") - quantity)
+    if updated:
+        ListingStockAction.objects.filter(listing_id=listing_id, used=False).update(used=True)
+    return updated
+
+
+def release_stock(listing_id, quantity):
+    ListingStockAction.objects.filter(listing_id=listing_id, used=False).update(used=True)
+    Listing.objects.filter(pk=listing_id).update(stock=F("stock") + quantity)
+
+
+def owned_reservation(view):
+    """Pass the caller's own order to the view, locked for the rest of the request.
+
+    Other users' orders answer 404 so their existence is not revealed.
+    """
+    @wraps(view)
+    def wrapper(request, pk, *args, **kwargs):
+        Reservation.expire_overdue()
+        with transaction.atomic():
+            User.objects.select_for_update().get(pk=request.user.pk)
+            before = Reservation.objects.filter(pk=pk, user=request.user).only("listing_id").first()
+            if before is None:
+                return Response({"detail": "Pesanan tidak ditemukan."}, status=404)
+            lock_listing(before.listing_id)
+            reservation = Reservation.objects.select_for_update().select_related("listing").get(pk=pk, user=request.user)
+            return view(request, reservation, *args, **kwargs)
+    return wrapper
+
+
+def free_limit_error(user, listing, quantity, exclude=None):
+    """Return a 400 response when a free claim would exceed the daily limit."""
+    if listing.price != 0:
+        return None
+    # Lock the buyer so two parallel claims cannot both pass the check.
+    User.objects.select_for_update().get(pk=user.pk)
+    claimed = Reservation.free_portions_today(user, exclude)
+    if claimed + quantity <= Reservation.FREE_DAILY_LIMIT:
+        return None
+    limit = Reservation.FREE_DAILY_LIMIT
+    return Response({"detail": f"Maks. {limit} porsi gratis per hari agar donasi terbagi rata. Hari ini kamu sudah mengklaim {claimed} porsi."}, status=400)
+
+
+def conflict(reservation, action):
+    return Response({"detail": f"Pesanan berstatus {reservation.get_status_display().lower()} tidak dapat {action}."}, status=409)
+
+
 @api_view(["GET", "POST"])
+@throttle_classes([OrderWriteThrottle])
 def reservations(request):
+    Reservation.expire_overdue()
     if request.method == "GET":
         return Response(ReservationSerializer(Reservation.objects.filter(user=request.user).select_related("listing").order_by("-created_at"), many=True).data)
     if UserSerializer(request.user).data["role"] != "buyer":
         return Response({"detail": "Pemesanan hanya tersedia untuk akun pembeli."}, status=403)
-    quantity = request.data.get("quantity", 1)
-    listing_id = request.data.get("listing_id")
-    if type(quantity) is not int or not 1 <= quantity <= 10 or type(listing_id) is not int:
-        return Response({"detail": "Pilih produk dan 1–10 porsi."}, status=400)
+    serializer = ReservationCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
     with transaction.atomic():
         User.objects.select_for_update().get(pk=request.user.pk)
-        if not Listing.objects.filter(pk=listing_id).exists():
-            return Response({"detail": "Makanan tidak tersedia."}, status=400)
-        listing = lock_listing(listing_id)
-        policy = reservation_policy(request.user, listing)
-        if policy["reason"] or (listing.price == 0 and quantity > policy["max_quantity"]):
-            return Response({"detail": policy["reason"] or "Maksimal 2 porsi gratis per toko per hari WIB; pilih jumlah sesuai sisa kuota."}, status=409)
-        updated = available_listings().filter(pk=listing_id, stock__gte=quantity).update(stock=F("stock") - quantity)
-        if not updated:
-            return Response({"detail": "Stok tidak cukup atau waktu pengambilan sudah berakhir."}, status=400)
-        listing = Listing.objects.get(pk=listing_id)
+        listing = lock_listing(data["listing_id"]) if Listing.objects.filter(pk=data["listing_id"]).exists() else None
+        error = listing and free_limit_error(request.user, listing, data["quantity"])
+        if error:
+            return error
+        if not take_stock(data["listing_id"], data["quantity"]):
+            return Response({"detail": STOCK_UNAVAILABLE}, status=400)
+        listing.refresh_from_db()
         for attempt in range(5):
             try:
                 with transaction.atomic():
-                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=quantity, total=quantity * listing.price, code="".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5)))
+                    reservation = Reservation.objects.create(user=request.user, listing=listing, quantity=data["quantity"], total=data["quantity"] * listing.price, note=data.get("note", ""), code="".join(secrets.choice(Reservation.CODE_ALPHABET) for _ in range(5)))
                 break
             except IntegrityError:
                 if attempt == 4:
@@ -217,23 +281,67 @@ def reservations(request):
     return Response(ReservationSerializer(reservation).data, status=201)
 
 
+@api_view(["GET", "PATCH", "DELETE"])
+@throttle_classes([OrderWriteThrottle])
+@owned_reservation
+def reservation_detail(request, reservation):
+    if request.method == "GET":
+        return Response(ReservationSerializer(reservation).data)
+    if request.method == "DELETE":
+        if reservation.status not in Reservation.FINISHED_STATUSES:
+            return conflict(reservation, "dihapus; batalkan terlebih dahulu")
+        reservation.delete()
+        return Response(status=204)
+    if reservation.status != "pending":
+        return conflict(reservation, "diubah")
+    serializer = ReservationUpdateSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    quantity = data.get("quantity", reservation.quantity)
+    change = quantity - reservation.quantity
+    error = change > 0 and free_limit_error(request.user, reservation.listing, quantity, exclude=reservation)
+    if error:
+        return error
+    if change > 0 and not take_stock(reservation.listing_id, change):
+        return Response({"detail": STOCK_UNAVAILABLE}, status=400)
+    if change < 0:
+        release_stock(reservation.listing_id, -change)
+    reservation.quantity = quantity
+    reservation.total = quantity * reservation.listing.price
+    reservation.note = data.get("note", reservation.note)
+    reservation.save(update_fields=["quantity", "total", "note"])
+    reservation.listing.refresh_from_db()
+    return Response(ReservationSerializer(reservation).data)
+
+
 @api_view(["POST"])
-def cancel_reservation(request, pk):
-    with transaction.atomic():
-        User.objects.select_for_update().get(pk=request.user.pk)
-        before = Reservation.objects.filter(pk=pk, user=request.user).only("listing_id").first()
-        if not before:
-            return Response({"detail": "Pesanan tidak ditemukan."}, status=404)
-        lock_listing(before.listing_id)
-        reservation = Reservation.objects.select_for_update().get(pk=pk, user=request.user)
-        reason = cancellation_reason(reservation)
-        if reason:
-            return Response({"detail": reason}, status=409)
-        updated = Reservation.objects.filter(pk=pk, user=request.user, status="reserved").update(status="cancelled", cancelled_by="buyer", cancelled_at=timezone.now())
-        if updated:
-            ListingStockAction.objects.filter(listing_id=reservation.listing_id, used=False).update(used=True)
-            Listing.objects.filter(pk=reservation.listing_id).update(stock=F("stock") + reservation.quantity)
-        reservation.refresh_from_db()
+@throttle_classes([OrderWriteThrottle])
+@owned_reservation
+def pay_reservation(request, reservation):
+    if reservation.status != "pending":
+        return conflict(reservation, "dibayar")
+    reservation.status = "paid"
+    reservation.paid_at = timezone.now()
+    reservation.save(update_fields=["status", "paid_at"])
+    reservation.listing.refresh_from_db()
+    return Response(ReservationSerializer(reservation).data)
+
+
+@api_view(["POST"])
+@throttle_classes([OrderWriteThrottle])
+@owned_reservation
+def cancel_reservation(request, reservation):
+    if reservation.status in ["picked_up", "expired"]:
+        return conflict(reservation, "dibatalkan")
+    if reservation.status == "paid" and timezone.now() >= reservation.cancel_until:
+        closed = timezone.localtime(reservation.cancel_until)
+        return Response({"detail": f"Pembatalan ditutup pukul {closed:%H.%M} (30 menit sebelum batas ambil)."}, status=409)
+    # Cancelling twice is harmless: stock is only released on the first call.
+    if reservation.status in Reservation.ACTIVE_STATUSES:
+        reservation.status = "cancelled"
+        reservation.save(update_fields=["status"])
+        release_stock(reservation.listing_id, reservation.quantity)
+    reservation.listing.refresh_from_db()
     return Response(ReservationSerializer(reservation).data)
 
 
@@ -242,11 +350,12 @@ def dashboard(request):
     role = UserSerializer(request.user).data["role"]
     if role == "buyer":
         return Response({"detail": "Akses khusus mitra atau admin."}, status=403)
-    return Response({"role": role, "users": User.objects.count() if role == "admin" else None, "listings": Listing.objects.filter(active=True).count(), "message": "Katalog contoh HABISIN. Mitra dapat mengelola profil dan lokasi toko serta listing makanan surplus. Moderasi tersedia pada pengembangan berikutnya."})
+    return Response({"role": role, "users": User.objects.count() if role == "admin" else None, "listings": Listing.objects.filter(active=True).count(), "message": "Katalog contoh HABISIN. Mitra dapat mengelola profil dan lokasi toko. Pengelolaan produk dan moderasi tersedia pada pengembangan berikutnya."})
 
 
 @api_view(["GET"])
 def listing_reservation_policy(request, pk):
+    Reservation.expire_overdue()
     if UserSerializer(request.user).data["role"] != "buyer":
         return Response({"detail": "Pemesanan hanya tersedia untuk akun pembeli."}, status=403)
     item = Listing.objects.filter(pk=pk).first()

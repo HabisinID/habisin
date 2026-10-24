@@ -58,7 +58,7 @@ def _mutate_store(request, store):
     location_changed = any(field in serializer.validated_data and serializer.validated_data[field] != getattr(store, field) for field in ["name", "address", "latitude", "longitude"])
     if location_changed:
         listing_ids = list(Listing.objects.select_for_update().filter(store_profile=store).order_by("pk").values_list("pk", flat=True))
-        if Reservation.objects.filter(listing_id__in=listing_ids, status="reserved", pickup_deadline__gt=timezone.now()).exists():
+        if Reservation.objects.filter(listing_id__in=listing_ids, status__in=Reservation.ACTIVE_STATUSES).exists():
             return Response({"detail": "Nama dan lokasi toko tidak dapat diubah selama ada pesanan aktif."}, status=409)
     serializer.save()
     if location_changed:
@@ -80,6 +80,7 @@ def partner_stores(request):
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsPartner])
 def partner_store_detail(request, pk):
+    Reservation.expire_overdue()
     with transaction.atomic():
         store = get_object_or_404(Store.objects.select_for_update(), pk=pk, owner=request.user)
         if request.method == "GET":
@@ -90,6 +91,7 @@ def partner_store_detail(request, pk):
 @api_view(["GET", "POST", "PATCH", "DELETE"])
 @permission_classes([IsPartner])
 def partner_store(request):
+    Reservation.expire_overdue()
     with transaction.atomic():
         User.objects.select_for_update().get(pk=request.user.pk)
         stores = list(Store.objects.select_for_update().filter(owner=request.user).order_by("id")[:2])
@@ -117,6 +119,7 @@ def public_store(request, pk):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def public_store_listings(request, pk):
+    Reservation.expire_overdue()
     store = get_object_or_404(Store, pk=pk)
     items = available_listings().filter(store_profile=store).select_related("store_profile").order_by("id")
     return Response(ListingSerializer(items, many=True).data)

@@ -4,7 +4,7 @@
 .map :global(.habisin-map-popup .leaflet-popup-content-wrapper) {
   border-radius: 12px;
   box-shadow: 0 3px 14px #00000066;
-  color: #1c2616;
+  color: var(--color-dark);
 }
 .map :global(.habisin-map-popup .leaflet-popup-content) {
   margin: 14px 16px;
@@ -16,10 +16,10 @@
   margin: 0;
 }
 .map :global(.store-popup a) {
-  color: #3e6b26;
+  color: var(--color-brand);
 }
 .map :global(.food-pin:focus-visible) {
-  outline: 3px solid #3e6b26;
+  outline: 3px solid var(--color-brand);
   outline-offset: 5px;
 }
 .map :global(.food-pin span) {
@@ -27,7 +27,7 @@
   padding: 7px 8px;
   border: 2px solid white;
   border-radius: 999px;
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
   box-shadow: 0 3px 10px #0003;
   text-align: center;
@@ -44,35 +44,35 @@
   min-height: 400px;
 }
 .discovery :global(.discovery-pin span) {
-  background: #ffd57e;
-  color: #1c2616;
-  border: 1.5px solid #1c2616;
+  background: var(--color-yellow);
+  color: var(--color-dark);
+  border: 1.5px solid var(--color-dark);
   border-radius: 6px;
   transform: rotate(3deg);
 }
 .discovery :global(.free-pin span) {
   background: white;
-  border-color: #3e6b26;
-  color: #3e6b26;
+  border-color: var(--color-brand);
+  color: var(--color-brand);
 }
 .discovery :global(.urgent-pin span) {
   background: #ff9300;
-  color: #1c2616;
+  color: var(--color-dark);
   border-color: #a34a00;
 }
 .discovery :global(.selected-pin span) {
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
   border: 2px solid white;
-  box-shadow: 0 0 0 2px #3e6b26;
+  box-shadow: 0 0 0 2px var(--color-brand);
 }
 .searchArea,
 .locate {
   position: absolute;
   z-index: 450;
   background: white;
-  color: #1c2616;
-  border: 1px solid #e6e4d6;
+  color: var(--color-dark);
+  border: 1px solid var(--color-line);
   box-shadow: 0 2px 8px #0002;
   min-height: 44px;
   font: inherit;
@@ -100,7 +100,7 @@
   bottom: 28px;
   padding: 10px 12px;
   background: white;
-  border: 1px solid #e6e4d6;
+  border: 1px solid var(--color-line);
   border-radius: 6px;
   display: flex;
   gap: 12px;
@@ -117,11 +117,11 @@
   width: 12px;
   height: 12px;
   display: inline-block;
-  border: 1px solid #3e6b26;
+  border: 1px solid var(--color-brand);
   border-radius: 3px;
 }
 .gold {
-  background: #ffd57e;
+  background: var(--color-yellow);
 }
 .free {
   background: white;
@@ -131,7 +131,7 @@
 }
 .discovery :global(.leaflet-control-attribution) {
   background: #fffd;
-  color: #1c2616;
+  color: var(--color-dark);
 }
 .discovery [role="status"] {
   top: 140px;

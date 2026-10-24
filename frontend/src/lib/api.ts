@@ -71,13 +71,17 @@ export type Reservation = {
   quantity: number;
   total: number;
   code: string;
-  status: string;
+  note: string;
+  status: "pending" | "paid" | "picked_up" | "cancelled" | "expired";
   created_at: string;
+  pay_before: string;
+  cancel_until: string;
+  paid_at: string | null;
+  picked_up_at: string | null;
+  /** Legacy history fields; new transaction responses do not require them. */
   can_cancel?: boolean;
-  cancellation_reason?: string;
   cancellation_note?: string;
-  cancelled_by?: "buyer" | "partner" | "";
-  cancelled_at?: string | null;
+  cancellation_reason?: string;
 };
 
 export type ReservationPolicy = {

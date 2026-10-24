@@ -28,12 +28,12 @@ export default function StoreMapPopup({
   }, [group.key]);
   return (
     <section
-      className="store-popup relative w-[240px] max-w-full space-y-2 text-[#1c2616]"
+      className="store-popup relative w-[240px] max-w-full space-y-2 text-[var(--color-dark)]"
       aria-label={`Pilihan makanan ${group.name}`}
     >
       <button
         type="button"
-        className="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-md text-xl text-[#5a6653] hover:bg-[#eaf1e2]"
+        className="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-md text-xl text-[var(--color-muted)] hover:bg-[var(--color-light)]"
         onClick={onClose}
         aria-label="Tutup popup toko"
       >
@@ -46,24 +46,24 @@ export default function StoreMapPopup({
       >
         {group.name}
       </h3>
-      <p className="text-xs text-[#5a6653]">
+      <p className="text-xs text-[var(--color-muted)]">
         {locationDistance(group.latitude, group.longitude, origin)} · perkiraan
         garis lurus
       </p>
-      <p className="text-xs break-words text-[#5a6653]">{group.address}</p>
+      <p className="text-xs break-words text-[var(--color-muted)]">{group.address}</p>
       <p className="text-xs">
         {group.items.length} makanan cocok · Mulai {rupiah(group.minPrice)}
       </p>
-      <ul className="max-h-28 space-y-1 overflow-y-auto overscroll-contain border-y border-[#e6e4d6] py-2">
+      <ul className="max-h-28 space-y-1 overflow-y-auto overscroll-contain border-y border-[var(--color-line)] py-2">
         {group.items.map((item) => (
           <li key={item.id}>
             <button
               type="button"
-              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-1 text-left text-xs hover:bg-[#eaf1e2]"
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-1 text-left text-xs hover:bg-[var(--color-light)]"
               onClick={() => onSelect(item)}
             >
               <span className="min-w-0 break-words">{item.name}</span>
-              <span className="shrink-0 font-semibold text-[#3e6b26]">
+              <span className="shrink-0 font-semibold text-[var(--color-brand)]">
                 {rupiah(item.price)}
               </span>
             </button>
@@ -73,18 +73,18 @@ export default function StoreMapPopup({
       {group.storeId !== null ? (
         <Link
           href={`/stores/${group.storeId}`}
-          className="inline-flex min-h-11 items-center text-sm font-bold text-[#3e6b26]"
+          className="inline-flex min-h-11 items-center text-sm font-bold text-[var(--color-brand)]"
         >
           Lihat toko
         </Link>
       ) : (
-        <p className="text-xs text-[#5a6653]">Profil toko belum terhubung.</p>
+        <p className="text-xs text-[var(--color-muted)]">Profil toko belum terhubung.</p>
       )}
       {neighbors.length > 1 && (
         <label className="block text-xs font-semibold">
           Toko lain di lokasi ini
           <select
-            className="mt-2 min-h-11 w-full rounded-md border border-[#7a8872] bg-white p-2 text-xs"
+            className="mt-2 min-h-11 w-full rounded-md border border-[var(--color-border)] bg-white p-2 text-xs"
             value={group.key}
             onChange={(event) => onStore(event.target.value)}
           >

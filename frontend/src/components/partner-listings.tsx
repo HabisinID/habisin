@@ -165,7 +165,7 @@ export default function PartnerListings({
             </div>
             {message && (
               <p
-                className="rounded-lg bg-[#e8f1e1] p-3 text-xs leading-relaxed text-[#477543]"
+                className="rounded-lg bg-[var(--color-light)] p-3 text-xs leading-relaxed text-[var(--color-brand)]"
                 role="status"
               >
                 {message}

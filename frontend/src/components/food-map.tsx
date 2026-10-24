@@ -358,7 +358,7 @@ export default function FoodMap({
       }}
     >
       <div
-        className={`map-canvas relative z-0 w-full bg-[#e9efdf] ${design ? "h-full min-h-[400px]" : "h-[530px] tablet:h-[480px]"}`}
+        className={`map-canvas relative z-0 w-full bg-[var(--color-light)] ${design ? "h-full min-h-[400px]" : "h-[530px] tablet:h-[480px]"}`}
         ref={container}
       />
       {design && !landing && engine && (
@@ -432,13 +432,13 @@ export default function FoodMap({
               setTileFailed(false);
               setAttempt((n) => n + 1);
             }}
-            className="mr-4 min-h-11 font-bold text-[#3e6b26]"
+            className="mr-4 min-h-11 font-bold text-[var(--color-brand)]"
           >
             Coba lagi peta
           </button>
           <button
             onClick={onFallback}
-            className="min-h-11 font-bold text-[#3e6b26]"
+            className="min-h-11 font-bold text-[var(--color-brand)]"
           >
             Kembali ke daftar
           </button>
@@ -455,7 +455,7 @@ export default function FoodMap({
               setTileFailed(false);
               engine?.tile.redraw();
             }}
-            className="font-bold text-[#3e6b26]"
+            className="font-bold text-[var(--color-brand)]"
           >
             Coba lagi gambar peta
           </button>
@@ -469,7 +469,7 @@ export default function FoodMap({
           <p>Belum ada toko yang dapat dipetakan untuk filter ini.</p>
           <button
             onClick={onReset}
-            className="mt-2 min-h-11 font-bold text-[#3e6b26]"
+            className="mt-2 min-h-11 font-bold text-[var(--color-brand)]"
           >
             Reset filter peta
           </button>

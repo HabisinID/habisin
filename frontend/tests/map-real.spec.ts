@@ -99,6 +99,7 @@ test("real stores → map → profile → detail → reserve/cancel obey branch 
     await expect(
       page.getByRole("region", { name: "Detail makanan", exact: true }),
     ).toContainText(stores[0].address);
+    await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
@@ -110,7 +111,13 @@ test("real stores → map → profile → detail → reserve/cancel obey branch 
     expect(orders[0].listing.image).toBe(a1.image);
     expect(orders[0].listing.stock).toBe(3);
     await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
+    const cancelled = page.waitForResponse(
+      (r) =>
+        r.url().endsWith(`/api/reservations/${orders[0].id}/cancel`) &&
+        r.request().method() === "POST",
+    );
     await page.getByRole("button", { name: "Batalkan", exact: true }).click();
+    expect((await cancelled).status()).toBe(200);
     await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     expect(
@@ -139,7 +146,7 @@ test("real stores → map → profile → detail → reserve/cancel obey branch 
         .getByText(/Makanan ini sudah tidak tersedia/),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Simulasikan pembayaran berhasil" }),
+      page.getByRole("button", { name: "Lanjut ke ringkasan" }),
     ).toBeDisabled();
     expect(
       (

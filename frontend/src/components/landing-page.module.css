@@ -1,7 +1,7 @@
 .landing,
 .header {
-  color: #1c2616;
-  background: #fbf7ec;
+  color: var(--color-dark);
+  background: var(--color-cream);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -11,7 +11,7 @@
 }
 .landing :is(button, a):focus-visible,
 .header :is(button, a, input):focus-visible {
-  outline: 3px solid #3e6b26;
+  outline: 3px solid var(--color-brand);
   outline-offset: 4px;
 }
 .header {
@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
 }
 .header > a {
   font-size: 25px;
@@ -46,9 +46,9 @@
   gap: 10px;
   flex: 1;
   min-width: 100px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fbf7ec;
+  background: var(--color-cream);
   height: 44px;
   padding: 0 12px;
 }
@@ -63,7 +63,7 @@
   display: flex;
   gap: 6px;
   align-items: center;
-  background: #f6eacb;
+  background: var(--color-surface-2);
   border-radius: 999px;
   padding: 0 12px;
   min-height: 44px;
@@ -86,7 +86,7 @@
 .eyebrow {
   font-family: ui-monospace, monospace;
   font-size: 12px;
-  color: #5a6653;
+  color: var(--color-muted);
   letter-spacing: 0.025em;
   text-transform: uppercase;
 }
@@ -99,7 +99,7 @@
 .lead {
   font-size: 20px;
   line-height: 1.5;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .actions {
   display: flex;
@@ -120,7 +120,7 @@
   font-size: 16px;
 }
 .primary {
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
 }
 .header .primary {
@@ -130,10 +130,10 @@
 }
 .secondary {
   background: white;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
 }
 .muted {
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .board {
   height: 560px;
@@ -142,10 +142,10 @@
 }
 .mapPanel {
   height: 460px;
-  border: 1px solid #e6e4d6;
+  border: 1px solid var(--color-line);
   border-radius: 6px;
   overflow: hidden;
-  background: #eaf1e2;
+  background: var(--color-light);
 }
 .mapPanel > div {
   height: 100%;
@@ -158,7 +158,7 @@
 .receipt,
 .exampleTicket {
   background: white;
-  border-top: 6px dotted #e6e4d6;
+  border-top: 6px dotted var(--color-line);
   box-shadow: 0 3px 12px #00000014;
   padding: 20px;
 }
@@ -177,7 +177,7 @@
 .receipt small {
   display: block;
   font-size: 11px;
-  color: #5a6653;
+  color: var(--color-muted);
   margin-top: 12px;
 }
 .receiptRow {
@@ -227,7 +227,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #3e6b26;
+  color: var(--color-brand);
   font-weight: 700;
   min-height: 44px;
 }
@@ -264,8 +264,8 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  background: #ffd57e;
-  border: 1px solid #1c2616;
+  background: var(--color-yellow);
+  border: 1px solid var(--color-dark);
   border-radius: 6px;
   transform: rotate(3deg);
   flex: none;
@@ -306,11 +306,11 @@
 }
 .exampleTicket small {
   font-size: 12px;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .partner {
-  background: #141a10;
-  color: #edeee6;
+  background: var(--color-dark);
+  color: var(--color-line);
   padding: 88px 64px 88px 80px;
   display: grid;
   grid-template-columns: minmax(0, 600px) minmax(0, 1fr);
@@ -319,7 +319,7 @@
 }
 .partner .eyebrow,
 .partner p {
-  color: #a9b5a0;
+  color: var(--color-border);
 }
 .partner h2 {
   margin: 24px 0;
@@ -335,7 +335,7 @@
   gap: 16px;
 }
 .features > div > svg {
-  color: #9dc97a;
+  color: var(--color-light);
   margin-top: 3px;
 }
 .features h3 {
@@ -343,12 +343,12 @@
   margin-bottom: 4px;
 }
 .partnerCta {
-  background: #9dc97a;
-  color: #141a10;
+  background: var(--color-light);
+  color: var(--color-dark);
 }
 .verificationExample {
-  background: #1e261a;
-  border: 1px solid #3a4731;
+  background: var(--color-dark);
+  border: 1px solid var(--color-dark);
   border-radius: 8px;
   padding: 32px;
 }
@@ -362,14 +362,14 @@
   height: 72px;
   display: grid;
   place-items: center;
-  background: #27301f;
-  border: 1px solid #4b5d40;
+  background: var(--color-dark);
+  border: 1px solid var(--color-dark);
   border-radius: 6px;
   font-family: ui-monospace, monospace;
   font-size: 32px;
 }
 .verificationNote {
-  background: #26331d;
+  background: var(--color-dark);
   padding: 16px;
   display: flex;
   gap: 12px;
@@ -402,23 +402,23 @@
   font-size: 16px;
 }
 .figures a {
-  color: #5a6653;
+  color: var(--color-muted);
   font-size: 12px;
   text-decoration: underline;
 }
 .liveFigures {
-  border-left: 1px solid #e6e4d6;
+  border-left: 1px solid var(--color-line);
   padding-left: 32px;
 }
 .liveFigures h3 {
   font-size: 16px;
 }
 .liveFigures p {
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .liveFigures b {
   font-size: 24px;
-  color: #1c2616;
+  color: var(--color-dark);
   margin-right: 8px;
 }
 .liveFigures small {
@@ -430,7 +430,7 @@
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 80px;
   padding: 80px 64px 96px 80px;
-  border-top: 1px solid #e6e4d6;
+  border-top: 1px solid var(--color-line);
 }
 .faq article + article {
   margin-top: 24px;
@@ -440,14 +440,14 @@
   font-size: 16px;
 }
 .footer {
-  background: #f6eacb;
+  background: var(--color-surface-2);
   padding: 48px 64px 48px 80px;
   display: grid;
   grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(0, 1fr));
   gap: 48px;
 }
 .footer > div p {
-  color: #5a6653;
+  color: var(--color-muted);
   max-width: 420px;
   margin-top: 12px;
 }
@@ -456,11 +456,11 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .footer h3 {
   font-size: 14px;
-  color: #1c2616;
+  color: var(--color-dark);
   margin-bottom: 4px;
 }
 .footer nav :is(a, button) {
@@ -469,7 +469,7 @@
 }
 .footer nav :is(a, button):hover {
   text-decoration: underline;
-  color: #3e6b26;
+  color: var(--color-brand);
 }
 .footer nav span {
   opacity: 0.6;
@@ -480,9 +480,9 @@
   justify-content: space-between;
   gap: 24px;
   padding: 16px 64px 16px 80px;
-  background: #f6eacb;
-  border-top: 1px solid #e6e4d6;
-  color: #5a6653;
+  background: var(--color-surface-2);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
   font-size: 12px;
 }
 @media (min-width: 1601px) {
@@ -609,7 +609,7 @@
   .liveFigures {
     grid-column: 1/-1;
     border-left: 0;
-    border-top: 1px solid #e6e4d6;
+    border-top: 1px solid var(--color-line);
     padding: 24px 0 0;
   }
   .faq {

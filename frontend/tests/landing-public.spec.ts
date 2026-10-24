@@ -185,7 +185,7 @@ test("empty, loading and offline catalogs never become demo listing sections and
       .locator(".food-card"),
   ).toHaveCount(4);
 });
-test("public explore uses buyer map and list, gates favorites cart and paid/free ordering without writes", async ({
+test("public explore uses buyer map and list, gates favorites and paid/free ordering without writes", async ({
   page,
 }) => {
   await anonymous(page);
@@ -199,7 +199,7 @@ test("public explore uses buyer map and list, gates favorites cart and paid/free
     page.getByRole("button", { name: "Peta", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   const nav = page.getByRole("navigation", { name: "Navigasi pembeli" });
-  for (const name of ["Favorit", "Keranjang", "Pesanan saya"]) {
+  for (const name of ["Favorit", "Pesanan saya"]) {
     await nav.getByRole("button", { name, exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
@@ -220,11 +220,9 @@ test("public explore uses buyer map and list, gates favorites cart and paid/free
     await expect(
       page.getByRole("region", { name: "Detail makanan", exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Masukkan keranjang", exact: true })
-      .click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Masukkan keranjang", exact: true }),
+    ).toHaveCount(0);
     await page
       .getByRole("button", { name: "Masuk untuk memesan", exact: true })
       .click();
@@ -285,7 +283,7 @@ test("landing search and listing deep links open public detail then login preser
   ).toContainText("Roti Aktif");
   await expect(
     page.getByRole("button", {
-      name: "Simulasikan pembayaran berhasil",
+      name: "Lanjut ke ringkasan",
       exact: true,
     }),
   ).toBeEnabled();

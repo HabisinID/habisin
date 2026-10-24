@@ -1,29 +1,36 @@
-import Link from "next/link";
-import { ArrowLeft, Clock3, MapPin } from "lucide-react";
-import type { Store } from "@/lib/api";
-import HabisinLogo from "./habisin-logo";
+import { Clock3, MapPin } from "lucide-react";
+import SiteHeader from "./site-header";
+import type { Store, User } from "@/lib/api";
 
-export const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#174c36] disabled:opacity-55";
-export const secondaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-brand hover:bg-light";
+// Base components from design.pen: Btn/Primary, Btn/Secondary,
+// Btn/Destructive and Input.
+const buttonBase =
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-control px-5 py-3 text-base transition-colors disabled:opacity-55";
+export const primaryButton = `${buttonBase} bg-brand font-bold text-white hover:bg-brand-hover active:bg-brand-pressed`;
+export const secondaryButton = `${buttonBase} border border-border bg-surface font-semibold text-dark hover:bg-surface-2`;
+export const destructiveButton = `${buttonBase} bg-error font-bold text-white hover:opacity-90`;
 export const fieldClass =
-  "w-full rounded-lg border border-[#dfe5d7] bg-white px-3 py-3 text-sm text-dark";
+  "w-full rounded-field border border-border bg-surface px-3.5 py-3 text-base text-dark";
 export const errorClass =
-  "rounded-lg bg-[#fbeae4] p-3 text-sm leading-relaxed text-[#a34337]";
+  "rounded-field bg-error-tint p-3 text-sm leading-relaxed text-error";
 
-export function StoreShell({ children }: { children: React.ReactNode }) {
+export function StoreShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user?: User | null;
+}) {
   return (
     <>
-      <header className="border-b border-line bg-cream">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-6">
-          <HabisinLogo className="brand flex items-center text-2xl font-extrabold tracking-tight" />
-          <Link href="/" className="flex items-center gap-2 text-xs text-brand">
-            <ArrowLeft size={16} />
-            Kembali jelajah
-          </Link>
-        </div>
-      </header>
+      <SiteHeader
+        nav={[
+          { label: "Jelajahi", href: "/jelajahi" },
+          ...(user?.role === "partner"
+            ? [{ label: "Toko saya", href: "/partner/store" }]
+            : []),
+        ]}
+      />
       <main className="mx-auto max-w-5xl px-6 py-10 mobile:px-4 mobile:py-6">
         {children}
       </main>
@@ -40,7 +47,7 @@ export function StoreDetails({ store }: { store: Store }) {
           {store.name}
         </h1>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-[#f1e8e4] text-[#865b4c]"}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${store.is_open ? "bg-light text-brand" : "bg-[var(--color-error-tint)] text-[var(--color-error)]"}`}
         >
           {store.is_open ? "Toko aktif" : "Toko ditutup sementara"}
         </span>

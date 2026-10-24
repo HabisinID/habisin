@@ -9,7 +9,16 @@ export async function mutate(
   data?: unknown,
   method = "POST",
 ) {
-  const csrf = await (await request.get("/api/auth/csrf")).json();
+  const csrfResponse = await request.get("/api/auth/csrf");
+  const expectedOrigin = new URL(
+    process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000",
+  ).origin;
+  if (new URL(csrfResponse.url()).origin !== expectedOrigin) {
+    throw new Error(
+      "Backend fixture menolak mutasi ke origin di luar PLAYWRIGHT_BASE_URL.",
+    );
+  }
+  const csrf = await csrfResponse.json();
   return request.fetch(`/api/${path}`, {
     method,
     data,

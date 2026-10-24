@@ -1,12 +1,12 @@
 .partner-listings {
-  --color-brand: #3e6b26;
-  --color-dark: #1c2616;
-  --color-cream: #fbf7ec;
-  --color-line: #e6e4d6;
-  --green: #3e6b26;
-  --dark: #1c2616;
-  --cream: #fbf7ec;
-  --line: #e6e4d6;
+
+
+
+
+  --green: var(--color-brand);
+  --dark: var(--color-dark);
+  --cream: var(--color-cream);
+  --line: var(--color-line);
 }
 .listing-toolbar {
   display: flex;
@@ -17,7 +17,7 @@
 }
 .listing-toolbar p,
 .listing-hint {
-  color: #5a6653;
+  color: var(--color-muted);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -40,7 +40,7 @@
   vertical-align: top;
 }
 .listing-table th {
-  color: #5a6653;
+  color: var(--color-muted);
   font-size: 12px;
 }
 .listing-product {
@@ -52,7 +52,7 @@
 .listing-product small {
   display: block;
   margin-top: 5px;
-  color: #5a6653;
+  color: var(--color-muted);
   font-size: 12px;
 }
 .listing-thumbnail {
@@ -60,18 +60,18 @@
   height: 48px;
   flex-shrink: 0;
   border-radius: 6px;
-  background: #f6eacb center/cover;
+  background: var(--color-surface-2) center/cover;
 }
 .listing-status {
   display: inline-block;
   padding: 5px 8px;
   border-radius: 6px;
-  background: #dee2e6;
+  background: var(--color-line);
   font-size: 12px;
 }
 .listing-status.is-active {
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
 }
 .listing-actions,
 .listing-form-actions {
@@ -82,20 +82,20 @@
 .listing-actions button {
   padding: 8px 10px;
   min-height: 44px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 12px;
-  color: #3e6b26;
+  color: var(--color-brand);
   background: white;
 }
 .listing-actions .listing-delete {
-  color: #b3261e;
-  border-color: #b3261e;
+  color: var(--color-error);
+  border-color: var(--color-error);
 }
 .listing-confirm {
   padding: 16px;
-  border: 1px solid #7a8872;
-  background: #f6eacb;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
   border-radius: 6px;
   line-height: 1.6;
 }
@@ -142,19 +142,19 @@
   min-width: 0;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   background: white;
-  color: #1c2616;
+  color: var(--color-dark);
   font: inherit;
 }
 .listing-field textarea {
   resize: vertical;
 }
 .listing-field [aria-invalid="true"] {
-  border-color: #b3261e;
+  border-color: var(--color-error);
 }
 .listing-field-error {
-  color: #b3261e;
+  color: var(--color-error);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -174,7 +174,7 @@
 .listing-donation input {
   width: 18px;
   height: 18px;
-  accent-color: #3e6b26;
+  accent-color: var(--color-brand);
 }
 .listing-form-actions {
   justify-content: flex-end;
@@ -202,7 +202,7 @@
   }
   .listing-table tr {
     padding: 12px 0;
-    border-bottom: 1px solid #7a8872;
+    border-bottom: 1px solid var(--color-border);
   }
   .listing-table td {
     padding: 6px 0;
@@ -210,7 +210,7 @@
   }
   .listing-table td[data-label]:not(:first-child)::before {
     content: attr(data-label) ": ";
-    color: #5a6653;
+    color: var(--color-muted);
   }
   .listing-table td:last-child .listing-actions {
     margin-top: 8px;

@@ -68,15 +68,15 @@ class ReservationPolicyTests(TestCase):
     def reserve(self, item, quantity=1):
         return self.client.post("/api/reservations", {"listing_id": item.pk, "quantity": quantity}, format="json")
 
-    def test_free_quantity_limit_and_one_active_across_stores(self):
-        self.assertEqual(self.reserve(self.a, 3).status_code, 409)
+    def test_free_quantity_limit_is_global_across_stores(self):
+        self.assertEqual(self.reserve(self.a, 3).status_code, 400)
         self.assertEqual(self.reserve(self.a, 2).status_code, 201)
-        self.assertEqual(self.reserve(self.b).status_code, 409)
+        self.assertEqual(self.reserve(self.b).status_code, 400)
         self.b.refresh_from_db()
         self.assertEqual(self.b.stock, 10)
         policy = self.client.get(f"/api/listings/{self.b.pk}/reservation-policy").data
         self.assertEqual(policy["max_quantity"], 0)
-        self.assertTrue(policy["active_free_reservation_id"])
+        self.assertIsNone(policy["active_free_reservation_id"])
 
     def test_cancel_releases_quota_and_is_idempotent(self):
         order = self.reserve(self.a, 2).data
@@ -87,11 +87,11 @@ class ReservationPolicyTests(TestCase):
         self.assertEqual(self.a.stock, 10)
         self.assertEqual(self.reserve(self.a, 2).status_code, 201)
 
-    def test_expired_ticket_still_consumes_daily_quota_only_at_its_store(self):
+    def test_expired_ticket_restores_global_daily_quota(self):
         self.reserve(self.a, 2)
         Reservation.objects.filter(listing=self.a).update(pickup_deadline=self.now-timedelta(seconds=1))
         sibling = self.food(self.store)
-        self.assertEqual(self.reserve(sibling).status_code, 409)
+        self.assertEqual(self.reserve(sibling).status_code, 201)
         self.assertEqual(self.reserve(self.b).status_code, 201)
 
     def test_wib_midnight_and_paid_are_independent(self):
@@ -106,15 +106,15 @@ class ReservationPolicyTests(TestCase):
         self.assertEqual(self.reserve(paid, 3).status_code, 201)
 
     def test_cancellation_exact_boundary_and_late_rejection(self):
-        for delta, expected in [(timedelta(minutes=30), 200), (timedelta(minutes=30)-timedelta(seconds=1), 409), (-timedelta(seconds=1), 409)]:
+        for delta, expected in [(timedelta(minutes=30)+timedelta(seconds=1), 200), (timedelta(minutes=30), 409), (timedelta(minutes=30)-timedelta(seconds=1), 409), (-timedelta(seconds=1), 409)]:
             for price in [0, 1000]:
                 food = self.food(self.store, price=price, pickup_end=self.now+delta)
-                order = Reservation.objects.create(user=self.buyer, listing=food, quantity=1, total=price, code=f"{Reservation.objects.count():05}")
+                order = Reservation.objects.create(user=self.buyer, listing=food, quantity=1, total=price, code=f"{Reservation.objects.count():05}", status="paid")
                 with patch("main.reservation_policy.timezone.now", return_value=self.now):
                     result = self.client.post(f"/api/reservations/{order.pk}/cancel")
                 self.assertEqual(result.status_code, expected)
                 food.refresh_from_db()
-                self.assertEqual(food.stock, 11 if expected == 200 else 10)
+                self.assertEqual(food.stock, 11 if expected == 200 or delta.total_seconds() < 0 else 10)
 
     def test_policy_permissions_and_missing_listing(self):
         self.assertEqual(self.client.get("/api/listings/999999/reservation-policy").status_code, 404)
@@ -124,12 +124,11 @@ class ReservationPolicyTests(TestCase):
         self.client.force_authenticate(self.partner)
         self.assertEqual(self.client.get(f"/api/listings/{self.a.pk}/reservation-policy").status_code, 403)
 
-    def test_expired_single_portion_leaves_one_same_store_and_cancelled_retry_after_deadline(self):
+    def test_expired_single_portion_releases_both_portions_and_cancelled_retry_is_safe(self):
         order = self.reserve(self.a, 1).data
         Reservation.objects.filter(listing=self.a).update(pickup_deadline=self.now-timedelta(seconds=1))
         sibling = self.food(self.store)
-        self.assertEqual(self.reserve(sibling, 2).status_code, 409)
-        self.assertEqual(self.reserve(sibling, 1).status_code, 201)
+        self.assertEqual(self.reserve(sibling, 2).status_code, 201)
         policy = self.client.get(f"/api/listings/{sibling.pk}/reservation-policy").data
         self.assertEqual(policy["remaining_free_portions"], 0)
         Reservation.objects.filter(pk=order["id"]).update(status="cancelled")

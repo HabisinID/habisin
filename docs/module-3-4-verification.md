@@ -1,3 +1,5 @@
+> **Kontrak terbaru integrasi main:** [panduan integrasi](integrate-main-modules-3-4.md). Bagian audit bertanggal di bawah adalah bukti historis, termasuk fitur keranjang/pembatalan mitra yang kini ditunda.
+
 # Verifikasi revisi Modul 3 dan Modul 4
 
 ## Menjalankan suite tanpa menyentuh data kerja

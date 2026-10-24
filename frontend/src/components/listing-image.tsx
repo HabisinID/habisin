@@ -14,7 +14,7 @@ export default function ListingImage({
   const [failedSource, setFailedSource] = useState<string | null>(null);
   return (
     <div
-      className={`relative aspect-[4/3] overflow-hidden bg-[#f6eacb] ${className}`}
+      className={`relative aspect-[4/3] overflow-hidden bg-[var(--color-surface-2)] ${className}`}
     >
       {src && failedSource !== src ? (
         <Image
@@ -29,7 +29,7 @@ export default function ListingImage({
         <span
           role="img"
           aria-label={alt}
-          className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-[#5a6653]"
+          className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-[var(--color-muted)]"
         >
           Foto tidak tersedia
         </span>

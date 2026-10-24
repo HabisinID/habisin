@@ -16,6 +16,7 @@ import { type Listing, pickup, rupiah } from "@/lib/api";
 import { discover, eligible, type Origin } from "@/lib/discovery";
 import { designFont } from "@/lib/design-font";
 import HabisinLogo from "./habisin-logo";
+import SiteHeader from "./site-header";
 import FoodPostCard from "./food-post-card";
 import MapBoundary from "./map-boundary";
 import s from "./landing-page.module.css";
@@ -50,8 +51,22 @@ export function LandingHeader({
   onRegister: () => void;
 }) {
   return (
-    <header className={`${s.header} ${designFont.className}`}>
-      <HabisinLogo />
+    <SiteHeader
+      className={designFont.className}
+      nav={[
+        { label: "Jelajahi", href: "/jelajahi" },
+        { label: "Dampak", href: "/#dampak" },
+        { label: "Untuk Mitra", href: "/#mitra" },
+      ]}
+      actions={
+        <>
+          <button onClick={onLogin}>Masuk</button>
+          <button className={s.primary} onClick={onRegister}>
+            Daftar gratis
+          </button>
+        </>
+      }
+    >
       <form action="/jelajahi" className={s.search} role="search">
         <Search size={18} aria-hidden="true" />
         <input
@@ -64,16 +79,7 @@ export function LandingHeader({
         <MapPin size={16} />
         {locating ? "Mencari lokasi…" : `${location} · Ubah`}
       </button>
-      <nav aria-label="Navigasi utama">
-        <Link href="/jelajahi">Jelajahi</Link>
-        <a href="#dampak">Dampak</a>
-        <a href="#mitra">Untuk Mitra</a>
-        <button onClick={onLogin}>Masuk</button>
-        <button className={s.primary} onClick={onRegister}>
-          Daftar gratis
-        </button>
-      </nav>
-    </header>
+    </SiteHeader>
   );
 }
 export default function LandingPage({
@@ -172,7 +178,7 @@ export default function LandingPage({
           </div>
           <p className={s.muted}>
             Tanpa akun untuk melihat. Masuk saat ingin memesan, menyimpan
-            favorit, atau memakai keranjang.
+            favorit, dan melihat pesanan.
           </p>
         </div>
         <div className={s.board} aria-label="Papan makanan hari ini">
@@ -321,7 +327,7 @@ export default function LandingPage({
               {
                 Icon: Gift,
                 title: "Bisa juga donasi",
-                body: "Tandai Gratis untuk berbagi. Maksimal 2 porsi per pembeli per toko per hari dan satu tiket gratis aktif.",
+                body: "Tandai Gratis untuk berbagi. Maksimal 2 porsi gratis per pembeli per hari WIB untuk seluruh toko.",
               },
             ].map(({ Icon, title, body }) => (
               <div key={title}>
@@ -421,11 +427,11 @@ export default function LandingPage({
             ],
             [
               "Bagaimana cara bayarnya?",
-              "Saat ini pembayaran HABISIN berupa simulasi. Tidak ada uang yang ditarik. Masuk terlebih dahulu untuk memesan makanan atau memakai keranjang.",
+              "Saat ini pembayaran HABISIN berupa simulasi. Tidak ada uang yang ditarik. Masuk terlebih dahulu untuk memesan makanan dan melihat pesanan.",
             ],
             [
               "Kenapa ada makanan gratis?",
-              "Sebagian toko mendonasikan sisa jualannya. Kuotanya maksimal 2 porsi gratis per toko per hari WIB dan hanya satu tiket gratis aktif per pembeli.",
+              "Sebagian toko mendonasikan sisa jualannya. Kuotanya maksimal 2 porsi gratis per pembeli per hari WIB untuk seluruh toko. Pesanan dibatalkan atau kedaluwarsa tidak memakai kuota.",
             ],
           ].map(([question, answer]) => (
             <article key={question}>

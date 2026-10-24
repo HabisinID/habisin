@@ -44,7 +44,7 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".food-pin")).toHaveCount(6);
-  await page.locator(".food-pin").first().click();
+  await page.locator(".food-pin").filter({ hasText: "Kopi Tuku" }).click();
   await expect(page.getByText("Profil toko belum terhubung.")).toBeVisible();
   await page
     .getByRole("region", { name: /^Pilihan makanan/ })
@@ -53,8 +53,13 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   await expect(
     page.getByRole("region", { name: "Detail makanan", exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Tutup popup toko" }).click();
+  await page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("button", { name: "Jelajahi", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Detail makanan", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Daftar", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -76,6 +81,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
   await openCatalog(page);
   try {
     await page
+      .getByRole("banner")
       .getByRole("button", { name: "Daftar gratis", exact: true })
       .click();
     await page.getByLabel("Nama lengkap").fill("Browser Tester");
@@ -94,16 +100,15 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await page
       .getByRole("button", { name: "Pesan Surprise Pastry Box", exact: true })
       .click();
-    await page.getByLabel("Jumlah porsi", { exact: true }).fill("2");
+    await page.getByLabel("Jumlah porsi").fill("2");
+    await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
     await expect(
       page.getByRole("heading", { name: "Makananmu sudah dipesan!" }),
     ).toBeVisible();
-    await expect(page.locator('[class*="claim"]>strong')).toHaveText(
-      /^[A-Z2-9]{5}$/,
-    );
+    await expect(page.locator(".ticket>strong")).toHaveText(/^[A-Z2-9]{5}$/);
     await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
     await expect(page.locator(".order-item")).toHaveCount(1);
     await page.getByRole("button", { name: "Batalkan", exact: true }).click();
@@ -123,7 +128,10 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     changed = true;
     await page.getByRole("button", { name: "Tutup", exact: true }).click();
     await page.getByRole("button", { name: "Keluar", exact: true }).click();
-    await page.getByRole("button", { name: "Masuk", exact: true }).click();
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Masuk", exact: true })
+      .click();
     await page.getByLabel("Username", { exact: true }).fill(username);
     await page.getByLabel("Password", { exact: true }).fill(newPassword);
     await page
@@ -140,7 +148,9 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await page.getByRole("button", { name: "Hapus akun permanen" }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Masuk", exact: true }),
+      page
+        .getByRole("banner")
+        .getByRole("button", { name: "Masuk", exact: true }),
     ).toBeVisible();
     registered = false;
   } finally {

@@ -1,15 +1,8 @@
 "use client";
-import {
-  Heart,
-  ShoppingCart,
-  Ticket,
-  MapPin,
-  LogOut,
-  Search,
-} from "lucide-react";
+import { MapPin, LogOut, Search } from "lucide-react";
 import type { User } from "@/lib/api";
 import { designFont } from "@/lib/design-font";
-import HabisinLogo from "./habisin-logo";
+import SiteHeader from "./site-header";
 import s from "./workspace.module.css";
 export default function BuyerHeader({
   user,
@@ -20,7 +13,6 @@ export default function BuyerHeader({
   onLocate,
   active,
   onNavigate,
-  cartCount,
   onAccount,
   onLogout,
   onLogin,
@@ -34,15 +26,57 @@ export default function BuyerHeader({
   onLocate: () => void;
   active: string;
   onNavigate: (v: string) => void;
-  cartCount: number;
+  cartCount?: number;
   onAccount: () => void;
   onLogout: () => void;
   onLogin?: () => void;
   onRegister?: () => void;
 }) {
   return (
-    <header className={`${s.buyerHeader} ${designFont.className}`}>
-      <HabisinLogo />
+    <SiteHeader
+      className={designFont.className}
+      navLabel="Navigasi pembeli"
+      nav={[
+        {
+          label: "Jelajahi",
+          current: active === "explore",
+          onClick: () => onNavigate("explore"),
+        },
+        {
+          label: "Favorit",
+          current: active === "favorites",
+          onClick: () => onNavigate("favorites"),
+        },
+        {
+          label: "Pesanan saya",
+          current: active === "orders",
+          onClick: () => onNavigate("orders"),
+        },
+      ]}
+      actions={
+        user ? (
+          <>
+            <button
+              className={s.avatar}
+              aria-label={`Akun ${user.name || user.username}`}
+              onClick={onAccount}
+            >
+              {(user.name || user.username).slice(0, 2).toUpperCase()}
+            </button>
+            <button aria-label="Keluar" onClick={onLogout}>
+              <LogOut size={18} />
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={onLogin}>Masuk</button>
+            <button className={s.primary} onClick={onRegister}>
+              Daftar gratis
+            </button>
+          </>
+        )
+      }
+    >
       <label className={s.headerSearch}>
         <Search size={18} />
         <input
@@ -65,52 +99,6 @@ export default function BuyerHeader({
         <MapPin size={16} />
         {locating ? "Mencari lokasi…" : `${location} · Ubah`}
       </button>
-      <nav aria-label="Navigasi pembeli">
-        {[
-          { key: "explore", label: "Jelajahi" },
-          { key: "favorites", label: "Favorit", Icon: Heart },
-          { key: "cart", label: "Keranjang", Icon: ShoppingCart },
-          { key: "orders", label: "Pesanan saya", Icon: Ticket },
-        ].map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            aria-current={active === key ? "page" : undefined}
-            onClick={() => onNavigate(key)}
-          >
-            {Icon && <Icon size={17} />}
-            <span>{label}</span>
-            {key === "cart" && cartCount > 0 && <b>{cartCount}</b>}
-          </button>
-        ))}
-      </nav>
-      {user ? (
-        <>
-          <button
-            className={s.avatar}
-            aria-label={`Akun ${user.name || user.username}`}
-            onClick={onAccount}
-          >
-            {(user.name || user.username)
-              .split(" ")
-              .map((v) => v[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
-          </button>
-          <button aria-label="Keluar" className={s.icon} onClick={onLogout}>
-            <LogOut size={18} />
-          </button>
-        </>
-      ) : (
-        <div className={s.guestActions}>
-          <button className={s.textButton} onClick={onLogin}>
-            Masuk
-          </button>
-          <button className={s.primary} onClick={onRegister}>
-            Daftar gratis
-          </button>
-        </div>
-      )}
-    </header>
+    </SiteHeader>
   );
 }

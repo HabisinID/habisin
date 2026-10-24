@@ -44,7 +44,7 @@ test("store popup identities, keyboard, filters and viewport survive repeated to
   );
   await expect(popup.getByRole("link", { name: "Lihat toko" })).toHaveCSS(
     "color",
-    "rgb(62, 107, 38)",
+    "rgb(31, 77, 51)",
   );
   await popup.getByLabel("Toko lain di lokasi ini").selectOption("store:32");
   await expect(popup).toContainText("Food 303");

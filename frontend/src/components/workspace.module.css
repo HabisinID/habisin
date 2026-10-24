@@ -2,8 +2,8 @@
 .partnerShell,
 .cart,
 .ticketPage {
-  color: #1c2616;
-  background: #fbf7ec;
+  color: var(--color-dark);
+  background: var(--color-cream);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -17,7 +17,7 @@
 .partnerShell :is(button, input, a):focus-visible,
 .cart :is(button, input):focus-visible,
 .ticketPage :is(button, a):focus-visible {
-  outline: 3px solid #3e6b26;
+  outline: 3px solid var(--color-brand);
   outline-offset: 3px;
 }
 .buyerHeader {
@@ -26,7 +26,7 @@
   gap: 20px;
   min-height: 64px;
   padding: 0 32px;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
   background: white;
   position: relative;
   z-index: 20;
@@ -49,12 +49,12 @@
   white-space: nowrap;
 }
 .buyerHeader nav button[aria-current] {
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
   font-weight: 700;
 }
 .buyerHeader nav b {
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
   border-radius: 999px;
   padding: 0 6px;
@@ -65,10 +65,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   height: 44px;
-  background: #fbf7ec;
+  background: var(--color-cream);
   padding: 0 12px;
   min-width: 100px;
 }
@@ -85,7 +85,7 @@
   gap: 6px;
   min-height: 44px;
   padding: 0 12px;
-  background: #f6eacb;
+  background: var(--color-surface-2);
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -94,8 +94,8 @@
   height: 40px;
   flex: none;
   border-radius: 50%;
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
   display: inline-grid;
   place-items: center;
   font-weight: 700;
@@ -119,20 +119,20 @@
   font-weight: 700;
 }
 .primary {
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
 }
 .secondary {
   background: white;
-  border: 1px solid #7a8872;
-  color: #1c2616;
+  border: 1px solid var(--color-border);
+  color: var(--color-dark);
 }
 .danger {
-  background: #a34337;
+  background: var(--color-error);
   color: white;
 }
 .textButton {
-  color: #3e6b26;
+  color: var(--color-brand);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -147,27 +147,27 @@
   justify-content: space-between;
 }
 .muted {
-  color: #5a6653;
+  color: var(--color-muted);
   font-size: 13px;
 }
 .error {
-  color: #a34337;
+  color: var(--color-error);
 }
 .empty {
   padding: 32px 16px;
-  border: 1px dashed #d4d9ce;
+  border: 1px dashed var(--color-line);
   border-radius: 12px;
   margin: 20px 0;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .status {
   padding: 16px 32px;
-  background: #f6eacb;
+  background: var(--color-surface-2);
 }
 .eyebrow {
   font-size: 12px;
   letter-spacing: 0.8px;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .mono {
   font-family: ui-monospace, SFMono-Regular, monospace;
@@ -176,8 +176,8 @@
   display: inline-block;
   align-self: start;
   padding: 4px 10px;
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -207,7 +207,7 @@
 }
 .shopGroup {
   background: white;
-  border: 1px solid #e6e4d6;
+  border: 1px solid var(--color-line);
   border-radius: 12px;
   margin-bottom: 20px;
   padding: 20px;
@@ -216,11 +216,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
   padding-bottom: 16px;
 }
 .cart input[type="checkbox"] {
-  accent-color: #3e6b26;
+  accent-color: var(--color-brand);
   width: 18px;
   height: 18px;
   flex: none;
@@ -230,7 +230,7 @@
   gap: 16px;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
 }
 .cartRow:last-child {
   border: 0;
@@ -246,7 +246,7 @@
 .cartRow input[type="number"] {
   width: 60px;
   padding: 8px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
 }
 .thumb {
@@ -255,7 +255,7 @@
   flex: none;
   border-radius: 6px;
   overflow: hidden;
-  background: #f6eacb;
+  background: var(--color-surface-2);
 }
 .thumb img {
   width: 100%;
@@ -265,7 +265,7 @@
 .summary {
   align-self: start;
   padding: 24px;
-  background: #f6eacb;
+  background: var(--color-surface-2);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -277,11 +277,11 @@
   display: flex;
   justify-content: space-between;
   padding: 16px 0;
-  border-top: 1px solid #d8cda9;
+  border-top: 1px solid var(--color-surface-2);
 }
 .total strong {
   font-size: 22px;
-  color: #3e6b26;
+  color: var(--color-brand);
 }
 .ticketPage {
   padding: 32px 80px 40px;
@@ -312,7 +312,7 @@
 }
 .claim {
   text-align: center;
-  border: 1px dashed #d9d9ce;
+  border: 1px dashed var(--color-line);
   padding: 24px 16px;
   margin: 24px 0;
 }
@@ -321,10 +321,10 @@
   font-family: ui-monospace, monospace;
   font-size: 42px;
   letter-spacing: 8px;
-  color: #1c2616;
+  color: var(--color-dark);
 }
 .claim small {
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .receiptLines {
   margin: 20px 0;
@@ -332,7 +332,7 @@
 .receiptLines > div {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px dotted #c5c9bd;
+  border-bottom: 1px dotted var(--color-line);
   margin: 12px 0;
   gap: 16px;
 }
@@ -351,7 +351,7 @@
   gap: 8px;
 }
 .ticketLocation {
-  border-block: 1px solid #e6e4d6;
+  border-block: 1px solid var(--color-line);
   padding: 24px 0;
 }
 .ticketLocation p {
@@ -361,7 +361,7 @@
 }
 .ticketLocation small {
   display: block;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .cancellation {
   padding: 16px 0;
@@ -373,8 +373,8 @@
 }
 .partnerSidebar {
   padding: 24px 16px;
-  background: #fbf7ec;
-  border-right: 1px solid #e6e4d6;
+  background: var(--color-cream);
+  border-right: 1px solid var(--color-line);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -383,7 +383,7 @@
   font-size: 25px;
 }
 .partnerSidebar > small {
-  color: #5a6653;
+  color: var(--color-muted);
   margin-top: -14px;
   margin-left: 48px;
 }
@@ -403,14 +403,14 @@
 }
 .partnerSidebar nav b {
   margin-left: auto;
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
   padding: 0 6px;
   border-radius: 99px;
 }
 .partnerSidebar nav [aria-current] {
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
   font-weight: 700;
 }
 .verify {
@@ -418,7 +418,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #3e6b26;
+  background: var(--color-brand);
   color: white;
   border-radius: 6px;
   min-height: 48px;
@@ -431,7 +431,7 @@
 }
 .partnerHeader {
   padding: 24px 32px;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
   display: flex;
   gap: 24px;
   justify-content: space-between;
@@ -442,24 +442,24 @@
   justify-content: flex-end;
 }
 .performance {
-  background: #f6eacb;
+  background: var(--color-surface-2);
   padding: 20px 32px;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
 }
 .periods {
   display: flex;
   gap: 4px;
 }
 .periods button {
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   background: white;
   padding: 5px 12px;
   min-height: 36px;
 }
 .periods [aria-pressed="true"] {
-  background: #eaf1e2;
-  color: #3e6b26;
+  background: var(--color-light);
+  color: var(--color-brand);
   font-weight: 700;
 }
 .metrics {
@@ -479,7 +479,7 @@
     monospace;
 }
 .metrics span {
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .chart {
   height: 64px;
@@ -497,7 +497,7 @@
 }
 .chart i {
   width: 100%;
-  background: #3e6b26;
+  background: var(--color-brand);
   border-radius: 3px 3px 0 0;
 }
 .performance > .muted {
@@ -517,14 +517,14 @@
 }
 .liveListings {
   background: white;
-  border-left: 1px solid #e6e4d6;
+  border-left: 1px solid var(--color-line);
 }
 .pickupRow {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
 }
 .pickupRow > strong {
   font-size: 20px;
@@ -541,7 +541,7 @@
 .pickupRow small,
 .liveRow small {
   font-size: 12px;
-  color: #5a6653;
+  color: var(--color-muted);
 }
 .pickupRow .secondary {
   font-size: 12px;
@@ -554,7 +554,7 @@
   gap: 12px;
   position: relative;
   padding: 20px 0;
-  border-bottom: 1px solid #e6e4d6;
+  border-bottom: 1px solid var(--color-line);
 }
 .liveRow > div:nth-child(2) {
   flex: 1;
@@ -576,7 +576,7 @@
 }
 .skeleton div {
   height: 64px;
-  background: #e6e4d6;
+  background: var(--color-line);
   margin: 16px 0;
   border-radius: 6px;
 }
@@ -619,7 +619,7 @@
   }
   .partnerSidebar {
     border-right: 0;
-    border-bottom: 1px solid #e6e4d6;
+    border-bottom: 1px solid var(--color-line);
     padding: 12px 16px;
     gap: 8px;
   }
@@ -656,7 +656,7 @@
   }
   .liveListings {
     border-left: 0;
-    border-top: 1px solid #e6e4d6;
+    border-top: 1px solid var(--color-line);
   }
   .performance > .row {
     flex-wrap: wrap;
@@ -807,13 +807,13 @@
   flex: none;
   width: 44px;
   height: 44px;
-  color: #b13f32;
-  border: 1px solid #b13f32;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
   border-radius: 8px;
   background: white;
 }
 .removeButton:hover {
-  background: #fff1ed;
+  background: var(--color-error-tint);
 }
 .removeButton:disabled {
   opacity: 0.5;
@@ -823,14 +823,14 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  background: #fbf7ec;
+  background: var(--color-cream);
   border-radius: 8px;
 }
 .orderCancel textarea {
   width: 100%;
   min-height: 88px;
   padding: 10px;
-  border: 1px solid #7a8872;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
 }
 @media (max-width: 640px) {
@@ -871,4 +871,10 @@
   .guestActions > .primary {
     padding: 8px;
   }
+}
+
+.partnerHeader > div {
+  width: 100%;
+  max-width: none;
+  padding: 0;
 }

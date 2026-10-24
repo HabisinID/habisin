@@ -216,10 +216,11 @@ test("cropped File draft restores after reload, publishes and copies without sta
 test("copy sheet excludes foreign listings and clears a closed store", async ({
   page,
   playwright,
+  baseURL,
 }) => {
   const stores = await register(page.request, "partner");
   const other = await playwright.request.newContext({
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
   });
   await register(other, "partner", 1);
   try {

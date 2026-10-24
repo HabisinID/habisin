@@ -10,7 +10,6 @@ from .models import Listing, Reservation, Store
 from .geocoding import normalize_address, validate_location_token
 from .listing_services import ListingConflict
 from .listing_media import normalize_listing_image
-from .reservation_policy import cancellation_reason
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -137,7 +136,7 @@ class PartnerListingSerializer(ListingSerializer):
             errors["store_id"] = "Buka toko sebelum mengaktifkan listing."
         if target and (instance is None or store_id is not None):
             snapshot = dict(store=target.name, address=target.address, latitude=target.latitude, longitude=target.longitude)
-            if instance and instance.reservation_set.filter(status="reserved", pickup_deadline__gt=timezone.now()).exists() and instance.store_profile_id != target.pk:
+            if instance and instance.reservation_set.filter(status__in=Reservation.ACTIVE_STATUSES).exists() and instance.store_profile_id != target.pk:
                 same_legacy_location = instance.store_profile_id is None and all(getattr(instance, key) == val for key, val in snapshot.items())
                 if not same_legacy_location:
                     raise ListingConflict("Toko tidak dapat diganti selama ada pesanan aktif.")
@@ -155,7 +154,7 @@ class PartnerListingSerializer(ListingSerializer):
                 errors["prepared_at"] = "Waktu dibuat tidak boleh di masa depan."
             elif prepared > value("pickup_end"):
                 errors["prepared_at"] = "Waktu dibuat tidak boleh setelah batas pengambilan."
-        if self.instance and self.instance.reservation_set.filter(status="reserved", pickup_deadline__gt=timezone.now()).exists():
+        if self.instance and self.instance.reservation_set.filter(status__in=Reservation.ACTIVE_STATUSES).exists():
             for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
                 if field in attrs and attrs[field] != getattr(self.instance, field):
                     errors[field] = "Tidak dapat diubah selama ada pesanan aktif."
@@ -173,27 +172,47 @@ class PartnerListingSerializer(ListingSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     listing = serializers.SerializerMethodField()
-    status = serializers.SerializerMethodField()
 
     def get_listing(self, item):
         data = dict(ListingSerializer(item.listing).data)
         data["pickup_end"] = item.deadline.isoformat()
         return data
 
-    def get_status(self, item):
-        return "expired" if item.status == "reserved" and item.deadline <= timezone.now() else item.status
-    can_cancel = serializers.SerializerMethodField()
-    cancellation_reason = serializers.SerializerMethodField()
-
-    def get_can_cancel(self, item):
-        return item.status == "reserved" and not cancellation_reason(item)
-
-    def get_cancellation_reason(self, item):
-        return cancellation_reason(item)
+    pay_before = serializers.DateTimeField(read_only=True)
+    cancel_until = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "status", "created_at", "can_cancel", "cancellation_reason", "cancellation_note", "cancelled_by", "cancelled_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "pay_before", "cancel_until", "paid_at", "picked_up_at"]
+
+
+class StrictIntegerField(serializers.IntegerField):
+    # DRF accepts "2" and True as integers; orders only accept real JSON numbers.
+    def to_internal_value(self, data):
+        if type(data) is not int:
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+class StrictCharField(serializers.CharField):
+    # DRF converts numbers to strings; a note must be sent as text.
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+QUANTITY_ERRORS = {"invalid": "Jumlah porsi harus berupa angka bulat.", "min_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi.", "max_value": f"Pilih 1–{Reservation.MAX_QUANTITY} porsi."}
+
+
+class ReservationUpdateSerializer(serializers.Serializer):
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, required=False, error_messages=QUANTITY_ERRORS)
+    note = StrictCharField(max_length=Reservation.NOTE_MAX_LENGTH, allow_blank=True, required=False, error_messages={"invalid": "Catatan harus berupa teks.", "max_length": f"Catatan maksimal {Reservation.NOTE_MAX_LENGTH} karakter."})
+
+
+class ReservationCreateSerializer(ReservationUpdateSerializer):
+    listing_id = StrictIntegerField(error_messages={"invalid": "Pilih produk yang valid."})
+    quantity = StrictIntegerField(min_value=1, max_value=Reservation.MAX_QUANTITY, default=1, error_messages=QUANTITY_ERRORS)
 
 
 class GeocodeSerializer(serializers.Serializer):

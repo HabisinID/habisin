@@ -79,5 +79,5 @@ test("profile tabs and account deletion checkbox preserve their layout", async (
   const checkbox = dialog.getByRole("checkbox");
   expect((await checkbox.boundingBox())!.width).toBeLessThan(30);
   await expect(checkbox.locator("..")).toHaveCSS("flex-direction", "row");
-  await expect(checkbox).toHaveCSS("accent-color", "rgb(35, 100, 73)");
+  await expect(checkbox).toHaveCSS("accent-color", "rgb(31, 77, 51)");
 });

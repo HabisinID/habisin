@@ -35,8 +35,8 @@ export default function Modal({
       ref={ref}
       className={
         fullscreen
-          ? "modal fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none overflow-hidden border-0 bg-[#fbf7ec] p-0 text-[#1c2616]"
-          : `modal m-auto ${sheet ? "w-[min(490px,100%)] rounded-xl p-4 max-[760px]:fixed max-[760px]:inset-x-0 max-[760px]:bottom-0 max-[760px]:mb-0 max-[760px]:rounded-b-none" : `p-[27px] ${wide ? "w-[min(1040px,_calc(100%_-_28px))] rounded-xl tablet:p-5" : "w-[min(490px,_calc(100%_-_28px))] rounded-[18px] mobile:p-[22px]"}`} max-h-[calc(100dvh_-_40px)] overflow-auto bg-cream [border:1px_solid_#dfe6d8] text-dark shadow-[0_25px_100px_#10281740] backdrop:bg-[#162c236e] backdrop:[backdrop-filter:blur(5px)] [&_h2]:text-[23px] [&_h2]:font-bold [&_h2]:tracking-[-0.8px] [&_h3]:font-bold mobile:[&_h2]:text-[21px]`
+          ? "modal fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none overflow-hidden border-0 bg-[var(--color-cream)] p-0 text-[var(--color-dark)]"
+          : `modal m-auto ${sheet ? "w-[min(490px,100%)] rounded-xl p-4 max-[760px]:fixed max-[760px]:inset-x-0 max-[760px]:bottom-0 max-[760px]:mb-0 max-[760px]:rounded-b-none" : `p-[27px] ${wide ? "w-[min(1040px,_calc(100%_-_28px))] rounded-xl tablet:p-5" : "w-[min(490px,_calc(100%_-_28px))] rounded-[18px] mobile:p-[22px]"}`} max-h-[calc(100dvh_-_40px)] overflow-auto bg-cream [border:1px_solid_var(--color-line)] text-dark shadow-[0_25px_100px_#10281740] backdrop:bg-[#162c236e] backdrop:[backdrop-filter:blur(5px)] [&_h2]:text-[23px] [&_h2]:font-bold [&_h2]:tracking-[-0.8px] [&_h3]:font-bold mobile:[&_h2]:text-[21px]`
       }
       aria-label={fullscreen ? title : undefined}
       aria-labelledby={fullscreen ? undefined : id}
@@ -52,7 +52,7 @@ export default function Modal({
         <div className="modal-head flex items-center justify-between gap-[15px] mb-[23px]">
           <h2 id={id}>{title}</h2>
           <button
-            className="icon-button inline-grid place-items-center p-[5px] text-[#708168] rounded-[5px] hover:bg-[#edf1e7]"
+            className="icon-button inline-grid place-items-center p-[5px] text-[var(--color-muted)] rounded-[5px] hover:bg-[var(--color-light)]"
             aria-label="Tutup"
             onClick={onClose}
           >

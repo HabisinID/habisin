@@ -8,6 +8,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import SiteHeader from "./site-header";
 import HabisinLogo from "./habisin-logo";
 import {
   ArrowLeft,
@@ -657,7 +658,7 @@ export default function ListingComposer({
         </button>
       </aside>
       <div className={styles.workspace}>
-        <header className={styles.mobileHeader}>
+        <SiteHeader nav={[]} className={styles.mobileHeader}>
           <button
             className={styles.back}
             type="button"
@@ -678,8 +679,8 @@ export default function ListingComposer({
           >
             {savingDraft ? "Menyimpan…" : "Simpan draf"}
           </button>
-        </header>
-        <header className={styles.desktopHeader}>
+        </SiteHeader>
+        <SiteHeader nav={[]} className={styles.desktopHeader}>
           <div>
             <button
               className={styles.breadcrumb}
@@ -707,7 +708,7 @@ export default function ListingComposer({
               Salin dari listing kemarin
             </button>
           )}
-        </header>
+        </SiteHeader>
         <div className={styles.body}>
           <form className={styles.form} ref={form} onSubmit={submit} noValidate>
             <div className={styles.scroll}>

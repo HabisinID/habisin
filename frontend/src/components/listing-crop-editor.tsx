@@ -35,7 +35,7 @@ export default function ListingCropEditor({
       tabIndex={-1}
       aria-busy={busy}
       aria-label="Editor crop foto"
-      className="space-y-4 rounded-xl border border-[#7a8872] bg-[#fbf7ec] p-3"
+      className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-cream)] p-3"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -45,12 +45,12 @@ export default function ListingCropEditor({
       }}
     >
       <h4 className="font-bold">Atur foto · 4:3</h4>
-      <p className="text-sm text-[#5a6653]">
+      <p className="text-sm text-[var(--color-muted)]">
         Geser foto atau gunakan tombol panah pada area crop. Cubit atau atur
         zoom untuk memperbesar.
       </p>
       <div
-        className={`relative h-64 overflow-hidden rounded-md bg-[#1c2616] ${busy ? "pointer-events-none" : ""}`}
+        className={`relative h-64 overflow-hidden rounded-md bg-[var(--color-dark)] ${busy ? "pointer-events-none" : ""}`}
         aria-label="Area crop, gunakan tombol panah"
       >
         <Cropper
@@ -140,7 +140,7 @@ export default function ListingCropEditor({
         </button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-[#b3261e]">
+        <p role="alert" className="text-sm text-[var(--color-error)]">
           {error}
         </p>
       )}

@@ -213,7 +213,7 @@ test("clock crosses 30 minutes and expires an open detail without reload", async
   ).toBeVisible();
   await expect(
     detail(page).getByRole("button", {
-      name: "Simulasikan pembayaran berhasil",
+      name: "Lanjut ke ringkasan",
     }),
   ).toBeDisabled();
 });
@@ -306,40 +306,45 @@ test("real free policy is displayed, enforced and released after cancellation", 
     await page.goto(`/?listing=${a.id}`);
     await expect(detail(page)).toContainText("Kotak nyata");
     await expect(
-      detail(page).getByText("Sisa kuota toko hari ini: 2 porsi"),
+      detail(page).getByText("Sisa kuota gratis hari ini: 2 porsi"),
     ).toBeVisible();
     await page.getByLabel("Jumlah porsi", { exact: true }).fill("3");
     await expect(
-      page.getByRole("button", { name: "Klaim donasi gratis", exact: true }),
+      page.getByRole("button", { name: "Lanjut ke ringkasan", exact: true }),
     ).toBeDisabled();
     await page.getByLabel("Jumlah porsi", { exact: true }).fill("2");
     await page
-      .getByRole("button", { name: "Klaim donasi gratis", exact: true })
+      .getByRole("button", { name: "Lanjut ke ringkasan", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Makananmu sudah dipesan!" }),
+      page.getByRole("heading", { name: "Ringkasan pesanan" }),
     ).toBeVisible();
+    const orders = await (await page.request.get("/api/reservations")).json();
+    expect(orders[0].status).toBe("pending");
     await page.keyboard.press("Escape");
     await page.goto(`/?listing=${b.id}`);
     await expect(detail(page)).toContainText(
-      "Anda masih memiliki satu tiket gratis aktif",
+      "Kuota gratis hari ini sudah habis",
     );
     await expect(
-      page.getByRole("button", { name: "Klaim donasi gratis", exact: true }),
+      page.getByRole("button", { name: "Lanjut ke ringkasan", exact: true }),
     ).toBeDisabled();
-    const rejected = await mutate(page.request, "reservations", {
-      listing_id: b.id,
-      quantity: 1,
-    });
-    expect(rejected.status()).toBe(409);
-    await page
-      .getByRole("button", { name: "Lihat tiket gratis aktif" })
-      .click();
-    await page.getByRole("button", { name: "Batalkan", exact: true }).click();
-    await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
+    expect(
+      (
+        await mutate(page.request, "reservations", {
+          listing_id: b.id,
+          quantity: 1,
+        })
+      ).status(),
+    ).toBe(400);
+    expect(
+      (
+        await mutate(page.request, `reservations/${orders[0].id}/cancel`)
+      ).status(),
+    ).toBe(200);
+    await page.reload();
     await expect(
-      page.getByRole("button", { name: "Klaim donasi gratis", exact: true }),
+      page.getByRole("button", { name: "Lanjut ke ringkasan", exact: true }),
     ).toBeEnabled();
   } finally {
     await mutate(page.request, "auth/me", { password }, "DELETE");
@@ -383,14 +388,14 @@ test("logged catalog and quota failures keep data and recover with retry", async
     .click();
   await expect(detail(page)).toContainText("Kuota sementara gagal");
   await expect(
-    page.getByRole("button", { name: "Klaim donasi gratis", exact: true }),
+    page.getByRole("button", { name: "Lanjut ke ringkasan", exact: true }),
   ).toBeDisabled();
   quotaFailure = false;
   await page
     .getByRole("button", { name: "Coba lagi kuota", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Klaim donasi gratis", exact: true }),
+    page.getByRole("button", { name: "Lanjut ke ringkasan", exact: true }),
   ).toBeEnabled();
   await expect(
     page.getByLabel("Jumlah porsi", { exact: true }),
@@ -435,15 +440,17 @@ test("urgent real order cannot be cancelled from UI or direct API", async ({
     const item = await result.json();
     await page.goto(`/?listing=${item.id}`);
     await expect(detail(page)).toContainText(
-      "Pesanan ini tidak bisa dibatalkan",
+      "Pesanan lunas tidak bisa dibatalkan",
     );
+    await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
     await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
     await expect(
       page.getByRole("button", { name: "Batalkan", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toContainText("Pembatalan ditutup");
     const orders = await (await page.request.get("/api/reservations")).json();
     const rejected = await mutate(
       page.request,
@@ -495,7 +502,7 @@ test("logged initial loading and offline preview are labelled honestly", async (
     .click();
   await expect(
     detail(page).getByRole("button", {
-      name: "Simulasikan pembayaran berhasil",
+      name: "Lanjut ke ringkasan",
     }),
   ).toBeDisabled();
 });

@@ -254,7 +254,7 @@ export default function StoreManager() {
               </button>
             </div>
           </section>
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#ead9d1] p-5">
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--color-error-tint)] p-5">
             <div>
               <h2 className="font-bold">Hapus toko</h2>
               <p className="mt-1 text-sm text-muted">
@@ -262,7 +262,7 @@ export default function StoreManager() {
               </p>
             </div>
             <button
-              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-[#a34337] hover:bg-[#fbeae4]"
+              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-[var(--color-error)] hover:bg-[var(--color-error-tint)]"
               onClick={() => {
                 setDeleting(true);
                 setConfirmation("");
@@ -332,7 +332,7 @@ export default function StoreManager() {
             )}
             <div className="flex flex-wrap gap-3">
               <button
-                className="min-h-11 rounded-lg bg-[#a34337] px-4 py-3 font-semibold text-white"
+                className="min-h-11 rounded-lg bg-[var(--color-error)] px-4 py-3 font-semibold text-white"
                 disabled={busy || confirmation !== store.name}
               >
                 {busy ? "Menghapus…" : "Hapus toko permanen"}

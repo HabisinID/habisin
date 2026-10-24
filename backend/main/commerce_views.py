@@ -1,22 +1,15 @@
-"""Atomic simulated checkout and partner operations; no payment provider."""
-import hashlib
-import json
-import secrets
+"""Partner dashboard and reversible stock operations; orders use main.views."""
 import uuid
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
-from django.contrib.auth.models import User
-from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.response import Response
-from .models import CheckoutBatch, Listing, ListingStockAction, Reservation, Store
+from .models import Listing, ListingStockAction, Reservation, Store
 from .serializers import ListingSerializer, ReservationSerializer, UserSerializer
-from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
-from .reservation_policy import reservation_policy
-from django.shortcuts import get_object_or_404
+from .listing_services import ListingConflict, lock_listing
 
 
 def require_role(request, role):
@@ -24,71 +17,12 @@ def require_role(request, role):
         raise PermissionDenied("Akses tidak sesuai peran akun.")
 
 
-def create_reservation(user, item, quantity):
-    for attempt in range(5):
-        try:
-            with transaction.atomic():
-                return Reservation.objects.create(user=user, listing=item, quantity=quantity, total=item.price * quantity,
-                    code="".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5)))
-        except IntegrityError:
-            if attempt == 4:
-                raise
-
-
-@api_view(["POST"])
-def checkout(request):
-    require_role(request, "buyer")
-    try:
-        key = uuid.UUID(str(request.data.get("key")))
-    except (ValueError, TypeError, AttributeError):
-        raise ValidationError({"key": "Token checkout tidak valid."})
-    rows = request.data.get("items")
-    if not isinstance(rows, list) or not 1 <= len(rows) <= 20:
-        raise ValidationError({"items": "Pilih 1–20 makanan."})
-    normalized = []
-    for row in rows:
-        if not isinstance(row, dict) or type(row.get("listing_id")) is not int or type(row.get("quantity")) is not int or not 1 <= row["quantity"] <= 10 or type(row.get("expected_price")) is not int or row["expected_price"] < 0:
-            raise ValidationError({"items": "Produk, harga, dan jumlah 1–10 porsi harus valid."})
-        normalized.append({k: row[k] for k in ["listing_id", "quantity", "expected_price"]})
-    normalized.sort(key=lambda row: row["listing_id"])
-    ids = [row["listing_id"] for row in normalized]
-    if len(set(ids)) != len(ids):
-        raise ValidationError({"items": "Gabungkan porsi produk yang sama."})
-    fingerprint = hashlib.sha256(json.dumps(normalized, sort_keys=True).encode()).hexdigest()
-    with transaction.atomic():
-        User.objects.select_for_update().get(pk=request.user.pk)
-        existing = CheckoutBatch.objects.filter(user=request.user, key=key).first()
-        if existing:
-            if existing.fingerprint != fingerprint:
-                raise ListingConflict("Token sudah dipakai untuk pilihan berbeda. Muat ulang checkout.")
-            reservations = Reservation.objects.filter(pk__in=existing.reservation_ids, user=request.user).select_related("listing", "listing__store_profile").order_by("pk")
-            return Response(ReservationSerializer(reservations, many=True).data)
-        before = dict(Listing.objects.filter(pk__in=ids).values_list("pk", "store_profile_id"))
-        if len(before) != len(ids):
-            raise ListingConflict("Salah satu makanan tidak tersedia. Muat ulang katalog.")
-        lock_stores(before.values())
-        locked = {item.pk: item for item in Listing.objects.select_for_update().filter(pk__in=ids).order_by("pk")}
-        result = []
-        for row in normalized:
-            item = locked[row["listing_id"]]
-            if item.store_profile_id != before[item.pk]:
-                raise ListingConflict()
-            if item.price != row["expected_price"]:
-                raise ListingConflict(f"Harga {item.name} berubah. Muat ulang katalog sebelum membayar.")
-            policy = reservation_policy(request.user, item)
-            if policy["reason"] or item.price == 0 and row["quantity"] > policy["max_quantity"]:
-                raise ListingConflict(policy["reason"] or "Jumlah gratis melebihi kuota toko hari ini.")
-            if not available_listings().filter(pk=item.pk, stock__gte=row["quantity"]).update(stock=F("stock")-row["quantity"]):
-                raise ListingConflict(f"Stok {item.name} tidak cukup atau waktu ambil berakhir.")
-            item.refresh_from_db()
-            result.append(create_reservation(request.user, item, row["quantity"]))
-        CheckoutBatch.objects.create(user=request.user, key=key, fingerprint=fingerprint, reservation_ids=[row.pk for row in result])
-    return Response(ReservationSerializer(result, many=True).data, status=201)
 
 
 @api_view(["GET"])
 def partner_dashboard(request):
     require_role(request, "partner")
+    Reservation.expire_overdue()
     wib = ZoneInfo("Asia/Jakarta")
     now = timezone.now()
     today = now.astimezone(wib).date()
@@ -99,13 +33,13 @@ def partner_dashboard(request):
     start = datetime.combine(today-timedelta(days=days-1), time.min, tzinfo=wib)
     end = datetime.combine(today+timedelta(days=1), time.min, tzinfo=wib)
     owned = Reservation.objects.filter(listing__owner=request.user).select_related("listing", "listing__store_profile", "user")
-    paid = list(owned.filter(created_at__gte=start, created_at__lt=end).exclude(status="cancelled"))
-    # No completed/collected status exists yet: report bookings, not pickups.
+    paid = list(owned.filter(created_at__gte=start, created_at__lt=end).filter(status__in=["paid", "picked_up"]))
+    # Simulated paid amounts are not evidence of actual food collection.
     series = {}
     for row in paid:
         day = row.created_at.astimezone(wib).date().isoformat()
         series[day] = series.get(day, 0) + row.quantity
-    pickups = owned.filter(pickup_deadline__gt=now, pickup_deadline__lt=end).exclude(status="cancelled").order_by("pickup_deadline", "pk")
+    pickups = owned.filter(pickup_deadline__gt=now, pickup_deadline__lt=end, status="paid").order_by("pickup_deadline", "pk")
     stores = Store.objects.filter(owner=request.user).order_by("pk")
     return Response({
         "period": period, "booked_portions": sum(row.quantity for row in paid), "simulated_total": sum(row.total for row in paid),
@@ -120,6 +54,7 @@ def partner_dashboard(request):
 @api_view(["POST"])
 def sold_out(request, pk):
     require_role(request, "partner")
+    Reservation.expire_overdue()
     with transaction.atomic():
         item = lock_listing(pk, request.user)
         if item.stock < 1:
@@ -134,6 +69,7 @@ def sold_out(request, pk):
 @api_view(["POST"])
 def undo_sold_out(request, pk):
     require_role(request,"partner")
+    Reservation.expire_overdue()
     with transaction.atomic():
         item = lock_listing(pk, request.user)
         try:
@@ -148,27 +84,3 @@ def undo_sold_out(request, pk):
         action.used=True
         action.save(update_fields=["used"])
     return Response(ListingSerializer(item).data)
-
-
-@api_view(["POST"])
-def partner_cancel_reservation(request, pk):
-    require_role(request, "partner")
-    reason = request.data.get("reason")
-    if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 500:
-        raise ValidationError({"reason": "Isi alasan pembatalan (1–500 karakter)."})
-    with transaction.atomic():
-        before = get_object_or_404(Reservation, pk=pk, listing__owner=request.user)
-        User.objects.select_for_update().get(pk=before.user_id)
-        item = lock_listing(before.listing_id, request.user)
-        order = Reservation.objects.select_for_update().get(pk=pk)
-        if order.status == "reserved":
-            if order.deadline <= timezone.now():
-                raise ListingConflict("Pesanan sudah kedaluwarsa dan tidak dapat dibatalkan.")
-            order.status = "cancelled"
-            order.cancellation_note = reason.strip()
-            order.cancelled_by = "partner"
-            order.cancelled_at = timezone.now()
-            order.save(update_fields=["status", "cancellation_note", "cancelled_by", "cancelled_at"])
-            ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
-            Listing.objects.filter(pk=item.pk).update(stock=F("stock") + order.quantity)
-    return Response(ReservationSerializer(order).data)
