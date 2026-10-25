@@ -159,6 +159,8 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "main.exceptions.exception_handler",
 }
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS + ["http://localhost:3001", "http://127.0.0.1:3001"]))
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
@@ -170,3 +172,7 @@ TIME_ZONE = "Asia/Jakarta"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 if not DEBUG and SECRET_KEY == "local-demo-only-change-before-deployment":
     raise RuntimeError("Set SECRET_KEY before running in production.")
+
+# Uploaded listing photos use Django storage; production requires persistent storage.
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
+MEDIA_URL = "/media/"

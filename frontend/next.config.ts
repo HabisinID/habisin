@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: "/media/:path*",
+        destination: `${process.env.BACKEND_URL || "http://127.0.0.1:8000"}/media/:path*`,
+      },
+      {
         source: "/api/:path*",
         destination: `${process.env.BACKEND_URL || "http://127.0.0.1:8000"}/api/:path*`,
       },

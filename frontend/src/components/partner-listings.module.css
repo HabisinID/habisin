@@ -1,0 +1,221 @@
+.partner-listings {
+
+
+
+
+  --green: var(--color-brand);
+  --dark: var(--color-dark);
+  --cream: var(--color-cream);
+  --line: var(--color-line);
+}
+.listing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.listing-toolbar p,
+.listing-hint {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.listing-toolbar > button {
+  white-space: nowrap;
+}
+.listing-table-wrap {
+  margin-top: 20px;
+}
+.listing-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.listing-table th,
+.listing-table td {
+  padding: 16px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.listing-table th {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.listing-product {
+  display: flex;
+  gap: 12px;
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+.listing-product small {
+  display: block;
+  margin-top: 5px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.listing-thumbnail {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: var(--color-surface-2) center/cover;
+}
+.listing-status {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--color-line);
+  font-size: 12px;
+}
+.listing-status.is-active {
+  background: var(--color-light);
+  color: var(--color-brand);
+}
+.listing-actions,
+.listing-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.listing-actions button {
+  padding: 8px 10px;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-brand);
+  background: white;
+}
+.listing-actions .listing-delete {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+.listing-confirm {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  border-radius: 6px;
+  line-height: 1.6;
+}
+.listing-confirm .listing-actions {
+  margin-top: 12px;
+}
+.listing-form {
+  display: grid;
+  gap: 20px;
+}
+.listing-back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+}
+.listing-form h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.listing-fields {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.listing-field {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.listing-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.listing-field input,
+.listing-field select,
+.listing-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: white;
+  color: var(--color-dark);
+  font: inherit;
+}
+.listing-field textarea {
+  resize: vertical;
+}
+.listing-field [aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.listing-field-error {
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.listing-span {
+  grid-column: 1 / -1;
+}
+.listing-span .listing-hint {
+  margin-top: 8px;
+}
+.listing-donation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  min-height: 44px;
+}
+.listing-donation input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-brand);
+}
+.listing-form-actions {
+  justify-content: flex-end;
+}
+.listing-loading {
+  padding: 24px 0;
+}
+@media (max-width: 760px) {
+  .listing-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .listing-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .listing-table,
+  .listing-table tbody,
+  .listing-table tr,
+  .listing-table td {
+    display: block;
+  }
+  .listing-table thead {
+    display: none;
+  }
+  .listing-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .listing-table td {
+    padding: 6px 0;
+    border: 0;
+  }
+  .listing-table td[data-label]:not(:first-child)::before {
+    content: attr(data-label) ": ";
+    color: var(--color-muted);
+  }
+  .listing-table td:last-child .listing-actions {
+    margin-top: 8px;
+  }
+  .listing-product {
+    max-width: none;
+  }
+}

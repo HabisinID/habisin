@@ -129,7 +129,7 @@ export default function StoreForm({
     setError("");
     try {
       const saved = await api<Store>(
-        "partner/store",
+        store ? `partner/stores/${store.id}` : "partner/stores",
         store ? "PATCH" : "POST",
         {
           name: data.name,

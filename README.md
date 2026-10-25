@@ -142,7 +142,8 @@ Admin platform yang mengatur dan memantau seluruh aktivitas di sistem. Hak akses
 
 Demo sudah mencakup autentikasi Django + DRF, katalog makanan, Leaflet/OpenStreetMap,
 pencarian/filter, favorit lokal, pemesanan dengan simulasi pembayaran, tiket pengambilan,
-dan pembatalan pesanan. Antarmuka tersedia dalam Bahasa Indonesia dan responsif.
+pengelolaan listing mitra, dan pembatalan pesanan. Antarmuka tersedia dalam Bahasa
+Indonesia dan responsif.
 
 ### Prasyarat
 
@@ -182,6 +183,7 @@ Pesanan yang belum dibayar lebih dari lima menit atau sudah melewati batas ambil
 otomatis menjadi **Kedaluwarsa** sebelum seed berjalan. Perintah tetap menolak
 pembaruan jika masih ada pesanan aktif yang belum lewat batas; batalkan melalui
 **Pesanan saya** sebelum menjalankan ulang seed.
+Seed menolak benturan ID listing milik mitra; seluruh operasi dibatalkan atomik.
 
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
@@ -265,7 +267,7 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 ### Alur demo
 
 1. Daftar sebagai **Pembeli**. Ketersediaan username diperiksa otomatis.
-2. Cari/filter makanan, simpan favorit, atau pilih marker harga di tampilan **Peta**.
+2. Cari/filter makanan, simpan favorit, atau pilih marker toko di tampilan **Peta**.
    Tombol lokasi meminta izin GPS dan menghitung ulang jarak dari lokasi pengguna.
 3. Buka produk, pilih jumlah porsi dan catatan pengambilan, lalu pilih
    **Lanjut ke ringkasan**. Periksa atau ubah pesanan, lalu pilih
@@ -278,6 +280,8 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.
 
+Akun **Mitra** dapat mendaftar dan mengelola listing miliknya melalui **Dasbor mitra**
+di header desktop atau **Kelola listing** pada banner mitra di mobile.
 Akun **Mitra** dapat mendaftarkan dan mengelola toko melalui `/partner/store`.
 Lihat [panduan Modul 2](docs/module-2.md) untuk alur onboarding, API toko, dan
 kebijakan penggunaan Nominatim. Jalankan migrasi backend sebelum membuka fitur ini.
@@ -294,6 +298,83 @@ agar akun juga dapat digunakan melalui form login frontend.
 Admin Django dapat mengelola listing, profil peran, dan melihat reservasi.
 Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 
+### Pengelolaan listing mitra (Modul 3)
+
+1. Daftar/pilih peran **Mitra**, lalu buka pengelolaan listing.
+2. Daftarkan satu atau beberapa toko melalui **Toko**, lalu klik **Tambah listing**.
+   Pilih **Toko penjual** secara eksplisit; alamat dan pin pengambilan berasal dari
+   toko tersebut dan tidak dapat diketik ulang pada listing. Isi nama makanan, kategori,
+   deskripsi, stok, foto, harga, **Makanan dibuat (WIB)**, dan jendela pengambilan dalam **WIB**.
+   Kemasan, Disimpan, dan Mengandung/alergen opsional (maksimal 500 karakter masing-masing).
+   Jika belum memiliki toko, buka tautan pendaftaran pada tab baru lalu pilih **Muat ulang toko**; draft listing tetap tersedia.
+3. Masukkan harga normal dan harga jual (harga berbayar baru/perubahan harga harus lebih rendah dari harga normal),
+   atau aktifkan **Gratis (donasi)** untuk harga nol. Klik **Tayangkan listing**.
+4. Gunakan **Ubah** untuk memperbarui detail atau stok tersedia. Stok ini adalah sisa porsi
+   yang dapat dipesan; pembatalan pesanan mengembalikan porsi ke stok tersebut.
+5. **Nonaktifkan** menyembunyikan listing dari katalog dan mencegah pesanan baru tanpa
+   membatalkan pesanan yang sudah masuk. **Aktifkan** menawarkannya kembali selama belum kedaluwarsa.
+6. **Hapus** memerlukan konfirmasi dan hanya berlaku jika listing belum memiliki riwayat
+   reservasi. Listing ber-riwayat harus dinonaktifkan. Harga, alamat/koordinat, dan waktu ambil
+   tidak dapat diubah selama ada reservasi aktif. Toko penjual juga tidak dapat diganti;
+   perubahan nama/alamat/pin pada profil toko ditolak selama cabang memiliki pesanan aktif.
+
+Inventaris menampilkan seluruh listing milik akun, termasuk nonaktif, habis, dan kedaluwarsa.
+Listing demo lama tidak memiliki pemilik dan tidak otomatis masuk ke inventaris akun baru.
+Listing lama tanpa `store_id` tetap dapat dibaca; pemilik harus menautkan toko secara
+eksplisit saat mengedit. Sistem tidak menebak hubungan berdasarkan nama toko.
+Saat toko ditutup sementara, listing cabang itu tidak ditawarkan dan pesanan baru ditolak,
+tanpa membatalkan pesanan lama. Toko yang masih dirujuk listing tidak dapat dihapus;
+nonaktifkan/tutup sementara atau selesaikan hubungan listing terlebih dahulu.
+Jika akun mitra dihapus, listing miliknya dinonaktifkan dan tautan toko dilepas;
+nama/alamat/pin terakhir serta riwayat pesanan pembeli tetap dipertahankan.
+
+API mitra memakai sesi dan CSRF yang sama dengan autentikasi aplikasi:
+
+| Endpoint | Metode | Perilaku |
+| --- | --- | --- |
+| `/api/partner/listings` | GET, POST | Inventaris sendiri dan buat listing |
+| `/api/partner/listings/:id` | GET, PATCH, DELETE | Baca, ubah, dan hapus listing sendiri |
+
+Payload create listing mewajibkan `store_id` milik mitra dan `prepared_at` (tidak di masa depan atau setelah deadline). `packaging`, `storage_notes`, dan `allergens` opsional. Listing lama tetap nullable tanpa backfill rekaan, PATCH parsial kompatibel; `store`, `address`,
+`latitude`, dan `longitude` adalah field baca, kiriman manual ditolak. Respons
+menambah `store_id` dan ringkasan publik `store_summary` tanpa data akun pemilik.
+Server menetapkan pemilik dari sesi, membatasi akses ke peran mitra, dan menolak akses
+lintas akun. Endpoint publik `/api/listings` tetap tersedia untuk katalog pembeli.
+
+### Foto listing: URL dan upload
+
+Pilih salah satu sumber foto; foto wajib sebelum listing ditayangkan. URL publik
+HTTP/HTTPS tetap didukung. Upload menerima JPEG, PNG, atau WebP statis; sumber
+maksimal 10 MiB/20 megapiksel, lalu konfirmasi crop **4:3** (400×300 sampai
+1600×1200 piksel, tanpa memperbesar foto kecil). File hasil maksimal 5 MiB.
+Server memeriksa isi file, menyimpan JPEG yang dinormalisasi tanpa EXIF/GPS,
+dan menolak file rusak, animasi, GIF, SVG, serta HEIC. Konversikan HEIC sebelum
+memilih file. Foto asli tidak disimpan untuk editing permanen.
+
+POST/PATCH listing menerima JSON untuk URL (`image_source: "url"`, `image`) atau
+multipart untuk upload (`image_source: "upload"`, `image_file`); jangan kirim kedua
+sumber sekaligus. PATCH yang tidak menyertakan field foto mempertahankan foto lama.
+Respons `image` selalu URL efektif yang bisa ditampilkan, ditambah `image_source`.
+Foto lama tidak dihapus sebelum penggantian tersimpan; validasi atau storage gagal
+mempertahankan listing/foto sebelumnya.
+
+Media development memakai `backend/media` (sudah diabaikan Git) dan `/media/` dari
+Django saat `DEBUG=True`, diproxy oleh Next.js. `MEDIA_ROOT` dapat menunjuk lokasi
+lain. Deployment memerlukan direktori/volume persisten serta penyajian media yang
+sesuai; WhiteNoise menangani static, bukan upload pengguna. Storage dapat diganti
+melalui konfigurasi Django `STORAGES`; belum ada layanan cloud yang dikonfigurasi.
+
+Rekonsiliasi foto yang tidak lagi dirujuk, dari folder `backend`:
+
+```bash
+python manage.py cleanup_listing_media
+```
+
+Default hanya **dry-run** dan hanya memeriksa file dalam namespace `listings/`
+yang berusia setidaknya 24 jam. Setelah meninjau hasilnya, operator dapat memakai
+`--delete`. File yang masih dirujuk listing tetap dipertahankan. Jangan jalankan
+cleanup pada media pengguna sebagai bagian tes; tes memakai direktori sementara.
+
 ### Cakupan autentikasi
 
 - Registrasi pembeli/mitra, login, logout, sesi persisten tujuh hari.
@@ -302,20 +383,18 @@ Jangan mengubah stok/status reservasi secara manual ketika menguji alur stok.
 - Password di-hash oleh Django dan divalidasi dengan validator bawaan Django.
 - Username unik tanpa membedakan huruf besar/kecil untuk registrasi aplikasi.
 - Perubahan password mempertahankan sesi saat ini dan mencabut sesi lainnya.
-- Server membatasi akses berdasarkan peran dan kepemilikan pesanan.
+- Server membatasi akses berdasarkan peran, kepemilikan pesanan, dan kepemilikan listing mitra.
 - Pembatasan percobaan login/registrasi anonim: 30 permintaan per menit per IP
   melalui cache lokal DRF (konfigurasi cache bersama diperlukan untuk multi-worker).
 
 ### Status implementasi
 
-Modul 1 (akun), Modul 2 (onboarding/geocoding serta CRUD toko), dan Modul 7
-(ringkasan, edit, mock payment, batal, dan hapus riwayat pesanan) sudah tersedia.
-Ini belum implementasi lengkap seluruh 10 modul. CRUD produk di frontend,
-persetujuan mitra/moderasi,
+Modul 1 (akun), Modul 2 (toko), Modul 3 (listing), Modul 4 (discovery) dan Modul 7 (pesanan dan pembayaran simulasi) tersedia. Implementasi belum mencakup seluruh 10 modul. Persetujuan mitra/moderasi,
 moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
 offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
-demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Semua listing saat
-ini merupakan data demo.
+demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Katalog awal berisi
+data demo; akun mitra dapat membuat listing sendiri. Modul 4 menyediakan popup toko,
+katalog profil toko, deep link makanan, dan lifecycle peta yang mempertahankan viewport.
 
 ### Verifikasi
 
@@ -344,7 +423,9 @@ npm run lint
 npm run build
 ```
 
-Dengan kedua server tetap berjalan, jalankan tes browser dari terminal ketiga:
+Untuk tes browser, hentikan backend kerja pada port 8000. Jalankan backend sementara
+(dari folder `backend`) dengan `.venv/bin/python ../frontend/tests/serve-backend.py`.
+Pertahankan frontend pada port 3000, lalu jalankan tes dari terminal ketiga:
 
 ```bash
 cd frontend
@@ -352,10 +433,12 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Tes browser membutuhkan backend dan frontend aktif di `127.0.0.1:8000` dan
-`127.0.0.1:3000`, serta katalog `seed_demo` yang belum kedaluwarsa. Tes membuat akun
+Tes browser membutuhkan backend sementara dan frontend aktif di `127.0.0.1:8000` dan
+`127.0.0.1:3000`; harness menyediakan katalog yang belum kedaluwarsa. Tes membuat akun
 sementara, menguji alur reservasi, lalu menghapus akun tersebut. Screenshot pemeriksaan
-tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`.
+tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`. Tes Modul 3
+mencakup CRUD, validasi, donasi, konflik reservasi, loading/error/retry, dan layout mobile;
+screenshot-nya memakai prefix `/tmp/habisin-module3-`.
 
 ### Troubleshooting
 
@@ -370,6 +453,7 @@ tersimpan di `/tmp/habisin-desktop.png` dan `/tmp/habisin-mobile.png`.
 | Login atau registrasi gagal dengan CSRF 403 | Pastikan origin browser tercantum dalam `CSRF_TRUSTED_ORIGINS`, gunakan `DEBUG=True` untuk HTTP lokal, lalu restart Django dan muat ulang halaman. |
 | Port 3000 sudah dipakai | Hentikan proses yang memakai port itu, atau sesuaikan origin CSRF jika memakai port lain. Tes browser tetap mengharapkan port 3000. |
 | Chromium gagal karena library sistem belum tersedia | Dari `frontend`, jalankan `npx playwright install --with-deps chromium`; pemasangan dependensi sistem dapat meminta akses administrator. |
+| Turbopack gagal dengan `binding to a port: Operation not permitted` dalam sandbox | Gunakan `npm run build -- --webpack` untuk build atau `npm run dev -- --webpack` untuk server lokal. Tidak perlu mengubah konfigurasi proyek. |
 | Lokasi GPS ditolak | Izinkan akses lokasi di browser. Jika tidak tersedia, demo tetap memakai lokasi pencarian awal di Beji, Depok. |
 | Foto atau peta tidak tampil | Periksa koneksi internet dan pemblokiran permintaan ke Unsplash/OpenStreetMap. |
 
@@ -408,6 +492,78 @@ Bantuan AI digunakan untuk:
 - **Demo responsif:** katalog makanan, pencarian/filter, peta interaktif, favorit, mock payment, reservasi, tiket pengambilan, dan pembatalan pesanan.
 - **Dokumentasi:** penyusunan instruksi setup, prasyarat, konfigurasi environment, seeding demo, perintah pengujian, troubleshooting, dan batasan demo di README ini.
 
+#### Mengisi foto pada Tambah listing
+
+1. Buka **Kelola listing → Tambah listing**, lalu pilih **Toko penjual** (tidak dipilih otomatis). Alamat/pin mengikuti toko itu.
+2. Pilih **Upload foto**, pilih JPEG/PNG/WebP, lalu geser foto pada editor 4:3. Gunakan zoom, **Putar 90°**, atau **Reset crop**. Keyboard: fokus area crop lalu tombol panah; slider zoom dapat diubah dengan panah.
+3. Pilih **Gunakan foto** untuk preview. **Crop ulang** masih memakai file asli selama form terbuka. **Batal crop**/Escape kembali ke draft tanpa mengganti foto yang sudah dipilih.
+4. Alternatifnya pilih **Gunakan URL** dan isi URL publik HTTP/HTTPS. Hanya sumber yang dipilih dikirim. Isi detail lainnya lalu **Tayangkan listing**; saat gagal, draft tetap ada untuk dicoba lagi.
+5. Pada edit, tanpa memilih foto baru, foto tersimpan tetap dipakai. File asli tidak disimpan; untuk crop ulang sesudah form ditutup, pilih file asli lagi. Konversikan HEIC menjadi JPEG/PNG sebelum dipilih.
+
+Rollback revisi media/toko: pulihkan frontend dahulu bila perlu. Pertahankan migrasi FK dan kolom file selama masih ada listing upload/beberapa toko; ekspor/cadangkan database dan `MEDIA_ROOT` bersama sebelum rollback backend. Jangan membalik FK owner menjadi satu toko ketika satu akun sudah memiliki beberapa cabang, atau menghapus file yang masih dirujuk riwayat.
+
+### Modul 4: discovery berdasarkan toko
+
+Tampilan **Peta** memakai satu marker per **ID toko**, dihitung dari makanan layak yang lolos filter daftar yang sama. Dua toko bernama sama atau milik mitra yang sama tetap berbeda. Popup menampilkan nama/alamat, perkiraan jarak **garis lurus**, jumlah makanan cocok, harga mulai (termasuk Gratis), pilihan makanan, dan **Lihat toko**. Angka makanan adalah jumlah listing, bukan jumlah porsi.
+
+- Klik marker, atau fokus marker dengan Tab lalu Enter/Spasi. Escape atau **Tutup popup toko** mengembalikan fokus. Di titik yang sama, pilih **Toko lain di lokasi ini**; koordinat tidak digeser untuk memisahkan marker.
+- Makanan legacy tanpa relasi toko memakai marker per ID listing dan label **Profil toko belum terhubung**, tanpa tautan toko buatan. Koordinat invalid hanya ditampilkan di daftar dengan penjelasan lokasi.
+- Filter tidak mereset pan/zoom. Peta baru dimuat saat pertama dipilih, lalu dipertahankan selama berganti daftar/peta. Jelajahi memakai daftar kiri dan peta kanan pada desktop, bertumpuk pada ponsel.
+- **Gunakan lokasi saya** meminta GPS hanya ketika diklik (timeout 10 detik). Kegagalan awal mempertahankan Beji, Depok; setelah pernah berhasil, lokasi valid terakhir dipertahankan. Tidak ada tracking latar belakang, rute perjalanan, atau estimasi waktu tempuh.
+- Katalog diperbarui saat fokus kembali, retry, atau mutasi listing/pesanan lokal. Waktu berakhir listing diperiksa oleh timer browser. Perubahan oleh akun lain baru diketahui saat refresh; ini bukan realtime. Server memvalidasi ulang saat memesan.
+- Jika API gagal, gunakan **Coba lagi katalog**. Pratinjau contoh atau data terakhir tidak dapat dipesan ketika koneksi gagal. Tile gagal tetap memperlihatkan marker dan atribusi OpenStreetMap; tersedia retry gambar peta serta jalur daftar. Impor library gagal menyediakan retry peta/daftar, tanpa retry tile otomatis berulang.
+
+#### Halaman referensi: katalog profil toko
+
+`GET /api/stores/{id}/listings` mengembalikan array listing publik yang tertaut ke ID tersebut dan layak (aktif, stok positif, belum berakhir, toko aktif). ID toko lain milik owner yang sama tidak ikut. Toko kosong/tutup menghasilkan `200 []`; ID tidak ditemukan `404`. Respons menyertakan foto efektif, `store_id` dan ringkasan toko, tanpa email/owner.
+
+Buka `/stores/{id}` menggunakan ID hasil pendaftaran toko, lalu pilih makanan. Next Link menuju `/?listing={listing_id}` dan membuka alur detail/reservasi beranda yang sama, termasuk saat reload. Parameter dikonsumsi sekali dan dibersihkan saat detail ditutup. ID invalid/tidak tersedia memberi pesan; API offline tidak otomatis membuka makanan demo. Error katalog tidak menghilangkan profil toko yang berhasil dimuat.
+
+Permukaan form listing, popup peta, dan katalog toko memakai font **Plus Jakarta Sans** lokal sesuai token `font-ui` pada design.pen, dengan [lisensi SIL OFL](frontend/src/fonts/OFL.txt). Warna/radius popup dan form merujuk komponen Pencil; seluruh permukaan memakai palet token global main. Body Jelajahi setelah login mengikuti Dashoard-Login, detail Kartu Makanan (2)/(3), dan Map-makanan dari Pencil. Implementasi tidak mengubah file desain.
+
+Jika build Turbopack di lingkungan terbatas gagal saat membuat proses/binding port, gunakan `npm run build -- --webpack`, lalu `npm run start`. Ini fallback build lokal; jangan menyebut build default berhasil bila hanya Webpack yang diuji. Rangkaian tes discovery mencakup grouping ID, popup/keyboard, GPS, expiry dan pemulihan kegagalan; `map-real.spec.ts` memeriksa toko A/B hingga pesan/batal dengan backend nyata. Gunakan database/media sementara untuk menjalankan seluruh suite browser, agar akun/listing riwayat tes tidak masuk data kerja Anda. Alur geocoding nyata membutuhkan jaringan/provider, atau cache geocoding fixture pada database uji terisolasi.
+
+Panduan menjalankan backend/browser terisolasi, cakupan bukti, dan batas operasional: [Verifikasi Modul 3–4](docs/module-3-4-verification.md).
+
+### Revisi Jelajahi setelah login dan kebijakan reservasi
+
+- Dashboard login: grid 4 kolom desktop, 2 pada tablet, 1 pada ponsel; foto kartu/detail 4:3. Detail login menjadi halaman dua kolom dan tetap mendukung `/?listing=ID`. Body landing dipertahankan; header disatukan melalui SiteHeader.
+- Countdown berasal dari `pickup_end`, diperbarui tiap detik; oranye hanya saat sisa waktu **<30 menit**. Waktu dibuat serta metadata penyimpanan tampil dari data mitra; data kosong diberi label jujur.
+- Peta login menampilkan daftar kiri 440 px dan peta kanan pada desktop; peta/daftar bertumpuk di ponsel. **Cari di area ini** menyegarkan katalog dan menerapkan bounds tampilan; pan biasa tidak memfilter. Filter lainnya memuat favorit, kategori tambahan, dan batas harga.
+- Donasi: maksimal **2 porsi per pembeli per hari WIB lintas seluruh toko**. Pesanan dibatalkan/kedaluwarsa tidak memakai kuota; dua pesanan gratis aktif masing-masing satu porsi diperbolehkan.
+- Pesanan **pending** menahan stok maksimal 5 menit dan dapat dibatalkan selama aktif. Sesudah **paid**, pembatalan ditolak mulai **≤30 menit** sebelum deadline. Kedua jenis expiry mengembalikan stok tepat sekali; riwayat tetap tersimpan.
+- `GET /api/listings/:id/reservation-policy` memproyeksikan kuota global dan batas maksimal 4 porsi/pesanan (gratis mengikuti sisa kuota). `active_free_reservation_id` selalu null; tidak ada batas satu tiket gratis aktif. Server memvalidasi ulang stok dan izin.
+- Data pengguna harus dicadangkan sebelum migrasi `0008_food_preparation_information`. Jangan menjalankan seed atau browser suite terhadap DB kerja.
+
+### Form mitra sesuai Row Tambah listing / Baris 9 desktop
+
+Flow Tambah/Ubah listing memakai app bar dan CTA menetap pada mobile serta sidebar dan pratinjau kartu/peta pada desktop. Pilih cabang secara eksplisit pada **Detail toko & informasi makanan**; di sana tersedia deskripsi, tanggal/jendela pengambilan, waktu dibuat WIB, dan metadata opsional. Upload/URL dan crop 4:3 tetap didukung.
+
+- Nama listing baru/perubahan nama maksimal **60 karakter**. Nama lama tidak dipotong; PATCH yang tidak mengubah nama tetap kompatibel.
+- Harga berbayar baru/perubahan harga harus **lebih rendah** dari harga normal; donasi tetap nol. Kuota dan pembatalan sebelumnya tidak berubah.
+- `buyer_notes` adalah catatan pembeli opsional maksimal **140 karakter**, diterima pada JSON/multipart dan tampil pada detail. Kategori Kue basah, Sayur & buah, Lainnya ditambah tanpa menghapus kategori lama.
+- **Simpan draf** menyimpan isian dan hasil crop secara lokal di browser per akun/create-edit, menggunakan IndexedDB. Ini bukan penyimpanan server atau sinkronisasi perangkat. Pulihkan draf dari banner dan periksa waktu/toko sebelum tayang; publikasi berhasil menghapus draf terkait.
+- **Salin dari listing kemarin** membuka daftar listing akun sendiri dengan tanggal nyata, termasuk listing sebelumnya. Foto/nama/harga/porsi/catatan dapat disalin ke isian baru; jam ambil memakai hari ini WIB, waktu dibuat harus diisi ulang. Sumber tidak diubah, jam lewat tidak otomatis digeser ke besok.
+- Pengiriman file tetap atomik bersama publikasi. Persentase upload berasal dari bytes transfer sebenarnya; saat respons server ditunggu tampil Memproses. Gagal upload mempertahankan foto dan isian untuk retry.
+- Setelah tayang, snackbar **Lihat** membuka detail aktual dan **Tambah listing lain** memulai isian baru. Kembali ke listing membuka inventaris.
+
+### Alur awal pembeli, pesanan dan dashboard mitra
+
+Pembeli masuk ke **Jelajahi → Peta**. Seluruh header atas memakai `SiteHeader` dengan navigasi per peran, logo PNG terbaru dan tulisan `habisin.`; sidebar mitra dipertahankan. Header pembeli memuat pencarian, lokasi, Jelajahi, Favorit, Pesanan saya dan Akun. Pin toko menampilkan nama/rentang harga; klik kartu memfokuskan pin, dua tingkat zoom keluar melepas pilihan.
+
+Integrasi memakai **OrderSummary/OrderList Modul 7**: buat pending → ringkasan/edit catatan/jumlah → pembayaran simulasi → tiket kode teks. Keranjang/batch checkout dan pembatalan mitra ditunda; endpoint `/api/checkout` dan `/api/partner/reservations/:id/cancel` tidak tersedia. Tabel/kolom historisnya tetap dipertahankan. QR/verifikasi kasir belum tersedia.
+
+Mitra masuk ke dashboard **Baris 10 · Mitra · Dasbor**. Sidebar menyediakan Dasbor, Listing, Pesanan, Profil toko dan Akun; Verifikasi kode belum aktif. `GET /api/partner/dashboard?period=today|week|month|year` hanya membaca data akun sendiri. Grafik/angka menunjukkan porsi terpesan dan nominal simulasi, bukan klaim pengambilan selesai. Listing dan toko tetap memakai CRUD existing. **Tandai habis** mengubah stok nol melalui `POST /api/partner/listings/:id/sold-out`; respons menyertakan token undo60detik. `POST /api/partner/listings/:id/undo-sold-out` menerima `token` sekali; perubahan stok atau pembatalan pesanan membatalkan token lama agar tidak menimpa stok terbaru. Refresh dashboard setiap30detik/saat fokus/mutasi; keputusan transaksi tetap di server.
+
+Migrasi additive `0010_listingstockaction_checkoutbatch` menambah tabel token checkout/undo. Backup database kerja sebelum migrasi; suite browser harus memakai backend/media sementara pada panduan verifikasi. Tidak ada dependency baru untuk fitur ini.
+
+
+### Landing publik dan Jelajahi tamu
+
+Beranda publik memakai Leaflet di Margonda Raya, Depok. Section **Makanan di sekitarmu** menampilkan maksimal empat listing aktif dari API dan disembunyikan bila kosong atau katalog belum tersambung. Angka nasional memiliki sumber/periode; angka katalog tidak diklaim sebagai transaksi terselamatkan.
+
+Tamu dapat membuka `/jelajahi`, mencari, memfilter, berpindah peta/daftar dan membaca detail makanan. Pembelian, favorit dan CTA pendaftaran toko meminta login. Footer hanya mengaktifkan halaman atau bagian yang tersedia. Logo terbaru tetap disertai tulisan `habisin.`. QR dan verifikasi kasir tetap tahap berikutnya.
+
 ### Branch: `feat/pemesanan-dan-mock-payment`
 
 Tools: Claude Code (Anthropic), sesi lokal tanpa tautan chat publik.
@@ -419,3 +575,10 @@ Bantuan AI digunakan untuk:
 - **Pengujian:** unit test backend dan tes browser Playwright yang ditulis lebih dahulu (TDD), serta pengukuran coverage.
 - **Perbaikan pendukung:** pembacaan katalog demo sebagai UTF-8 dan pesan 429 berbahasa Indonesia.
 - **Dokumentasi:** panduan Modul 7 dan pembaruan README ini.
+
+### Integrasi main dengan Modul 3–4
+
+Lihat [kontrak integrasi dan migrasi](docs/integrate-main-modules-3-4.md).
+Migrasi `0012_merge_modules_3_4_and_orders` menyatukan kedua riwayat migrasi secara additive.
+Database kerja wajib dicadangkan bersama MEDIA_ROOT sebelum migrasi operasional.
+Resolusi merge tidak menjalankan migrasi/seed pada database kerja, membuat commit, atau push. Lihat catatan verifikasi integrasi untuk penyimpangan origin tes dan langkah pembersihan fixture.

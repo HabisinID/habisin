@@ -39,6 +39,7 @@ test.afterEach(async ({ page }) => {
 });
 
 async function startOrder(page: Page, quantity: string, note = "") {
+  await page.getByRole("button", { name: "Daftar", exact: true }).click();
   await page
     .getByRole("button", { name: "Pesan Surprise Pastry Box", exact: true })
     .click();

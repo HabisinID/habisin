@@ -1,0 +1,182 @@
+.map :global(.leaflet-container) {
+  font-family: inherit;
+}
+.map :global(.habisin-map-popup .leaflet-popup-content-wrapper) {
+  border-radius: 12px;
+  box-shadow: 0 3px 14px #00000066;
+  color: var(--color-dark);
+}
+.map :global(.habisin-map-popup .leaflet-popup-content) {
+  margin: 14px 16px;
+  width: auto !important;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.map :global(.habisin-map-popup p) {
+  margin: 0;
+}
+.map :global(.store-popup a) {
+  color: var(--color-brand);
+}
+.map :global(.food-pin:focus-visible) {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 5px;
+}
+.map :global(.food-pin span) {
+  display: block;
+  padding: 7px 8px;
+  border: 2px solid white;
+  border-radius: 999px;
+  background: var(--color-brand);
+  color: white;
+  box-shadow: 0 3px 10px #0003;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+.map :global(.leaflet-control-attribution) {
+  max-width: calc(100% - 8px);
+  font-size: 10px;
+}
+.discovery {
+  height: 100%;
+  min-height: 400px;
+}
+.discovery :global(.discovery-pin span) {
+  background: var(--color-yellow);
+  color: var(--color-dark);
+  border: 1.5px solid var(--color-dark);
+  border-radius: 6px;
+  transform: rotate(3deg);
+}
+.discovery :global(.free-pin span) {
+  background: white;
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+.discovery :global(.urgent-pin span) {
+  background: #ff9300;
+  color: var(--color-dark);
+  border-color: #a34a00;
+}
+.discovery :global(.selected-pin span) {
+  background: var(--color-brand);
+  color: white;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--color-brand);
+}
+.searchArea,
+.locate {
+  position: absolute;
+  z-index: 450;
+  background: white;
+  color: var(--color-dark);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 2px 8px #0002;
+  min-height: 44px;
+  font: inherit;
+}
+.searchArea {
+  top: 16px;
+  left: 16px;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.locate {
+  top: 88px;
+  right: 10px;
+  width: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+}
+.legend {
+  position: absolute;
+  z-index: 450;
+  left: 16px;
+  bottom: 28px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  max-width: calc(100% - 32px);
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend i {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border: 1px solid var(--color-brand);
+  border-radius: 3px;
+}
+.gold {
+  background: var(--color-yellow);
+}
+.free {
+  background: white;
+}
+.orange {
+  background: #ff9300;
+}
+.discovery :global(.leaflet-control-attribution) {
+  background: #fffd;
+  color: var(--color-dark);
+}
+.discovery [role="status"] {
+  top: 140px;
+}
+
+.discovery :global(.discovery-pin span) {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.discovery :global(.selected-pin) {
+  z-index: 1000 !important;
+}
+.discovery :global(.selected-pin span) {
+  transform: rotate(0);
+}
+
+.discovery :global(.discovery-pin > span) {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 280px;
+}
+.discovery :global(.pin-store-name) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.discovery :global(.pin-store-price) {
+  flex: none;
+  font-weight: 700;
+}
+
+.discovery :global(.discovery-pin) {
+  width: max-content !important;
+  height: auto !important;
+  translate: -50% 0;
+}
+.discovery :global(.discovery-pin > span) {
+  width: max-content;
+  max-width: 280px;
+}
+
+.discovery :global(.popup-pin) {
+  visibility: hidden;
+  pointer-events: none;
+}
