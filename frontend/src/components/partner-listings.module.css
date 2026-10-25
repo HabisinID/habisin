@@ -86,7 +86,7 @@
   border-radius: 6px;
   font-size: 12px;
   color: var(--color-brand);
-  background: white;
+  background: var(--color-surface);
 }
 .listing-actions .listing-delete {
   color: var(--color-error);
@@ -143,7 +143,7 @@
   padding: 12px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: white;
+  background: var(--color-surface);
   color: var(--color-dark);
   font: inherit;
 }

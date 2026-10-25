@@ -187,7 +187,7 @@ export default function StoreManager() {
                 aria-label={`Kelola toko ${item.name}`}
                 aria-pressed={store?.id === item.id}
                 disabled={busy}
-                className={`min-w-0 rounded-xl border p-4 text-left ${store?.id === item.id ? "border-brand bg-light" : "border-line bg-white"}`}
+                className={`min-w-0 rounded-xl border p-4 text-left ${store?.id === item.id ? "border-brand bg-light" : "border-line bg-surface"}`}
                 onClick={() => {
                   setStore(item);
                   setError("");
@@ -297,7 +297,7 @@ export default function StoreManager() {
           </button>
         </section>
       ) : (
-        <p className="rounded-xl border border-line bg-white p-6 text-muted">
+        <p className="rounded-xl border border-line bg-surface p-6 text-muted">
           Pilih toko di atas untuk melihat profil dan mengelolanya.
         </p>
       )}

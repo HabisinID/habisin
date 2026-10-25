@@ -538,7 +538,7 @@ export default function Home() {
             ))}
           </div>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => {
               setPanel(null);
               document
@@ -576,7 +576,7 @@ export default function Home() {
             sebagai makanan terselamatkan.
           </p>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => setPanel(null)}
           >
             Mulai dari makananmu
@@ -648,7 +648,7 @@ export default function Home() {
               </p>
               {!user && (
                 <button
-                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
                   onClick={() => {
                     setRegistrationRole("partner");
                     setPanel("register");
