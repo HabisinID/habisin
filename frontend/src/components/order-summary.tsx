@@ -13,6 +13,7 @@ import {
   statusLabel,
   timeLeft,
 } from "@/lib/orders";
+import { OrderSkeleton } from "./order-shell";
 import { errorClass, primaryButton, secondaryButton } from "./store-ui";
 
 // A dotted leader line between label and value, as printed on a struk.
@@ -45,6 +46,11 @@ export default function OrderSummary({ id }: { id: string }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // Set when another buyer took stock while this page was open.
+  const [adjusted, setAdjusted] = useState<{
+    chosen: number;
+    available: number;
+  } | null>(null);
   const [now, setNow] = useState(0);
   useEffect(() => {
     let active = true;
@@ -70,7 +76,7 @@ export default function OrderSummary({ id }: { id: string }) {
             {error}
           </p>
         ) : (
-          <p role="status">Memuat ringkasan…</p>
+          <OrderSkeleton label="Memuat ringkasan…" />
         )}
       </main>
     );
@@ -86,13 +92,30 @@ export default function OrderSummary({ id }: { id: string }) {
     if (!order || saving) return;
     const previous = order;
     setError("");
+    setAdjusted(null);
     setSaving(true);
     setOrder({ ...order, quantity, total: quantity * listing.price });
     try {
       setOrder(await orderApi.update(order.id, { quantity }));
     } catch (e) {
-      setOrder(previous);
-      setError((e as Error).message);
+      // Stock is re-checked on the server. If it shrank, settle on what is
+      // left and say so, instead of a bare error or a silent change.
+      const fresh = await orderApi.get(order.id).catch(() => null);
+      const left = fresh ? fresh.listing.stock + fresh.quantity : 0;
+      if (fresh && quantity > left) {
+        const target = Math.min(MAX_QUANTITY, left);
+        setOrder(
+          target === fresh.quantity
+            ? fresh
+            : await orderApi
+                .update(order.id, { quantity: target })
+                .catch(() => fresh),
+        );
+        setAdjusted({ chosen: quantity, available: left });
+      } else {
+        setOrder(previous);
+        setError((e as Error).message);
+      }
     } finally {
       setSaving(false);
     }
@@ -169,6 +192,21 @@ export default function OrderSummary({ id }: { id: string }) {
             </div>
           </div>
 
+          {adjusted && (
+            <div
+              role="status"
+              className="rounded-field border-l-4 border-urgency bg-urgency-tint p-4 text-sm"
+            >
+              <p className="font-bold">
+                Stok tinggal {adjusted.available} porsi. Jumlah pesanan sudah
+                kami sesuaikan.
+              </p>
+              <p className="mt-1">
+                Anda tadi memilih {adjusted.chosen}. Total ikut diperbarui.
+              </p>
+            </div>
+          )}
+
           {!pending && (
             <p className="rounded-field bg-light p-4 text-sm">
               Pesanan ini berstatus{" "}
@@ -184,7 +222,10 @@ export default function OrderSummary({ id }: { id: string }) {
             <div>
               <p className="font-semibold">Jumlah porsi</p>
               <p className="text-xs text-muted">
-                {available} porsi tersedia · maks. {MAX_QUANTITY} per pesanan
+                {available} porsi tersedia ·{" "}
+                {order.quantity >= available
+                  ? "batas atas tercapai"
+                  : `maks. ${MAX_QUANTITY} per pesanan`}
               </p>
             </div>
             <div className="flex h-12 w-40 items-center justify-between rounded-field border border-border bg-surface">

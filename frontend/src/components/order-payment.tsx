@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { rupiah, type Reservation } from "@/lib/api";
 import { clock, orderApi, statusLabel } from "@/lib/orders";
+import { OrderSkeleton } from "./order-shell";
 import { errorClass } from "./store-ui";
 
 function Row({
@@ -63,7 +64,7 @@ export default function OrderPayment({ id }: { id: string }) {
             {error}
           </p>
         ) : (
-          <p role="status">Memuat pembayaran…</p>
+          <OrderSkeleton label="Memuat pembayaran…" />
         )}
       </main>
     );

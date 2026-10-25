@@ -11,6 +11,7 @@ import {
   statusLabel,
   timeLeft,
 } from "@/lib/orders";
+import { OrderSkeleton } from "./order-shell";
 import { errorClass, primaryButton } from "./store-ui";
 
 const statusBadge: Record<Reservation["status"], string> = {
@@ -332,7 +333,7 @@ export default function OrderList() {
           )}
           <div id="order-panel" role="tabpanel" className="mt-6">
             {orders === null ? (
-              !error && <p role="status">Memuat pesanan…</p>
+              !error && <OrderSkeleton label="Memuat pesanan…" rows />
             ) : shown.length === 0 ? (
               <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-border/60 px-8 py-12">
                 <ShoppingBag size={32} className="text-brand" />
