@@ -1,0 +1,58 @@
+"""Exercise both pre-merge schemas against disposable test databases only."""
+from datetime import timedelta
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TransactionTestCase
+from django.utils import timezone
+
+
+class MergeMigrationTests(TransactionTestCase):
+    final = [('main', '0012_merge_modules_3_4_and_orders')]
+
+    def upgrade_from(self, origin, status):
+        executor = MigrationExecutor(connection)
+        executor.migrate([('main', None)])
+        executor = MigrationExecutor(connection)
+        executor.migrate([('main', origin)])
+        apps = executor.loader.project_state([('main', origin)]).apps
+        try:
+            user = apps.get_model('auth', 'User').objects.create(username='migration-buyer', password='hashed-fixture')
+            apps.get_model('main','Profile').objects.create(user_id=user.pk,role='buyer')
+            store = apps.get_model('main','Store').objects.create(owner_id=user.pk,name='Toko tetap',description='Cabang lama',address='Depok',opening_time='08:00',closing_time='22:00',latitude=-6.36,longitude=106.83)
+            now = timezone.now()
+            fields = dict(name='Foto tersimpan',store='Toko lama',category='Roti & kue',description='Riwayat',address='Depok',price=5000,original_price=10000,stock=3,image='https://example.com/food.jpg',latitude=-6.36,longitude=106.83,pickup_start=now,pickup_end=now+timedelta(hours=4))
+            if origin.startswith('0011'):
+                fields.update(image='', image_file='listings/preserved.jpg', owner_id=user.pk,store_profile_id=store.pk)
+            listing = apps.get_model('main','Listing').objects.create(**fields)
+            order_fields = dict(user_id=user.pk,listing_id=listing.pk,quantity=1,total=5000,code='ACDEF',status=status)
+            if origin.startswith('0011'):
+                order_fields.update(pickup_deadline=listing.pickup_end,cancellation_note='Catatan lama')
+            else:
+                order_fields.update(note='Tanpa sendok',paid_at=now)
+            order = apps.get_model('main','Reservation').objects.create(**order_fields)
+            executor = MigrationExecutor(connection)
+            executor.migrate(self.final)
+            merged = executor.loader.project_state(self.final).apps
+            result = merged.get_model('main','Reservation').objects.get(pk=order.pk)
+            self.assertEqual(result.status,'paid')
+            self.assertIsNotNone(result.paid_at)
+            self.assertEqual(result.pickup_deadline,listing.pickup_end)
+            self.assertEqual(result.quantity,1)
+            self.assertEqual(merged.get_model('auth','User').objects.get(pk=user.pk).password,'hashed-fixture')
+            restored = merged.get_model('main','Listing').objects.get(pk=listing.pk)
+            self.assertEqual(restored.stock,3)
+            self.assertEqual(merged.get_model('main','Store').objects.get(pk=store.pk).owner_id,user.pk)
+            if origin.startswith('0011'):
+                self.assertEqual(restored.image_file.name,'listings/preserved.jpg')
+                self.assertEqual(result.cancellation_note,'Catatan lama')
+            else:
+                self.assertEqual(restored.image,fields['image'])
+                self.assertEqual(result.note,'Tanpa sendok')
+        finally:
+            MigrationExecutor(connection).migrate(self.final)
+
+    def test_upgrade_modules_branch_preserves_reserved_history_and_photo(self):
+        self.upgrade_from('0011_reservation_lifecycle','reserved')
+
+    def test_upgrade_main_preserves_paid_order_and_account(self):
+        self.upgrade_from('0006_reservation_expired_status','paid')

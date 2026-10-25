@@ -87,3 +87,7 @@ Dari `frontend/`, dengan backend dan frontend aktif serta katalog `seed_demo` ba
 ```bash
 npx playwright test tests/orders.spec.ts
 ```
+
+## Integrasi Modul 3–4
+
+[Kontrak integrasi](integrate-main-modules-3-4.md) mempertahankan transaksi modul ini dan menambahkan snapshot deadline agar riwayat tidak berubah ketika listing diperbarui. Layout listing/peta/media dan sidebar mitra berasal dari branch Modul 3–4; fondasi header serta warna disatukan ke main.

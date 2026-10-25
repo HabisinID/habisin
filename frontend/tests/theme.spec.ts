@@ -27,8 +27,11 @@ test("the system dark preference applies before the page is interactive", async 
   expect(await theme(page)).toBe("dark");
   await expect(page.locator("body")).toHaveCSS("background-color", darkPaper);
   await expect(page.locator("body")).toHaveCSS("color", darkInk);
-  const logo = page.getByRole("banner").getByRole("img", { name: "habisin" });
-  await expect(logo).toHaveAttribute("src", /logo-dark/);
+  // The wordmark is text, so it follows the theme's ink colour.
+  const logo = page.getByRole("banner").getByRole("link", {
+    name: "Habisin beranda",
+  });
+  await expect(logo).toHaveCSS("color", darkInk);
 });
 
 test("the theme switcher cycles Sistem, Terang, Gelap and remembers the choice", async ({
@@ -119,13 +122,19 @@ test("the theme switcher sits right before the avatar once signed in", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const path of ["/", "/pesanan"]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
-    const banner = page.getByRole("banner");
-    await expect(banner.getByText("R", { exact: true })).toBeVisible();
-    const toggle = banner.getByRole("button", { name: /^Tema tampilan/ });
-    const next = await toggle.evaluate(
-      (el) => el.nextElementSibling?.textContent?.trim() ?? "",
-    );
-    expect(next, path).toMatch(/^R/);
+    const toggle = page
+      .getByRole("banner")
+      .getByRole("button", { name: /^Tema tampilan/ });
+    // The avatar shows the initials ("R" or "RA") once /api/auth/me resolves.
+    await expect
+      .poll(
+        () =>
+          toggle.evaluate(
+            (el) => el.nextElementSibling?.textContent?.trim() ?? "",
+          ),
+        { message: path },
+      )
+      .toMatch(/^R/);
   }
 });
 

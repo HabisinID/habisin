@@ -34,7 +34,7 @@ export default function PartnerStorePage() {
     };
   }, []);
   return (
-    <StoreShell>
+    <StoreShell user={user}>
       {loading ? (
         <p role="status">Memeriksa akun…</p>
       ) : error ? (

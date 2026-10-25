@@ -28,7 +28,7 @@ async function signInAs(page: Page, role: "buyer" | "partner") {
 
 async function expectSharedHeader(page: Page) {
   const header = page.getByRole("banner");
-  const logo = header.getByRole("img", { name: "habisin" });
+  const logo = header.locator('a[aria-label="Habisin beranda"] img');
   await expect(logo).toBeVisible();
   expect(
     await logo.evaluate((img: HTMLImageElement) => img.naturalWidth),
@@ -58,7 +58,7 @@ test("design tokens, fonts, logo and header apply across pages", async ({
     header
       .getByRole("navigation", { name: "Navigasi utama" })
       .getByRole("link", { name: "Jelajahi" }),
-  ).toHaveAttribute("aria-current", "page");
+  ).toHaveAttribute("href", "/jelajahi");
   await expect(
     header.getByRole("button", { name: "Daftar gratis", exact: true }),
   ).toHaveCSS("background-color", primary);
@@ -82,20 +82,21 @@ test("header actions follow the signed-in role", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const header = page.getByRole("banner");
   await expect(
-    header.getByRole("button", { name: "T Test", exact: true }),
+    header.getByRole("button", { name: "Akun Test User", exact: true }),
   ).toBeVisible();
   await expect(
     header
-      .getByRole("navigation", { name: "Navigasi utama" })
-      .getByRole("link", { name: "Pesanan" }),
+      .getByRole("navigation", { name: "Navigasi pembeli" })
+      .getByRole("link", { name: "Pesanan saya" }),
   ).toBeVisible();
   await expect(header.getByRole("link", { name: "Toko saya" })).toHaveCount(0);
 
   await page.unroute("**/api/auth/me");
   await signInAs(page, "partner");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(header.getByRole("link", { name: "Toko saya" })).toHaveAttribute(
-    "href",
-    "/partner/store",
-  );
+  await expect(
+    page
+      .getByRole("navigation", { name: "Navigasi mitra" })
+      .getByRole("link", { name: "Profil toko" }),
+  ).toHaveAttribute("href", "/partner/store");
 });

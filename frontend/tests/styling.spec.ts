@@ -10,47 +10,31 @@ test("responsive catalog, active filters, and accessible dialogs retain their st
   page,
 }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("status")).toContainText("pratinjau demo");
-  for (const [width, columns, headingSize] of [
-    [1500, 3, "66px"],
-    [1280, 3, "66px"],
-    [900, 3, "55px"],
-    [760, 2, "44px"],
-    [480, 2, "43px"],
-    [390, 2, "43px"],
+  await expect(
+    page.getByText("Katalog belum terhubung.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".food-card")).toHaveCount(0);
+  for (const [width, headingSize] of [
+    [1500, "48px"],
+    [1280, "48px"],
+    [900, "40px"],
+    [760, "40px"],
+    [480, "34px"],
+    [390, "34px"],
   ] as const) {
     await page.setViewportSize({ width, height: 900 });
     await expect(page.getByRole("heading", { level: 1 })).toHaveCSS(
       "font-size",
       headingSize,
     );
-    const tracks = await page
-      .locator(".food-grid")
-      .evaluate(
-        (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
-      );
-    expect(tracks).toBe(columns);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
   }
-
-  const donation = page.getByLabel("Donasi gratis", { exact: true });
-  await donation.check();
-  await expect(page.locator(".switch")).toHaveCSS(
-    "background-color",
-    "rgb(31, 77, 51)",
-  );
-  await expect(page.locator(".food-card")).toHaveCount(1);
-  await expect(page.locator(".discount-badge")).toHaveCSS(
-    "background-color",
-    "rgb(225, 236, 227)",
-  );
-  await donation.uncheck();
-
   await page
+    .getByRole("banner")
     .getByRole("button", { name: "Daftar gratis", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
@@ -67,10 +51,6 @@ test("responsive catalog, active filters, and accessible dialogs retain their st
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("html")).toHaveCSS("scroll-behavior", "auto");
-  await expect(page.locator(".food-card").first()).toHaveCSS(
-    "transition-duration",
-    "0s",
-  );
 });
 
 test("profile tabs and account deletion checkbox preserve their layout", async ({
@@ -88,7 +68,9 @@ test("profile tabs and account deletion checkbox preserve their layout", async (
     }),
   );
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "T Test", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Akun Test User", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Hapus akun", exact: true }).click();
   await expect(

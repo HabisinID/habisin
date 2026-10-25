@@ -11,6 +11,9 @@ export const test = base.extend<{ publicImages: void }>({
       await page.route("https://images.unsplash.com/**", (route) =>
         route.fulfill(image),
       );
+      await page.route("https://example.com/module3-photo.svg", (route) =>
+        route.fulfill(image),
+      );
       await page.route("https://tile.openstreetmap.org/**", (route) =>
         route.fulfill(image),
       );

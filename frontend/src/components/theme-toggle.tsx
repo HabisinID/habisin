@@ -41,6 +41,7 @@ export default function ThemeToggle() {
   const Icon = icons[preference];
   return (
     <button
+      data-theme-toggle
       className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border text-dark transition-transform hover:bg-surface-2 active:scale-90 mobile:h-10 mobile:w-10"
       aria-label={`Tema tampilan: ${themeLabel[preference]}`}
       title={`Tema: ${themeLabel[preference]} (klik untuk ganti)`}

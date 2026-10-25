@@ -3,12 +3,13 @@
 Jalankan `python manage.py migrate` dari `backend/` untuk menerapkan tabel toko dan
 geocoding. Tidak diperlukan API key tambahan. Setelah masuk atau mendaftar sebagai
 **Mitra**, aplikasi mengarahkan pengguna ke `/partner/store`. Tautan **Toko** di
-header dan tombol mitra di halaman utama juga membuka halaman ini.
+header membuka halaman ini; Dasbor mitra membuka pengelolaan listing Modul 3.
 
 ## Alur penggunaan
 
 1. Pilih **Daftarkan toko**, lalu isi nama, deskripsi, alamat usaha publik, serta
-   jam buka/tutup harian dalam WIB. Satu akun mitra mengelola satu toko. Jam tutup
+   jam buka/tutup harian dalam WIB. Satu akun mitra dapat mengelola beberapa toko.
+   Setelah toko pertama, gunakan **Tambah toko** dan pilih kartu cabang untuk mengelolanya. Jam tutup
    yang lebih awal dari jam buka berarti tutup pada hari berikutnya.
 2. Pilih **Cari alamat di peta**, lalu pilih hasil Nominatim yang sesuai. Geser pin,
    klik peta, atau sesuaikan kolom latitude/longitude. Centang konfirmasi posisi
@@ -77,10 +78,10 @@ diakses selalu milik akun saat ini, tanpa menerima ID pemilik dari browser.
 | Endpoint | Hasil |
 | --- | --- |
 | `POST /api/partner/geocode` | Body `{address}`; mengembalikan `{results, geocode_token}`. Hasil kosong berarti alamat perlu diperjelas; gangguan penyedia menghasilkan 503. |
-| `GET /api/partner/store` | Mengembalikan `{store: {...}}` atau `{store: null}`. |
-| `POST /api/partner/store` | Buat toko (201); satu akun satu toko, duplikat ditolak dengan 409. |
-| `PATCH /api/partner/store` | Edit detail/lokasi; `is_open: false/true` menutup/mengaktifkan toko. |
-| `DELETE /api/partner/store` | Body `{confirmation_name}`; nama harus sesuai, sukses menghasilkan 204. |
+| `GET /api/partner/stores` | Inventaris seluruh toko sendiri: `{stores: [...]}`, termasuk yang ditutup. |
+| `POST /api/partner/stores` | Buat toko/cabang tambahan (201), tetap dengan geocoding dan konfirmasi pin. |
+| `GET/PATCH/DELETE /api/partner/stores/{id}` | Detail, edit/status, atau hapus cabang tertentu; toko asing menghasilkan 404. DELETE tetap memerlukan `{confirmation_name}`. |
+| `/api/partner/store` (adapter lama) | Nol/satu toko mempertahankan bentuk respons dan mutasi lama; POST hanya membuat toko pertama. Jika akun memiliki beberapa toko, semua metode menghasilkan 409 `store_selection_required`; gunakan endpoint plural/ID. |
 | `GET /api/stores/{id}` | Publik, termasuk toko ditutup sementara; toko yang dihapus menghasilkan 404. |
 
 Field pembuatan: `name`, `description`, `address`, `opening_time`, `closing_time`,
@@ -89,9 +90,15 @@ Jam memakai format `HH:MM` atau `HH:MM:SS`. Perubahan alamat pada PATCH membutuh
 kedua koordinat, token baru yang cocok, dan konfirmasi pin. Perubahan koordinat saja
 memerlukan konfirmasi. `owner` tidak dapat diubah atau dibaca melalui API publik.
 
-Toko merupakan entitas mandiri. Listing contoh masih menyimpan nama/alamat sendiri;
-penautan listing ke toko dan pengelolaan produk termasuk Modul 3, sehingga perubahan
-atau penutupan toko belum mengubah katalog contoh. Penghapusan akun menghapus tokonya.
+Listing Modul 3 memilih ID toko. Nama/alamat/pin listing berasal dari toko tersebut.
+Perubahan nama atau lokasi cabang ditolak dengan 409 selama ada reservasi aktif;
+setelah tidak ada reservasi aktif, perubahan menyelaraskan listing cabang dalam satu
+transaksi. Menutup toko menghentikan penawaran baru tetapi menjaga pesanan lama.
+Toko yang masih dirujuk listing tidak dapat dihapus (409); tutup sementara sebagai
+alternatif. Penghapusan akun menonaktifkan listing dan melepas relasi toko sambil
+mempertahankan lokasi serta riwayat pengambilan pembeli, lalu menghapus toko akun.
+Data demo/legacy tanpa relasi toko tetap memakai snapshot lamanya; tidak ditautkan
+berdasarkan tebakan nama.
 
 ## Verifikasi
 
@@ -105,6 +112,7 @@ Dari `frontend/`, dengan server Next.js aktif, jalankan:
 npx playwright test tests/stores.spec.ts
 ```
 
-Tes browser toko memakai mock API dan tidak memerlukan Nominatim/backend aktif.
+Tes browser toko memakai mock API plural dan tidak memerlukan Nominatim/backend aktif.
 Tes mencakup CRUD, konfirmasi pin, geocoding ulang, profil publik, izin peran,
-jam lintas hari, kegagalan geocoder, input koordinat, dan tampilan mobile.
+jam lintas hari, kegagalan geocoder, input koordinat, dua cabang yang tidak saling
+memengaruhi, dan tampilan mobile.

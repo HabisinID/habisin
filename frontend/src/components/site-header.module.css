@@ -1,0 +1,83 @@
+.header {
+  position: relative;
+  z-index: 900;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-dark);
+}
+.inner {
+  min-height: 64px;
+  max-width: 1440px;
+  margin: auto;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.inner > a {
+  flex: none;
+  font-size: 25px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.nav > a,
+.nav > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 14px;
+}
+.nav [aria-current="page"] {
+  background: var(--color-light);
+  color: var(--color-brand);
+  font-weight: 700;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* The theme switcher keeps its own circle from theme-toggle.tsx. */
+.actions button:not([data-theme-toggle]) {
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+}
+.header :is(a, button, input):focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .inner {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+  .nav {
+    order: 4;
+    width: 100%;
+    margin: 0;
+    justify-content: space-around;
+  }
+  .actions {
+    margin-left: auto;
+  }
+  .nav > a,
+  .nav > button {
+    padding: 0 9px;
+    font-size: 13px;
+  }
+  .inner > a {
+    font-size: 24px;
+  }
+}

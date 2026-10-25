@@ -1,8 +1,34 @@
 "use client";
-import { useEffect, useState } from "react";
-import { ArrowRight, Leaf, ShieldCheck } from "lucide-react";
+import { useEffect, useState, type ComponentProps } from "react";
+import { ArrowRight, Eye, EyeOff, Leaf, ShieldCheck } from "lucide-react";
 import Modal from "./modal";
 import { api, type User } from "@/lib/api";
+
+function PasswordInput(props: Omit<ComponentProps<"input">, "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="relative block">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        style={{ paddingRight: "3rem" }}
+      />
+      <button
+        type="button"
+        aria-label={visible ? "Sembunyikan password" : "Tampilkan password"}
+        aria-pressed={visible}
+        onClick={() => setVisible((current) => !current)}
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-[7px] text-[var(--color-muted)] hover:text-brand focus-visible:outline-2 focus-visible:outline-brand"
+      >
+        {visible ? (
+          <EyeOff size={18} aria-hidden="true" />
+        ) : (
+          <Eye size={18} aria-hidden="true" />
+        )}
+      </button>
+    </span>
+  );
+}
 
 export function Auth({
   initial,
@@ -127,9 +153,8 @@ export function Auth({
         )}
         <label>
           Password
-          <input
+          <PasswordInput
             name="password"
-            type="password"
             required
             minLength={mode === "register" ? 8 : 1}
             maxLength={128}
@@ -294,8 +319,7 @@ export function Profile({
           <>
             <label>
               Password lama
-              <input
-                type="password"
+              <PasswordInput
                 name="old_password"
                 required
                 autoComplete="current-password"
@@ -303,8 +327,7 @@ export function Profile({
             </label>
             <label>
               Password baru
-              <input
-                type="password"
+              <PasswordInput
                 name="new_password"
                 required
                 minLength={8}
@@ -322,8 +345,7 @@ export function Profile({
             </p>
             <label>
               Konfirmasi password
-              <input
-                type="password"
+              <PasswordInput
                 name="password"
                 required
                 autoComplete="current-password"
