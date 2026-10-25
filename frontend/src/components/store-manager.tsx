@@ -31,6 +31,7 @@ const StoreMap = dynamic(() => import("./store-map"), {
 });
 
 export default function StoreManager() {
+  const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -42,9 +43,12 @@ export default function StoreManager() {
   const [deleteError, setDeleteError] = useState("");
   useEffect(() => {
     let active = true;
-    api<{ store: Store | null }>("partner/store")
+    api<{ stores: Store[] }>("partner/stores")
       .then((data) => {
-        if (active) setStore(data.store);
+        if (active) {
+          setStores(data.stores);
+          setStore(data.stores.length === 1 ? data.stores[0] : null);
+        }
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -63,10 +67,13 @@ export default function StoreManager() {
     setError("");
     setNotice("");
     try {
-      const updated = await api<Store>("partner/store", "PATCH", {
+      const updated = await api<Store>(`partner/stores/${store.id}`, "PATCH", {
         is_open: !store.is_open,
       });
       setStore(updated);
+      setStores((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
       setNotice(
         updated.is_open
           ? "Toko kembali aktif."
@@ -80,12 +87,17 @@ export default function StoreManager() {
   }
   async function deleteStore(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!store) return;
     setBusy(true);
     setDeleteError("");
     try {
-      await api("partner/store", "DELETE", { confirmation_name: confirmation });
+      await api(`partner/stores/${store.id}`, "DELETE", {
+        confirmation_name: confirmation,
+      });
       setDeleting(false);
-      setStore(null);
+      const remaining = stores.filter((item) => item.id !== store.id);
+      setStores(remaining);
+      setStore(remaining.length === 1 ? remaining[0] : null);
       setNotice("Toko berhasil dihapus. Akun mitra kamu tetap tersedia.");
     } catch (e) {
       setDeleteError((e as Error).message);
@@ -117,6 +129,10 @@ export default function StoreManager() {
           onCancel={() => setEditing(false)}
           onSaved={(saved) => {
             setStore(saved);
+            setStores((current) => [
+              ...current.filter((item) => item.id !== saved.id),
+              saved,
+            ]);
             setEditing(false);
             setError("");
             setNotice(
@@ -145,6 +161,51 @@ export default function StoreManager() {
           </Link>
         )}
       </div>
+      {stores.length > 0 && (
+        <section className="space-y-4" aria-label="Daftar toko saya">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              {stores.length} toko · Pilih cabang yang ingin dikelola.
+            </p>
+            <button
+              className={primaryButton}
+              disabled={busy}
+              onClick={() => {
+                setStore(null);
+                setEditing(true);
+                setError("");
+                setNotice("");
+              }}
+            >
+              <Plus size={18} /> Tambah toko
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mobile:grid-cols-1">
+            {stores.map((item) => (
+              <button
+                key={item.id}
+                aria-label={`Kelola toko ${item.name}`}
+                aria-pressed={store?.id === item.id}
+                disabled={busy}
+                className={`min-w-0 rounded-xl border p-4 text-left ${store?.id === item.id ? "border-brand bg-light" : "border-line bg-white"}`}
+                onClick={() => {
+                  setStore(item);
+                  setError("");
+                  setNotice("");
+                }}
+              >
+                <strong className="block break-words">{item.name}</strong>
+                <span className="mt-1 block break-words text-xs text-muted">
+                  {item.address}
+                </span>
+                <span className="mt-2 block text-xs text-brand">
+                  #{item.id} · {item.is_open ? "Aktif" : "Ditutup sementara"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {notice && (
         <p role="status" className="rounded-lg bg-light p-4 text-brand">
           {notice}
@@ -193,7 +254,7 @@ export default function StoreManager() {
               </button>
             </div>
           </section>
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#ead9d1] p-5">
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--color-error-tint)] p-5">
             <div>
               <h2 className="font-bold">Hapus toko</h2>
               <p className="mt-1 text-sm text-muted">
@@ -201,7 +262,7 @@ export default function StoreManager() {
               </p>
             </div>
             <button
-              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-[#a34337] hover:bg-[#fbeae4]"
+              className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-[var(--color-error)] hover:bg-[var(--color-error-tint)]"
               onClick={() => {
                 setDeleting(true);
                 setConfirmation("");
@@ -214,15 +275,15 @@ export default function StoreManager() {
             </button>
           </section>
         </>
-      ) : (
+      ) : stores.length === 0 ? (
         <section className="rounded-2xl border border-line bg-white px-7 py-12 text-center">
           <StoreIcon size={48} className="mx-auto mb-5 text-brand" />
           <h2 className="text-2xl font-bold">
             Kesempatan baik dimulai dari tokomu.
           </h2>
           <p className="mx-auto my-4 max-w-md leading-relaxed text-muted">
-            Daftarkan profil dan lokasi toko agar mudah ditemukan. Satu akun
-            mitra dapat mengelola satu toko.
+            Daftarkan profil dan lokasi toko agar mudah ditemukan. Kamu dapat
+            mengelola beberapa cabang dalam satu akun mitra.
           </p>
           <button
             className={primaryButton}
@@ -235,6 +296,10 @@ export default function StoreManager() {
             Daftarkan toko
           </button>
         </section>
+      ) : (
+        <p className="rounded-xl border border-line bg-white p-6 text-muted">
+          Pilih toko di atas untuk melihat profil dan mengelolanya.
+        </p>
       )}
       {deleting && store && (
         <Modal
@@ -267,7 +332,7 @@ export default function StoreManager() {
             )}
             <div className="flex flex-wrap gap-3">
               <button
-                className="min-h-11 rounded-lg bg-[#a34337] px-4 py-3 font-semibold text-white"
+                className="min-h-11 rounded-lg bg-[var(--color-error)] px-4 py-3 font-semibold text-white"
                 disabled={busy || confirmation !== store.name}
               >
                 {busy ? "Menghapus…" : "Hapus toko permanen"}

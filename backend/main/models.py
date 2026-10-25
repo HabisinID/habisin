@@ -22,7 +22,7 @@ class Profile(models.Model):
 
 
 class Store(models.Model):
-    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="store")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stores")
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000)
     address = models.CharField(max_length=250)
@@ -51,6 +51,8 @@ class GeocodingQuota(models.Model):
 
 
 class Listing(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="listings")
+    store_profile = models.ForeignKey(Store, null=True, blank=True, on_delete=models.PROTECT, related_name="listings")
     name = models.CharField(max_length=160)
     store = models.CharField(max_length=120)
     category = models.CharField(max_length=30)
@@ -59,12 +61,26 @@ class Listing(models.Model):
     price = models.PositiveIntegerField()
     original_price = models.PositiveIntegerField()
     stock = models.PositiveIntegerField(default=5)
-    image = models.CharField(max_length=250)
+    image = models.CharField(max_length=250, blank=True)
+    image_file = models.ImageField(upload_to="listings/", blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
     pickup_start = models.DateTimeField()
     pickup_end = models.DateTimeField()
+    prepared_at = models.DateTimeField(null=True, blank=True)
+    buyer_notes = models.CharField(max_length=140, blank=True)
+    packaging = models.CharField(max_length=500, blank=True)
+    storage_notes = models.CharField(max_length=500, blank=True)
+    allergens = models.CharField(max_length=500, blank=True)
     active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(image_file="") & ~models.Q(image="")) | (~models.Q(image_file="") & models.Q(image="")),
+                name="listing_exactly_one_image_source",
+            ),
+        ]
 
 
 class Reservation(models.Model):
@@ -91,22 +107,37 @@ class Reservation(models.Model):
     note = models.CharField(max_length=NOTE_MAX_LENGTH, blank=True)
     status = models.CharField(max_length=12, default="pending", choices=[("pending", "Menunggu pembayaran"), ("paid", "Lunas"), ("picked_up", "Sudah diambil"), ("cancelled", "Dibatalkan"), ("expired", "Kedaluwarsa")])
     created_at = models.DateTimeField(auto_now_add=True)
+    pickup_deadline = models.DateTimeField(null=True, editable=False)
+    cancellation_note = models.CharField(max_length=500, blank=True)
+    cancelled_by = models.CharField(max_length=7, blank=True, choices=[("buyer", "Pembeli"), ("partner", "Mitra")])
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def deadline(self):
+        return self.pickup_deadline or self.listing.pickup_end
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.pickup_deadline is None:
+            self.pickup_deadline = self.deadline
+        super().save(*args, **kwargs)
+
+
     paid_at = models.DateTimeField(null=True, blank=True)
     picked_up_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def pay_before(self):
-        return min(self.created_at + self.PAYMENT_WINDOW, self.listing.pickup_end)
+        return min(self.created_at + self.PAYMENT_WINDOW, self.deadline)
 
     @property
     def cancel_until(self):
-        return self.listing.pickup_end - self.CANCEL_CUTOFF
+        return self.deadline - self.CANCEL_CUTOFF
 
     @classmethod
     def free_portions_today(cls, user, exclude=None):
         """Free portions the user claimed since local midnight, ignoring cancelled or expired claims."""
         midnight = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
-        claims = cls.objects.filter(user=user, listing__price=0, created_at__gte=midnight).exclude(status__in=["cancelled", "expired"])
+        claims = cls.objects.filter(user=user, total=0, created_at__gte=midnight).exclude(status__in=["cancelled", "expired"])
         if exclude is not None:
             claims = claims.exclude(pk=exclude.pk)
         return claims.aggregate(total=Sum("quantity"))["total"] or 0
@@ -118,17 +149,42 @@ class Reservation(models.Model):
         PWS has no scheduler, so callers run this before reading orders or stock.
         """
         now = timezone.now()
-        overdue = cls.objects.filter(
+        from .listing_services import lock_stores
+        from django.db.models.functions import Coalesce
+        overdue = cls.objects.annotate(_deadline=Coalesce("pickup_deadline", "listing__pickup_end")).filter(
             Q(status="pending", created_at__lte=now - cls.PAYMENT_WINDOW)
-            | Q(status__in=cls.ACTIVE_STATUSES, listing__pickup_end__lte=now)
+            | Q(status__in=cls.ACTIVE_STATUSES, _deadline__lte=now)
         )
         with transaction.atomic():
-            rows = list(overdue.select_for_update(of=("self",)).values_list("pk", "listing_id", "quantity"))
+            listing_ids = list(overdue.values_list("listing_id", flat=True).distinct())
+            lock_stores(Listing.objects.filter(pk__in=listing_ids).values_list("store_profile_id", flat=True))
+            list(Listing.objects.select_for_update().filter(pk__in=listing_ids).order_by("pk"))
+            rows = list(overdue.filter(listing_id__in=listing_ids).select_for_update().order_by("pk").values_list("pk", "listing_id", "quantity"))
             if not rows:
                 return
             cls.objects.filter(pk__in=[pk for pk, _, _ in rows]).update(status="expired")
             released = Counter()
             for _, listing_id, quantity in rows:
                 released[listing_id] += quantity
+            ListingStockAction.objects.filter(listing_id__in=released, used=False).update(used=True)
             for listing_id, quantity in released.items():
                 Listing.objects.filter(pk=listing_id).update(stock=F("stock") + quantity)
+
+
+class CheckoutBatch(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    key = models.UUIDField()
+    fingerprint = models.CharField(max_length=64)
+    reservation_ids = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "key"], name="checkout_user_key_unique")]
+
+
+class ListingStockAction(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    token = models.UUIDField(unique=True)
+    previous_stock = models.PositiveIntegerField()
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
