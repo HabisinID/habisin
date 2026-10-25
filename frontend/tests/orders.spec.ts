@@ -196,3 +196,130 @@ test("guests are asked to sign in before seeing orders", async ({ page }) => {
   await page.goto("/pesanan", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Masuk untuk melihat pesananmu")).toBeVisible();
 });
+
+// TopNav/Pembeli in design.pen: search, location chip, Beranda · Jelajahi ·
+// Pesanan, then the avatar. The order pages share it.
+async function expectDesignTopNav(page: Page) {
+  const banner = page.getByRole("banner");
+  await expect(
+    banner.getByRole("searchbox", { name: "Cari makanan atau toko" }),
+  ).toBeVisible();
+  await expect(
+    banner.getByRole("button", { name: /Pakai lokasiku/ }),
+  ).toBeVisible();
+  const nav = banner.getByRole("navigation", { name: "Navigasi pembeli" });
+  await expect(nav.getByRole("link")).toHaveText([
+    "Beranda",
+    "Jelajahi",
+    "Pesanan",
+  ]);
+  await expect(nav.getByRole("link", { name: "Beranda" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+  await expect(nav.getByRole("link", { name: "Jelajahi" })).toHaveAttribute(
+    "href",
+    "/jelajahi",
+  );
+  await expect(nav.getByRole("link", { name: "Pesanan" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(banner.getByText("OT", { exact: true })).toBeVisible();
+}
+
+test("order pages share the buyer TopNav from the design", async ({ page }) => {
+  await signUpBuyer(page);
+  await startOrder(page, "1");
+  await expectDesignTopNav(page);
+  await page.getByRole("button", { name: /^Bayar Rp/ }).click();
+  await expect(page).toHaveURL(/\/bayar$/);
+  await expectDesignTopNav(page);
+  await page.goto("/pesanan", { waitUntil: "domcontentloaded" });
+  await expectDesignTopNav(page);
+
+  const search = page
+    .getByRole("banner")
+    .getByRole("searchbox", { name: "Cari makanan atau toko" });
+  await search.fill("pastry");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/\/jelajahi\?q=pastry$/);
+});
+
+test("order pages show skeletons, not bare text, while loading", async ({
+  page,
+}) => {
+  await signUpBuyer(page);
+  await startOrder(page, "1");
+  const summaryUrl = page.url();
+  const slow = async (route: import("@playwright/test").Route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  };
+  for (const [url, pattern, label, heading] of [
+    [
+      summaryUrl,
+      "**/api/reservations/*",
+      "Memuat ringkasan…",
+      "Ringkasan pesanan",
+    ],
+    [
+      `${summaryUrl}/bayar`,
+      "**/api/reservations/*",
+      "Memuat pembayaran…",
+      "Pembayaran",
+    ],
+    ["/pesanan", "**/api/reservations", "Memuat pesanan…", "Pesanan saya"],
+  ] as const) {
+    await page.route(pattern, slow);
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const skeleton = page.locator('main [aria-busy="true"]');
+    await expect(skeleton).toBeVisible();
+    await expect(skeleton.locator(".animate-pulse").first()).toBeVisible();
+    // Screen readers still hear what is loading.
+    await expect(skeleton.getByText(label)).toBeAttached();
+    await expect(
+      page.getByRole("heading", { name: heading, exact: true }),
+    ).toBeVisible();
+    await expect(skeleton).toHaveCount(0);
+    await page.unroute(pattern, slow);
+  }
+});
+
+test("a stock change during the summary adjusts the quantity with a notice", async ({
+  page,
+}) => {
+  await signUpBuyer(page);
+  await startOrder(page, "2");
+  // Another buyer takes the rest of the stock: the server refuses the third
+  // portion, and the fresh order shows no free stock left beyond these two.
+  await page.route("**/api/reservations/*", async (route) => {
+    if (route.request().method() === "PATCH") {
+      await route.fulfill({
+        status: 400,
+        json: { detail: "Stok tidak cukup atau listing sudah berakhir." },
+      });
+      return;
+    }
+    const response = await route.fetch();
+    const order = await response.json();
+    await route.fulfill({
+      response,
+      json: { ...order, listing: { ...order.listing, stock: 0 } },
+    });
+  });
+  await page.getByRole("button", { name: "Tambah porsi" }).click();
+  const notice = page
+    .getByRole("status")
+    .filter({ hasText: "Stok tinggal 2 porsi." });
+  await expect(notice).toContainText("Jumlah pesanan sudah kami sesuaikan.");
+  await expect(notice).toContainText("Anda tadi memilih 3.");
+  await expect(page.getByTestId("quantity")).toHaveText("2");
+  await expect(page.getByTestId("order-total")).toHaveText(/Rp\s?36\.000/);
+  await expect(
+    page.getByText("2 porsi tersedia · batas atas tercapai"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Tambah porsi" }),
+  ).toBeDisabled();
+});
