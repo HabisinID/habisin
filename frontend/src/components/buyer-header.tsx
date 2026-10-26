@@ -47,24 +47,13 @@ export default function BuyerHeader({
           current: active === "favorites",
           onClick: () => onNavigate("favorites"),
         },
-        // Modul 7: orders live on their own page; guests get the sign-in gate first.
         {
           label: "Pesanan saya",
           current: active === "orders",
-          ...(user
-            ? { href: "/pesanan" }
-            : { onClick: () => onNavigate("orders") }),
+          onClick: () => onNavigate("orders"),
         },
       ]}
       actions={
-        // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
-        !user && (
-          <button className="mobile:hidden" onClick={onLogin}>
-            Masuk
-          </button>
-        )
-      }
-      end={
         user ? (
           <>
             <button
@@ -80,9 +69,7 @@ export default function BuyerHeader({
           </>
         ) : (
           <>
-            <button className="hidden mobile:inline-flex" onClick={onLogin}>
-              Masuk
-            </button>
+            <button onClick={onLogin}>Masuk</button>
             <button className={s.primary} onClick={onRegister}>
               Daftar gratis
             </button>

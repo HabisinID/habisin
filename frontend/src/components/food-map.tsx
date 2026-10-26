@@ -422,7 +422,7 @@ export default function FoodMap({
       {failed && (
         <div
           role="alert"
-          className="absolute inset-x-3 top-14 z-[500] space-y-2 rounded-xl bg-surface p-4 text-sm shadow"
+          className="absolute inset-x-3 top-14 z-[500] space-y-2 rounded-xl bg-white p-4 text-sm shadow"
         >
           <p>Peta belum dapat dimuat. Makanan tetap tersedia melalui daftar.</p>
           <button
@@ -447,7 +447,7 @@ export default function FoodMap({
       {tileFailed && (
         <div
           role="status"
-          className="absolute inset-x-3 top-3 z-[500] rounded-lg bg-surface p-2 text-xs shadow"
+          className="absolute inset-x-3 top-3 z-[500] rounded-lg bg-white p-2 text-xs shadow"
         >
           Gambar peta gagal dimuat; marker dan pilihan makanan tetap tersedia.{" "}
           <button
@@ -463,7 +463,7 @@ export default function FoodMap({
       )}
       {groups.length === 0 && !failed && (
         <div
-          className="absolute left-1/2 top-1/2 z-[450] w-[min(260px,80%)] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-surface p-4 text-center text-sm shadow"
+          className="absolute left-1/2 top-1/2 z-[450] w-[min(260px,80%)] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-4 text-center text-sm shadow"
           role="status"
         >
           <p>Belum ada toko yang dapat dipetakan untuk filter ini.</p>

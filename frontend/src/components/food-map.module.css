@@ -28,7 +28,7 @@
   border: 2px solid white;
   border-radius: 999px;
   background: var(--color-brand);
-  color: var(--color-on-brand);
+  color: white;
   box-shadow: 0 3px 10px #0003;
   text-align: center;
   white-space: nowrap;
@@ -45,24 +45,24 @@
 }
 .discovery :global(.discovery-pin span) {
   background: var(--color-yellow);
-  color: var(--color-on-sticker);
+  color: var(--color-dark);
   border: 1.5px solid var(--color-dark);
   border-radius: 6px;
   transform: rotate(3deg);
 }
 .discovery :global(.free-pin span) {
-  background: var(--color-surface);
+  background: white;
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 .discovery :global(.urgent-pin span) {
-  background: var(--color-urgency);
+  background: #ff9300;
   color: var(--color-dark);
-  border-color: var(--color-urgency-text);
+  border-color: #a34a00;
 }
 .discovery :global(.selected-pin span) {
   background: var(--color-brand);
-  color: var(--color-on-brand);
+  color: white;
   border: 2px solid white;
   box-shadow: 0 0 0 2px var(--color-brand);
 }
@@ -70,7 +70,7 @@
 .locate {
   position: absolute;
   z-index: 450;
-  background: var(--color-surface);
+  background: white;
   color: var(--color-dark);
   border: 1px solid var(--color-line);
   box-shadow: 0 2px 8px #0002;
@@ -99,7 +99,7 @@
   left: 16px;
   bottom: 28px;
   padding: 10px 12px;
-  background: var(--color-surface);
+  background: white;
   border: 1px solid var(--color-line);
   border-radius: 6px;
   display: flex;
@@ -122,16 +122,15 @@
 }
 .gold {
   background: var(--color-yellow);
-  color: var(--color-on-sticker);
 }
 .free {
-  background: var(--color-surface);
+  background: white;
 }
 .orange {
-  background: var(--color-urgency);
+  background: #ff9300;
 }
 .discovery :global(.leaflet-control-attribution) {
-  background: color-mix(in srgb, var(--color-surface) 87%, transparent);
+  background: #fffd;
   color: var(--color-dark);
 }
 .discovery [role="status"] {

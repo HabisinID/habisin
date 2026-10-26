@@ -260,7 +260,7 @@ export default function StoreForm({
               {results.map((result, index) => (
                 <label
                   key={`${result.latitude}-${result.longitude}-${index}`}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface p-3 text-sm leading-relaxed"
+                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-white p-3 text-sm leading-relaxed"
                 >
                   <input
                     className="mt-1 shrink-0 accent-brand"

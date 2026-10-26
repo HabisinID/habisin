@@ -270,12 +270,12 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 2. Cari/filter makanan, simpan favorit, atau pilih marker toko di tampilan **Peta**.
    Tombol lokasi meminta izin GPS dan menghitung ulang jarak dari lokasi pengguna.
 3. Buka produk, pilih jumlah porsi dan catatan pengambilan, lalu pilih
-   **Lanjut ke ringkasan**. Di halaman ringkasan, ubah porsi atau catatan bila perlu,
-   pilih **Bayar**, lalu **Simulasikan pembayaran berhasil**. Tidak ada pembayaran
-   sungguhan; stok ditahan sejak pesanan dibuat dan kode tiket tersimpan di SQLite.
-4. Buka **Pesanan** di header untuk melanjutkan pembayaran, melihat kode tiket,
-   membatalkan pesanan, atau menghapus pesanan selesai/dibatalkan dari riwayat.
-   Pembatalan mengembalikan stok dan tidak bisa menggandakan pengembalian stok. Lihat
+   **Lanjut ke ringkasan**. Periksa atau ubah pesanan, lalu pilih
+   **Simulasikan pembayaran berhasil**. Tidak ada pembayaran sungguhan; stok ditahan
+   sejak pesanan dibuat dan kode tiket tersimpan di SQLite.
+4. Buka **Pesanan saya** untuk melanjutkan pembayaran, melihat tiket, membatalkan
+   pesanan, atau menghapus pesanan selesai/dibatalkan dari riwayat. Pembatalan
+   mengembalikan stok dan tidak bisa menggandakan pengembalian stok. Lihat
    [panduan Modul 7](docs/module-7.md) untuk status pesanan dan API pemesanan.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.

@@ -48,8 +48,7 @@
   align-items: center;
   gap: 12px;
 }
-/* The theme switcher keeps its own circle from theme-toggle.tsx. */
-.actions button:not([data-theme-toggle]) {
+.actions button {
   min-height: 44px;
   padding: 0 10px;
   border-radius: 12px;
