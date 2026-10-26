@@ -123,7 +123,7 @@ export default function StoreManager() {
     );
   if (editing)
     return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-white p-7 mobile:p-4">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-surface p-7 mobile:p-4">
         <StoreForm
           store={store}
           onCancel={() => setEditing(false)}
@@ -187,7 +187,7 @@ export default function StoreManager() {
                 aria-label={`Kelola toko ${item.name}`}
                 aria-pressed={store?.id === item.id}
                 disabled={busy}
-                className={`min-w-0 rounded-xl border p-4 text-left ${store?.id === item.id ? "border-brand bg-light" : "border-line bg-white"}`}
+                className={`min-w-0 rounded-xl border p-4 text-left ${store?.id === item.id ? "border-brand bg-light" : "border-line bg-surface"}`}
                 onClick={() => {
                   setStore(item);
                   setError("");
@@ -219,7 +219,7 @@ export default function StoreManager() {
       {store ? (
         <>
           <section
-            className="space-y-6 rounded-2xl border border-line bg-white p-7 mobile:p-4"
+            className="space-y-6 rounded-2xl border border-line bg-surface p-7 mobile:p-4"
             aria-label="Profil toko saya"
           >
             <StoreDetails store={store} />
@@ -276,7 +276,7 @@ export default function StoreManager() {
           </section>
         </>
       ) : stores.length === 0 ? (
-        <section className="rounded-2xl border border-line bg-white px-7 py-12 text-center">
+        <section className="rounded-2xl border border-line bg-surface px-7 py-12 text-center">
           <StoreIcon size={48} className="mx-auto mb-5 text-brand" />
           <h2 className="text-2xl font-bold">
             Kesempatan baik dimulai dari tokomu.
@@ -297,7 +297,7 @@ export default function StoreManager() {
           </button>
         </section>
       ) : (
-        <p className="rounded-xl border border-line bg-white p-6 text-muted">
+        <p className="rounded-xl border border-line bg-surface p-6 text-muted">
           Pilih toko di atas untuk melihat profil dan mengelolanya.
         </p>
       )}
@@ -332,7 +332,7 @@ export default function StoreManager() {
             )}
             <div className="flex flex-wrap gap-3">
               <button
-                className="min-h-11 rounded-lg bg-[var(--color-error)] px-4 py-3 font-semibold text-white"
+                className="min-h-11 rounded-lg bg-error px-4 py-3 font-semibold text-on-error"
                 disabled={busy || confirmation !== store.name}
               >
                 {busy ? "Menghapus…" : "Hapus toko permanen"}

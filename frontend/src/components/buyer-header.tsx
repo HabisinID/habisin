@@ -73,8 +73,13 @@ export default function BuyerHeader({
         ) : (
           <>
             <button onClick={onLogin}>Masuk</button>
-            <button className={s.primary} onClick={onRegister}>
-              Daftar gratis
+            {/* Mobile shows "Daftar" so the top bar fits on one row. */}
+            <button
+              className={s.primary}
+              aria-label="Daftar gratis"
+              onClick={onRegister}
+            >
+              Daftar<span className="mobile:hidden"> gratis</span>
             </button>
           </>
         )

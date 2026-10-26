@@ -52,7 +52,7 @@
   display: flex;
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: white;
+  background: var(--color-surface);
   padding: 3px;
 }
 .toggle button {
@@ -64,15 +64,15 @@
   gap: 6px;
 }
 .toggle button[aria-pressed="true"] {
-  background: var(--color-dark);
-  color: white;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
 }
 .select,
 .search {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   min-height: 44px;
-  background: white;
+  background: var(--color-surface);
   padding: 8px 12px;
   max-width: 100%;
 }
@@ -99,11 +99,12 @@
   border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 6px 14px;
-  background: white;
+  background: var(--color-surface);
   white-space: nowrap;
 }
 .chip[aria-pressed="true"] {
   background: var(--color-yellow);
+  color: var(--color-on-sticker);
   border-color: var(--color-dark);
 }
 .grid {
@@ -116,7 +117,7 @@
   border: 1px solid var(--color-line);
   border-radius: 12px;
   overflow: hidden;
-  background: white;
+  background: var(--color-surface);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -148,23 +149,23 @@
   font-weight: 700;
   transform: rotate(3deg);
   z-index: 1;
-  color: var(--color-dark);
+  color: var(--color-on-sticker);
 }
 .sticker[data-free="true"] {
-  background: white;
+  background: var(--color-surface);
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 .sticker[data-urgent="true"] {
-  background: #ff9300;
+  background: var(--color-urgency);
   color: var(--color-dark);
-  border-color: #a34a00;
+  border-color: var(--color-urgency-text);
 }
 .favorite {
   position: absolute;
   right: 10px;
   top: 10px;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 999px;
   display: grid;
@@ -212,7 +213,7 @@
   font-weight: 700;
 }
 .urgent {
-  color: #a34a00;
+  color: var(--color-urgency-text);
 }
 .progress {
   display: block;
@@ -233,16 +234,16 @@
   background: var(--color-brand);
 }
 .progress[data-urgent="true"]::-webkit-progress-value {
-  background: #ff9300;
+  background: var(--color-urgency);
 }
 .progress[data-urgent="true"]::-moz-progress-bar {
-  background: #ff9300;
+  background: var(--color-urgency);
 }
 .status {
   padding: 20px;
   border: 1px solid var(--color-line);
   border-radius: 12px;
-  background: white;
+  background: var(--color-surface);
   margin-bottom: 16px;
 }
 .error {
@@ -275,14 +276,14 @@
 }
 .primary {
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   border: 1px solid var(--color-brand);
 }
 .primary:hover:not(:disabled) {
   background: var(--color-brand);
 }
 .secondary {
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 .split {
@@ -291,7 +292,7 @@
   height: calc(100dvh - 88px);
 }
 .sidebar {
-  background: white;
+  background: var(--color-surface);
   border-right: 1px solid var(--color-line);
   overflow: auto;
   padding: 24px;
@@ -455,8 +456,8 @@
   font-weight: 700;
 }
 .countdown[data-urgent="true"] {
-  color: #a34a00;
-  background: #fff1dd;
+  color: var(--color-urgency-text);
+  background: var(--color-urgency-tint);
 }
 .booking {
   display: flex;
@@ -621,7 +622,7 @@
   padding: 12px;
   border: 1px solid var(--color-line);
   border-radius: 6px;
-  background: white;
+  background: var(--color-surface);
 }
 .sidebar .chips {
   flex-wrap: nowrap;
@@ -699,7 +700,7 @@
   padding: 0 16px;
 }
 .toggle button[aria-pressed="true"] {
-  background: white;
+  background: var(--color-surface);
   color: var(--color-dark);
   border-color: var(--color-border);
 }
@@ -736,7 +737,7 @@
   border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-brand);
-  background: white;
+  background: var(--color-surface);
 }
 .detailAction:hover {
   background: var(--color-surface-2);
@@ -756,7 +757,7 @@
   color: var(--color-error);
   border: 1px solid var(--color-error);
   border-radius: 8px;
-  background: white;
+  background: var(--color-surface);
 }
 .card .removeFavorite:hover {
   background: var(--color-error-tint);

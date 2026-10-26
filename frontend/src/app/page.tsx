@@ -470,7 +470,7 @@ export default function Home() {
       </main>
       {notice && (
         <div
-          className="toast fixed bottom-[25px] left-[50%] [transform:translateX(-50%)] flex items-center gap-[10px] bg-[var(--color-dark)] text-white [border:1px_solid_#ffffff30] rounded-[10px] py-4 px-5 shadow-[0_5px_30px_#0003] z-[1200] text-[12px] max-w-[calc(100%_-_30px)] w-[max-content] [&_>_button]:text-white [&_>_button]:pl-[10px] mobile:text-[11px] mobile:py-[13px] mobile:px-[15px]"
+          className="toast fixed bottom-[25px] left-[50%] [transform:translateX(-50%)] flex items-center gap-[10px] bg-inverse text-on-inverse [border:1px_solid_#ffffff30] rounded-[10px] py-4 px-5 shadow-[0_5px_30px_#0003] z-[1200] text-[12px] max-w-[calc(100%_-_30px)] w-[max-content] [&_>_button]:text-on-inverse [&_>_button]:pl-[10px] mobile:text-[11px] mobile:py-[13px] mobile:px-[15px]"
           role="status"
         >
           <Leaf size={18} />
@@ -538,7 +538,7 @@ export default function Home() {
             ))}
           </div>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => {
               setPanel(null);
               document
@@ -576,7 +576,7 @@ export default function Home() {
             sebagai makanan terselamatkan.
           </p>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => setPanel(null)}
           >
             Mulai dari makananmu
@@ -648,7 +648,7 @@ export default function Home() {
               </p>
               {!user && (
                 <button
-                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
                   onClick={() => {
                     setRegistrationRole("partner");
                     setPanel("register");
