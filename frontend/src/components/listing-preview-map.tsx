@@ -94,7 +94,7 @@ export default function ListingPreviewMap({
       <div ref={container} className="h-full w-full" />
       {failed && (
         <p
-          className="absolute bottom-6 left-2 right-2 z-[450] rounded bg-surface p-2 text-xs"
+          className="absolute bottom-6 left-2 right-2 z-[450] rounded bg-white p-2 text-xs"
           role="status"
         >
           Gambar peta belum tersedia; posisi mengikuti pin toko.

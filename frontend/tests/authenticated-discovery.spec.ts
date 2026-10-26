@@ -442,18 +442,15 @@ test("urgent real order cannot be cancelled from UI or direct API", async ({
     await expect(detail(page)).toContainText(
       "Pesanan lunas tidak bisa dibatalkan",
     );
-    // Modul 7 page flow: summary page → payment page → Pesanan saya.
     await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
-    await page.getByRole("button", { name: /^Bayar Rp/ }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
-    await expect(page).toHaveURL(/\/pesanan$/);
-    const card = page.locator(".order-card");
-    await expect(card).toContainText("Pembatalan ditutup");
+    await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
     await expect(
-      card.getByRole("button", { name: "Batalkan pesanan" }),
+      page.getByRole("button", { name: "Batalkan", exact: true }),
     ).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toContainText("Pembatalan ditutup");
     const orders = await (await page.request.get("/api/reservations")).json();
     const rejected = await mutate(
       page.request,

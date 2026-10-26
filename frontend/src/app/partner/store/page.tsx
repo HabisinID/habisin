@@ -60,7 +60,7 @@ export default function PartnerStorePage() {
           </p>
         </div>
       ) : (
-        <section className="mx-auto max-w-xl space-y-5 rounded-2xl border border-line bg-surface p-8">
+        <section className="mx-auto max-w-xl space-y-5 rounded-2xl border border-line bg-white p-8">
           <p className="text-xs font-bold tracking-widest text-brand">
             BERGABUNG SEBAGAI MITRA
           </p>

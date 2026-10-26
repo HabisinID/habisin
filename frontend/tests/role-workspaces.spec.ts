@@ -90,10 +90,9 @@ test("buyer starts on map, header and pills match, card focus clears after two z
     page.getByRole("button", { name: "Daftar", exact: true }),
   ).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: "/tmp/habisin-role-buyer-list-desktop.png" });
-  // "Pesanan saya" is a link to the /pesanan page (Modul 7); the rest are buttons.
   const labels = await page
     .getByRole("navigation", { name: "Navigasi pembeli" })
-    .locator("a, button")
+    .getByRole("button")
     .allTextContents();
   expect(labels).toEqual(["Jelajahi", "Favorit", "Pesanan saya"]);
   await page.setViewportSize({ width: 390, height: 844 });

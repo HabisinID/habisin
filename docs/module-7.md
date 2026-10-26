@@ -10,17 +10,15 @@ baru. Pesanan lama berstatus `reserved` otomatis menjadi `paid`.
    status **Menunggu pembayaran** dan stok ditahan selama **5 menit** (atau sampai batas
    ambil bila lebih dekat, lihat `pay_before`). Jika tidak dibayar, pesanan menjadi
    **Kedaluwarsa** dan stok kembali ke toko.
-2. Halaman **Ringkasan pesanan** (`/pesanan/{id}`) menampilkan produk, jarak toko, jam
-   ambil, dan struk rincian. Ubah jumlah porsi dengan tombol **−/+** (total langsung
-   berubah, lalu dikonfirmasi server) dan tulis catatan untuk kasir (maks. 140 karakter,
-   tersimpan saat kolom ditinggalkan). Stok bertambah/berkurang sesuai selisih porsi.
-3. Pilih **Bayar Rp…** untuk membuka **Pembayaran** (`/pesanan/{id}/bayar`), lalu
-   **Simulasikan pembayaran berhasil**. Produk gratis langsung memakai **Klaim gratis**
-   tanpa halaman bayar. Tidak ada transaksi uang sungguhan.
-4. Setelah bayar, **Pesanan saya** (`/pesanan`) terbuka di tab **Aktif** dengan jam ambil
-   dan kode tiket (`H7K · 49`). Pesanan yang belum dibayar dapat dilanjutkan
-   (**Lanjutkan pembayaran**), pesanan aktif dapat **dibatalkan** dengan konfirmasi
-   (stok kembali), dan pesanan di tab **Riwayat** dapat **dihapus dari riwayat**.
+2. Di **Ringkasan pesanan**, periksa alamat, jarak toko dari lokasi pencarian, jam
+   ambil, jumlah porsi, catatan, dan total. Pilih **Ubah pesanan** untuk mengganti
+   jumlah porsi atau catatan; stok bertambah/berkurang sesuai selisihnya.
+3. Pilih **Simulasikan pembayaran berhasil** (atau **Klaim donasi gratis** untuk
+   produk gratis). Status menjadi **Dipesan** dan tiket kode pengambilan tampil.
+   Tidak ada transaksi uang sungguhan.
+4. Di **Pesanan saya**, pesanan yang belum dibayar dapat dilanjutkan
+   (**Lanjutkan pembayaran**), pesanan aktif dapat **dibatalkan** (stok kembali),
+   dan pesanan yang sudah dibatalkan atau diambil dapat **dihapus dari riwayat**.
 
 Pembatalan dan penghapusan memakai *optimistic update*: tampilan langsung berubah,
 lalu dikembalikan seperti semula disertai pesan error jika server menolak.

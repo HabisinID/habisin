@@ -14,17 +14,35 @@ import LandingPage, {
   LandingHeader,
   PublicSearchParams,
 } from "@/components/landing-page";
-import { ArrowRight, Compass, Leaf, Sprout, Users, X } from "lucide-react";
+import {
+  ArrowRight,
+  Compass,
+  Check,
+  Leaf,
+  Sprout,
+  Ticket,
+  Users,
+  X,
+} from "lucide-react";
 import { Auth, Profile } from "@/components/account";
 import Modal from "@/components/modal";
 import AuthenticatedDiscovery from "@/components/authenticated-discovery";
 import FoodListingDetail from "@/components/food-listing-detail";
 import PartnerListings from "@/components/partner-listings";
 import BuyerHeader from "@/components/buyer-header";
+import OrderList from "@/components/order-list";
+import OrderSummary from "@/components/order-summary";
 import SiteHeader from "@/components/site-header";
 import { orderApi } from "@/lib/orders";
 import PartnerDashboard from "@/components/partner-dashboard";
-import { api, type Listing, type User } from "@/lib/api";
+import {
+  api,
+  pickup,
+  rupiah,
+  type Listing,
+  type Reservation,
+  type User,
+} from "@/lib/api";
 import demo from "@/lib/demo.json";
 import ListingDeepLink from "@/components/listing-deep-link";
 import { useCatalog } from "@/hooks/use-catalog";
@@ -110,13 +128,17 @@ export default function Home() {
   const [partnerRevision, setPartnerRevision] = useState(0);
   const [partnerCopy, setPartnerCopy] = useState(false);
   const [partnerStart, setPartnerStart] = useState(false);
+  const [orders, setOrders] = useState<Reservation[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const { origin, location, locating, recenterKey, locate } =
     useBrowserLocation(setNotice);
+  const [summary, setSummary] = useState<Reservation | null>(null);
   const [note, setNote] = useState("");
+  const [ticket, setTicket] = useState<Reservation | null>(null);
   const [dashboard, setDashboard] = useState<{
     users: number | null;
     listings: number;
@@ -128,6 +150,39 @@ export default function Home() {
       .then(setUser)
       .catch(() => {});
   }, []);
+  const ticketId = ticket?.id;
+  useEffect(() => {
+    if (!user || user.role !== "buyer" || (panel !== "orders" && !ticketId))
+      return;
+    const controller = new AbortController();
+    const refreshOrders = () => {
+      void api<Reservation[]>(
+        "reservations",
+        "GET",
+        undefined,
+        controller.signal,
+      )
+        .then((rows) => {
+          if (controller.signal.aborted) return;
+          setOrders(rows);
+          setTicket((current) =>
+            current
+              ? rows.find((row) => row.id === current.id) || current
+              : null,
+          );
+        })
+        .catch((e: Error) => {
+          if (!controller.signal.aborted) setOrderError(e.message);
+        });
+    };
+    window.addEventListener("focus", refreshOrders);
+    const timer = setInterval(refreshOrders, 15000);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", refreshOrders);
+      clearInterval(timer);
+    };
+  }, [user, panel, ticketId]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 6500);
@@ -209,12 +264,21 @@ export default function Home() {
       setNotice("Penyimpanan favorit tidak tersedia di browser ini.");
     }
   }
-  function showOrders() {
+  async function showOrders() {
     if (!user) {
       setPanel("login");
       return;
     }
-    router.push("/pesanan");
+    setPanel("orders");
+    setOrdersLoading(true);
+    setOrderError("");
+    try {
+      setOrders(await api<Reservation[]>("reservations"));
+    } catch (e) {
+      setOrderError((e as Error).message);
+    } finally {
+      setOrdersLoading(false);
+    }
   }
   async function book() {
     if (!selectedAvailable || catalogLoading) return;
@@ -229,8 +293,18 @@ export default function Home() {
     try {
       const order = await orderApi.create(selected!.id, quantity, note);
       setPolicyRevision((n) => n + 1);
-      // Modul 7: the summary is its own page (/pesanan/:id), not a modal.
-      router.push(`/pesanan/${order.id}`);
+      setSummary(order);
+      setSelected(null);
+      if (new URLSearchParams(window.location.search).has("listing"))
+        router.replace(pathname, { scroll: false });
+      refresh();
+      setItems((current) =>
+        current.map((item) =>
+          item.id === order.listing.id
+            ? { ...item, stock: order.listing.stock }
+            : item,
+        ),
+      );
     } catch (e) {
       setOrderError((e as Error).message);
       setPolicyRevision((n) => n + 1);
@@ -239,13 +313,23 @@ export default function Home() {
       setBusy(false);
     }
   }
+  function updateListing(listing: Listing) {
+    setItems((current) =>
+      current.map((item) => (item.id === listing.id ? listing : item)),
+    );
+    setPolicyRevision((n) => n + 1);
+    refresh();
+  }
   async function signOut() {
     try {
       await api("auth/logout", "POST");
       setSelected(null);
+      setSummary(null);
+      setTicket(null);
       setPolicyRevision((n) => n + 1);
       previousDetail.current = false;
       setUser(null);
+      setOrders([]);
       setDashboard(null);
       setNotice("Kamu berhasil keluar.");
     } catch (e) {
@@ -283,6 +367,7 @@ export default function Home() {
       setPanel("login");
       return;
     }
+    setTicket(null);
     closeDetail();
     if (destination === "orders") void showOrders();
     else {
@@ -299,14 +384,24 @@ export default function Home() {
         onQuery={(value) => {
           setBuyerQuery(value);
           setPanel(null);
+          setTicket(null);
           closeDetail();
         }}
         location={location}
         locating={locating}
         onLocate={locate}
-        active={buyerFavorites ? "favorites" : "explore"}
+        active={
+          ticket || panel === "orders"
+            ? "orders"
+            : buyerFavorites
+              ? "favorites"
+              : "explore"
+        }
         onNavigate={buyerNavigate}
-        onAccount={() => setPanel("profile")}
+        onAccount={() => {
+          setTicket(null);
+          setPanel("profile");
+        }}
         onLogout={signOut}
         onLogin={() => {
           setRegistrationRole("buyer");
@@ -470,7 +565,7 @@ export default function Home() {
       </main>
       {notice && (
         <div
-          className="toast fixed bottom-[25px] left-[50%] [transform:translateX(-50%)] flex items-center gap-[10px] bg-inverse text-on-inverse [border:1px_solid_#ffffff30] rounded-[10px] py-4 px-5 shadow-[0_5px_30px_#0003] z-[1200] text-[12px] max-w-[calc(100%_-_30px)] w-[max-content] [&_>_button]:text-on-inverse [&_>_button]:pl-[10px] mobile:text-[11px] mobile:py-[13px] mobile:px-[15px]"
+          className="toast fixed bottom-[25px] left-[50%] [transform:translateX(-50%)] flex items-center gap-[10px] bg-[var(--color-dark)] text-white [border:1px_solid_#ffffff30] rounded-[10px] py-4 px-5 shadow-[0_5px_30px_#0003] z-[1200] text-[12px] max-w-[calc(100%_-_30px)] w-[max-content] [&_>_button]:text-white [&_>_button]:pl-[10px] mobile:text-[11px] mobile:py-[13px] mobile:px-[15px]"
           role="status"
         >
           <Leaf size={18} />
@@ -499,6 +594,7 @@ export default function Home() {
             setUser(newUser);
             if (!newUser) {
               setSelected(null);
+              setOrders([]);
               previousDetail.current = false;
             }
           }}
@@ -538,7 +634,7 @@ export default function Home() {
             ))}
           </div>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => {
               setPanel(null);
               document
@@ -576,7 +672,7 @@ export default function Home() {
             sebagai makanan terselamatkan.
           </p>
           <button
-            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
             onClick={() => setPanel(null)}
           >
             Mulai dari makananmu
@@ -648,7 +744,7 @@ export default function Home() {
               </p>
               {!user && (
                 <button
-                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+                  className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
                   onClick={() => {
                     setRegistrationRole("partner");
                     setPanel("register");
@@ -661,6 +757,77 @@ export default function Home() {
             </>
           )}
         </Modal>
+      )}
+      {ticket && (
+        <Modal title="Makananmu sudah dipesan!" onClose={() => setTicket(null)}>
+          <div className="ticket text-center bg-[var(--color-light)] [border:1px_dashed_var(--color-light)] rounded-[13px] py-[25px] px-[15px] [&_>_p:first-of-type]:text-[9px] [&_>_p:first-of-type]:tracking-[2px] [&_>_p:first-of-type]:text-[var(--color-muted)] [&_>_strong]:block [&_>_strong]:text-[42px] [&_>_strong]:tracking-[8px] [&_>_strong]:mt-[10px] [&_>_strong]:mr-0 [&_>_strong]:mb-5 [&_>_strong]:ml-0 [&_>_strong]:text-brand [&_h3]:mb-[10px] [&_h3]:text-[16px] [&_>_span]:text-[12px] [&_>_span]:text-[var(--color-muted)] [&_hr]:[border:0] [&_hr]:[border-top:1px_dashed_var(--color-light)] [&_hr]:my-[25px] [&_hr]:mx-0 [&_p]:text-[12px] [&_p]:my-[10px] [&_p]:mx-0 [&_p]:text-[var(--color-brand)] [&_small]:text-[10px] [&_small]:text-[var(--color-muted)]">
+            <span className="ticket-check w-[55px] h-[55px] rounded-[50%] bg-brand text-white grid place-items-center mt-0 mr-auto mb-5 ml-auto">
+              <Check size={30} />
+            </span>
+            <p>KODE PENGAMBILAN</p>
+            <strong>{ticket.code}</strong>
+            <h3>{ticket.listing.name}</h3>
+            <span>
+              {ticket.quantity} porsi · {rupiah(ticket.total)}
+            </span>
+            <hr />
+            <p>{ticket.listing.store}</p>
+            <small>{ticket.listing.address}</small>
+            <p>Ambil sebelum {pickup(ticket.listing.pickup_end)} WIB</p>
+          </div>
+          <p className="fine-print text-[10px] leading-[1.8] text-[var(--color-muted)] my-[15px] mx-0">
+            Tiket demo tersimpan di Pesanan saya. Verifikasi kasir belum
+            tersedia pada demo ini.
+          </p>
+          <button
+            className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+            onClick={() => {
+              setTicket(null);
+              showOrders();
+            }}
+          >
+            Lihat pesanan saya
+            <Ticket size={18} />
+          </button>
+        </Modal>
+      )}
+      {panel === "orders" && (
+        <OrderList
+          orders={orders}
+          setOrders={setOrders}
+          loading={ordersLoading}
+          loadError={orderError}
+          onListing={updateListing}
+          onResume={(order) => {
+            setPanel(null);
+            setSummary(order);
+          }}
+          onTicket={(order) => {
+            setPanel(null);
+            setTicket(order);
+          }}
+          onClose={() => setPanel(null)}
+        />
+      )}
+      {summary && (
+        <OrderSummary
+          order={summary}
+          origin={origin}
+          onChange={(order) => {
+            setSummary(order);
+            updateListing(order.listing);
+          }}
+          onPaid={(order) => {
+            setSummary(null);
+            setTicket(order);
+          }}
+          onCancelled={(order) => {
+            setSummary(null);
+            updateListing(order.listing);
+            setNotice("Pesanan dibatalkan. Stok sudah dikembalikan.");
+          }}
+          onClose={() => setSummary(null)}
+        />
       )}
     </>
   );
