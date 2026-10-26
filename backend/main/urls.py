@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import store_views, commerce_views
+from . import reviews_views
 
 urlpatterns = [
     path("partner/dashboard", commerce_views.partner_dashboard),
@@ -28,4 +29,9 @@ urlpatterns = [
     path("partner/stores/<int:pk>", store_views.partner_store_detail),
     path("stores/<int:pk>", store_views.public_store),
     path("stores/<int:pk>/listings", store_views.public_store_listings),
+    path("stores/<int:pk>/reviews", reviews_views.store_reviews),
+    path("reviews", reviews_views.create_review),
+    path("reviews/mine", reviews_views.my_feedback),
+    path("reviews/<int:pk>", reviews_views.review_detail),
+    path("complaints", reviews_views.create_complaint),
 ]

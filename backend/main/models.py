@@ -188,3 +188,31 @@ class ListingStockAction(models.Model):
     previous_stock = models.PositiveIntegerField()
     expires_at = models.DateTimeField()
     used = models.BooleanField(default=False)
+
+
+class Review(models.Model):
+    reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, related_name="review")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_reviews")
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(max_length=1000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="review_rating_between_1_5")]
+
+
+class Complaint(models.Model):
+    STATUS_CHOICES = [("open", "Terbuka"), ("reviewed", "Ditinjau"), ("resolved", "Selesai")]
+
+    reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, related_name="complaint")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="complaints")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_complaints")
+    description = models.TextField(max_length=2000)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
