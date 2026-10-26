@@ -873,8 +873,9 @@
   .workspace {
     height: 100dvh;
   }
+  /* Two rows: logo and theme switcher, then back · title · Simpan draf. */
   .mobileHeader {
-    height: 56px;
+    height: auto;
     min-height: 56px;
     display: flex;
     align-items: center;
@@ -1164,7 +1165,8 @@
   max-width: none;
   padding: 0;
 }
-.desktopHeader > div > div:first-of-type {
+/* SiteHeader wraps page content in a display:contents box; grow the title block inside it. */
+.desktopHeader > div > div:first-of-type > div:first-of-type {
   flex: 1;
   min-width: 0;
 }
@@ -1178,8 +1180,5 @@
     min-height: 56px;
     padding: 8px 0;
     gap: 4px;
-  }
-  .mobileHeader a[aria-label="Habisin beranda"] {
-    flex-basis: 100%;
   }
 }

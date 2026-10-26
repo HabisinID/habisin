@@ -8,6 +8,7 @@ import {
   nextTheme,
   readPreference,
   themeLabel,
+  type ThemePreference,
 } from "@/lib/theme";
 
 function subscribe(callback: () => void) {
@@ -19,16 +20,29 @@ function subscribe(callback: () => void) {
   };
 }
 
-const icons = { system: Monitor, light: Sun, dark: Moon };
-
-// Cycles Sistem → Terang → Gelap, matching the theme choice in the design's account menu.
-export default function ThemeToggle() {
-  const preference = useSyncExternalStore(
+// One preference for the TopNav switcher and the Akun choice, kept in sync.
+export function useThemePreference() {
+  return useSyncExternalStore(
     subscribe,
     readPreference,
     () => "system" as const,
   );
-  // "Sistem" follows the operating system, including changes while the page is open.
+}
+
+export function setThemePreference(next: ThemePreference) {
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch {
+    // Without storage the choice still applies for this visit.
+  }
+  applyTheme(next);
+  window.dispatchEvent(new Event(THEME_EVENT));
+}
+
+// Mounted once in the root layout, so pages without a switcher (Mitra) still
+// apply the saved theme and "Sistem" follows the OS while the page is open.
+export function ThemeSync() {
+  const preference = useThemePreference();
   useEffect(() => {
     applyTheme(preference);
     if (preference !== "system") return;
@@ -37,7 +51,14 @@ export default function ThemeToggle() {
     media.addEventListener("change", follow);
     return () => media.removeEventListener("change", follow);
   }, [preference]);
+  return null;
+}
 
+const icons = { system: Monitor, light: Sun, dark: Moon };
+
+// TopNav switcher: cycles Sistem → Terang → Gelap.
+export default function ThemeToggle() {
+  const preference = useThemePreference();
   const Icon = icons[preference];
   return (
     <button
@@ -45,16 +66,7 @@ export default function ThemeToggle() {
       className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border text-dark transition-transform hover:bg-surface-2 active:scale-90 mobile:h-10 mobile:w-10"
       aria-label={`Tema tampilan: ${themeLabel[preference]}`}
       title={`Tema: ${themeLabel[preference]} (klik untuk ganti)`}
-      onClick={() => {
-        const next = nextTheme[preference];
-        try {
-          localStorage.setItem(THEME_KEY, next);
-        } catch {
-          // Without storage the choice still applies for this visit.
-        }
-        applyTheme(next);
-        window.dispatchEvent(new Event(THEME_EVENT));
-      }}
+      onClick={() => setThemePreference(nextTheme[preference])}
     >
       <Icon size={20} />
     </button>

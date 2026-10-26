@@ -57,14 +57,6 @@ export default function BuyerHeader({
         },
       ]}
       actions={
-        // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
-        !user && (
-          <button className="mobile:hidden" onClick={onLogin}>
-            Masuk
-          </button>
-        )
-      }
-      end={
         user ? (
           <>
             <button
@@ -80,11 +72,14 @@ export default function BuyerHeader({
           </>
         ) : (
           <>
-            <button className="hidden mobile:inline-flex" onClick={onLogin}>
-              Masuk
-            </button>
-            <button className={s.primary} onClick={onRegister}>
-              Daftar gratis
+            <button onClick={onLogin}>Masuk</button>
+            {/* Mobile shows "Daftar" so the top bar fits on one row. */}
+            <button
+              className={s.primary}
+              aria-label="Daftar gratis"
+              onClick={onRegister}
+            >
+              Daftar<span className="mobile:hidden"> gratis</span>
             </button>
           </>
         )

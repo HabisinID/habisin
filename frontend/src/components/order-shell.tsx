@@ -102,7 +102,7 @@ export default function OrderShell({
           { label: "Jelajahi", href: "/jelajahi" },
           { label: "Pesanan", href: "/pesanan", current: true },
         ]}
-        end={
+        actions={
           user && (
             <span className={s.avatar} title={name}>
               {initials}
