@@ -17,11 +17,13 @@ class Book(models.Model):
 
 
 class Profile(models.Model):
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=10, choices=[("buyer", "Pembeli"), ("partner", "Mitra")], default="buyer")
 
 
 class Store(models.Model):
+    profile_picture = models.ImageField(upload_to="stores/", blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stores")
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000)
