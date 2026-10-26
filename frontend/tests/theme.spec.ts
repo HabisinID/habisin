@@ -74,7 +74,8 @@ const signInAs = (page: Page, role: "buyer" | "partner") =>
   );
 
 // Where the switcher sits in the first header: distance to the right edge of
-// the viewport, header items on its right in the same row, and items it overlaps.
+// the viewport, how far it is from the logo's row, header items on its right in
+// the same row, and items it overlaps.
 const switcherLayout = (page: Page) =>
   page
     .locator("header")
@@ -100,8 +101,13 @@ const switcherLayout = (page: Page) =>
         );
       });
       const sameRow = (r: DOMRect) => r.top < t.bottom && r.bottom > t.top;
+      const logo = header.querySelector('a[aria-label="Habisin beranda"]');
+      const middle = (r: DOMRect) => r.top + r.height / 2;
       return {
         gapToRightEdge: Math.round(window.innerWidth - t.right),
+        offLogoRow: logo
+          ? Math.round(Math.abs(middle(t) - middle(box(logo))))
+          : -1,
         onItsRight: others
           .filter((el) => sameRow(box(el)) && box(el).left >= t.right - 1)
           .map(label),
@@ -138,6 +144,9 @@ for (const [who, paths] of [
           where,
         ).toBeVisible();
         const layout = await switcherLayout(page);
+        // Top right: on the logo's row, with nothing further right.
+        expect(layout?.offLogoRow, where).toBeGreaterThanOrEqual(0);
+        expect(layout?.offLogoRow, where).toBeLessThanOrEqual(12);
         expect(layout?.onItsRight, where).toEqual([]);
         expect(layout?.overlapping, where).toEqual([]);
         expect(layout?.gapToRightEdge, where).toBeGreaterThanOrEqual(0);
