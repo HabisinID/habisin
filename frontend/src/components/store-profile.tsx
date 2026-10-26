@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import StoreCatalog from "./store-catalog";
+import StoreReviews from "./store-reviews";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, ApiError, type Store } from "@/lib/api";
@@ -79,6 +80,7 @@ export default function StoreProfile({ id }: { id: string }) {
             </p>
             <StoreDetails store={store} />
             <StoreCatalog id={id} />
+            <StoreReviews storeId={store.id} />
             <StoreMap latitude={store.latitude} longitude={store.longitude} />
             <p className="text-xs text-muted">
               Koordinat toko: {store.latitude.toFixed(6)},{" "}

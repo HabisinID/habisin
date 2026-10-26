@@ -4,6 +4,7 @@ import { ShoppingBag, Ticket } from "lucide-react";
 import Modal from "./modal";
 import { pickup, rupiah, type Listing, type Reservation } from "@/lib/api";
 import { orderApi, statusLabel } from "@/lib/orders";
+import BuyerFeedback from "./buyer-feedback";
 import { errorClass, primaryButton } from "./store-ui";
 
 const labelClass: Record<Reservation["status"], string> = {
@@ -105,6 +106,7 @@ export default function OrderList({
           </button>
         </div>
       ) : (
+        <>
         <ul className="flex flex-col gap-3">
           {orders.map((order) => {
             const busy = inFlight.includes(order.id);
@@ -180,6 +182,8 @@ export default function OrderList({
             );
           })}
         </ul>
+        <BuyerFeedback orders={orders} />
+        </>
       )}
       {(error || loadError) && (
         <p className={`${errorClass} mt-4`} role="alert">
