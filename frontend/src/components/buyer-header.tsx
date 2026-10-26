@@ -47,10 +47,13 @@ export default function BuyerHeader({
           current: active === "favorites",
           onClick: () => onNavigate("favorites"),
         },
+        // Modul 7: orders live on their own page; guests get the sign-in gate first.
         {
           label: "Pesanan saya",
           current: active === "orders",
-          onClick: () => onNavigate("orders"),
+          ...(user
+            ? { href: "/pesanan" }
+            : { onClick: () => onNavigate("orders") }),
         },
       ]}
       actions={
