@@ -24,6 +24,10 @@
   --color-error-tint: #fbe9e7;
   --color-inverse: #14301f;
   --color-on-inverse: #eef3ec;
+  --color-inverse-accent: #f4d56a;
+  --color-on-brand: #ffffff;
+  --color-on-sticker: #14301f;
+  --color-on-error: #ffffff;
   --radius-field: 6px;
   --radius-control: 12px;
 }
@@ -34,12 +38,48 @@
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
+/* The theme script in the root layout sets data-theme before first paint. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Preserve inclusive breakpoints and apply narrower overrides last. */
 @custom-variant compact (@media (width <= 1050px));
 @custom-variant tablet (@media (width <= 760px));
 @custom-variant mobile (@media (width <= 480px));
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  /* Dark values from design.pen (mode: dark). Utilities read these variables, so
+     every page switches without per-component dark: classes. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-brand: #9fd3ae;
+    --color-brand-hover: #b8e0c3;
+    --color-brand-pressed: #8bc49b;
+    --color-dark: #eef3ec;
+    --color-muted: #a9c0af;
+    --color-cream: #10261a;
+    --color-line: #24402f;
+    --color-light: #1e3f2b;
+    --color-surface: #163021;
+    --color-surface-2: #1d3a29;
+    --color-border: #5f7d68;
+    --color-urgency: #ffb347;
+    --color-urgency-text: #ffb347;
+    --color-urgency-tint: #3a2a12;
+    --color-success: #7fd1a3;
+    --color-warning: #f2c14e;
+    --color-error: #ff8a80;
+    --color-error-tint: #3a1a17;
+    --color-inverse: #eef3ec;
+    --color-on-inverse: #14301f;
+    --color-inverse-accent: #1f4d33;
+    --color-on-brand: #10261a;
+    --color-on-error: #10261a;
+  }
+
   html {
     @apply scroll-smooth scroll-pt-[100px];
   }
