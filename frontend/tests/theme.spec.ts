@@ -60,32 +60,98 @@ test("the theme switcher cycles Sistem, Terang, Gelap and remembers the choice",
   await expect(page.locator("body")).toHaveCSS("background-color", lightPaper);
 });
 
-// Accessible names of the header controls, left to right.
-const headerControls = (page: Page) =>
-  page
-    .getByRole("banner")
-    .locator("button:visible, a:visible")
-    .evaluateAll((els) =>
-      els.map(
-        (el) =>
-          el.getAttribute("aria-label") ||
-          (el as HTMLElement).innerText.replace(/\s+/g, " ").trim(),
-      ),
-    );
+const signInAs = (page: Page, role: "buyer" | "partner") =>
+  page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: "rani",
+        name: "Rani Ayu",
+        email: "rani@example.com",
+        role,
+      },
+    }),
+  );
 
-// TopNav in design.pen: the theme switcher is a bordered circle right before
-// the last header item (Daftar gratis for guests, the avatar once signed in).
-test("the theme switcher sits right before Daftar gratis for guests", async ({
+// Where the switcher sits in the first header: distance to the right edge of
+// the viewport, header items on its right in the same row, and items it overlaps.
+const switcherLayout = (page: Page) =>
+  page
+    .locator("header")
+    .first()
+    .evaluate((header) => {
+      const toggle = header.querySelector("[data-theme-toggle]");
+      if (!toggle) return null;
+      const box = (el: Element) => el.getBoundingClientRect();
+      const t = box(toggle);
+      const label = (el: Element) =>
+        el.getAttribute("aria-label") ||
+        (el as HTMLElement).innerText?.trim().slice(0, 24) ||
+        el.tagName;
+      const others = [
+        ...header.querySelectorAll("a, button, input, select"),
+      ].filter((el) => {
+        const r = box(el);
+        return (
+          el !== toggle &&
+          r.width > 0 &&
+          r.height > 0 &&
+          getComputedStyle(el).visibility !== "hidden"
+        );
+      });
+      const sameRow = (r: DOMRect) => r.top < t.bottom && r.bottom > t.top;
+      return {
+        gapToRightEdge: Math.round(window.innerWidth - t.right),
+        onItsRight: others
+          .filter((el) => sameRow(box(el)) && box(el).left >= t.right - 1)
+          .map(label),
+        overlapping: others
+          .filter((el) => {
+            const r = box(el);
+            return sameRow(r) && r.left < t.right && r.right > t.left;
+          })
+          .map(label),
+      };
+    });
+
+// The switcher is always the top-right item of the header, for every role and
+// screen size, and never collides with other header controls.
+for (const [who, paths] of [
+  ["guest", ["/", "/jelajahi"]],
+  ["buyer", ["/", "/pesanan"]],
+  ["partner", ["/", "/partner/store"]],
+] as const) {
+  test(`the theme switcher is the top-right header item for ${who}`, async ({
+    page,
+  }) => {
+    if (who !== "guest") await signInAs(page, who);
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      for (const path of paths) {
+        await page.goto(path, { waitUntil: "networkidle" });
+        const where = `${who} ${path} @${width}px`;
+        await expect(
+          page.locator("header").first().locator("[data-theme-toggle]"),
+          where,
+        ).toBeVisible();
+        const layout = await switcherLayout(page);
+        expect(layout?.onItsRight, where).toEqual([]);
+        expect(layout?.overlapping, where).toEqual([]);
+        expect(layout?.gapToRightEdge, where).toBeGreaterThanOrEqual(0);
+        expect(layout?.gapToRightEdge, where).toBeLessThanOrEqual(48);
+      }
+    }
+  });
+}
+
+test("the theme switcher is a bordered circle, 44px on desktop and 40px on mobile", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const controls = await headerControls(page);
-  expect(controls.slice(-3)).toEqual([
-    "Masuk",
-    "Tema tampilan: Sistem",
-    "Daftar gratis",
-  ]);
   const toggle = page
     .getByRole("banner")
     .getByRole("button", { name: /^Tema tampilan/ });
@@ -96,47 +162,8 @@ test("the theme switcher sits right before Daftar gratis for guests", async ({
     parseFloat(getComputedStyle(el).borderTopLeftRadius),
   );
   expect(radius).toBeGreaterThanOrEqual(22);
-
   await page.setViewportSize({ width: 390, height: 844 });
-  expect((await headerControls(page)).slice(-3)).toEqual([
-    "Tema tampilan: Sistem",
-    "Masuk",
-    "Daftar gratis",
-  ]);
   expect(await toggle.boundingBox()).toMatchObject({ width: 40, height: 40 });
-});
-
-test("the theme switcher sits right before the avatar once signed in", async ({
-  page,
-}) => {
-  await page.route("**/api/auth/me", (route) =>
-    route.fulfill({
-      json: {
-        id: 1,
-        username: "rani",
-        name: "Rani Ayu",
-        email: "rani@example.com",
-        role: "buyer",
-      },
-    }),
-  );
-  await page.setViewportSize({ width: 1440, height: 900 });
-  for (const path of ["/", "/pesanan"]) {
-    await page.goto(path, { waitUntil: "domcontentloaded" });
-    const toggle = page
-      .getByRole("banner")
-      .getByRole("button", { name: /^Tema tampilan/ });
-    // The avatar shows the initials ("R" or "RA") once /api/auth/me resolves.
-    await expect
-      .poll(
-        () =>
-          toggle.evaluate(
-            (el) => el.nextElementSibling?.textContent?.trim() ?? "",
-          ),
-        { message: path },
-      )
-      .toMatch(/^R/);
-  }
 });
 
 for (const mode of ["light", "dark"] as const) {
