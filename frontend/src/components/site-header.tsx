@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HabisinLogo from "./habisin-logo";
+import ThemeToggle from "./theme-toggle";
 import styles from "./site-header.module.css";
 export type NavItem = {
   label: string;
@@ -7,15 +8,19 @@ export type NavItem = {
   onClick?: () => void;
   current?: boolean;
 };
+// TopNav in design.pen: logo, page content (search, location), page links,
+// `actions`, the theme switcher, then `end`, the last item (Daftar gratis or the avatar).
 export default function SiteHeader({
   nav = [{ label: "Jelajahi", href: "/jelajahi" }],
   actions,
+  end,
   children,
   navLabel = "Navigasi utama",
   className = "",
 }: {
   nav?: NavItem[];
   actions?: React.ReactNode;
+  end?: React.ReactNode;
   children?: React.ReactNode;
   navLabel?: string;
   className?: string;
@@ -48,7 +53,11 @@ export default function SiteHeader({
             )}
           </nav>
         )}
-        {actions && <div className={styles.actions}>{actions}</div>}
+        <div className={styles.actions}>
+          {actions}
+          <ThemeToggle />
+          {end}
+        </div>
       </div>
     </header>
   );
