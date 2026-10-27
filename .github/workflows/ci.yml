@@ -92,7 +92,9 @@ jobs:
         working-directory: frontend
         run: |
           npx playwright install --with-deps chromium
-          npm run test:e2e -- --trace retain-on-failure
+          # The backend rate-limits sign-ups, logins and geocoding, so a long run of
+          # tests can hit a 429 by timing alone; retried tests are still reported as flaky.
+          npm run test:e2e -- --trace retain-on-failure --retries=2
       - name: Upload server logs and Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
