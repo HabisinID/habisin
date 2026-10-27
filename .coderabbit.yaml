@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # AI review for every pull request. It complements, and never replaces, the
 # required review from a teammate.
-language: id-ID
 reviews:
   profile: chill
   request_changes_workflow: false
@@ -11,6 +10,9 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+  # Third-party files kept byte-for-byte for their SRI hashes.
+  path_filters:
+    - "!frontend/public/vendor/**"
   path_instructions:
     - path: "backend/**/*.py"
       instructions: |
