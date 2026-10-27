@@ -1,5 +1,6 @@
 "use client";
 import { MapPin, Search } from "lucide-react";
+import { Avatar } from "./profile-picture";
 import type { User } from "@/lib/api";
 import { designFont } from "@/lib/design-font";
 import { useBrowserLocation } from "@/hooks/use-browser-location";
@@ -83,11 +84,19 @@ export default function BuyerHeader({
                 aria-label={`Akun ${name}`}
                 onClick={onAccount}
               >
-                {initials(name)}
+                <Avatar
+                  src={user.profile_picture}
+                  name={name}
+                  fallback={initials(name)}
+                />
               </button>
             ) : (
               <span className={s.avatar} title={name}>
-                {initials(name)}
+                <Avatar
+                  src={user.profile_picture}
+                  name={name}
+                  fallback={initials(name)}
+                />
               </span>
             )}
             <LogoutButton onLogout={onLogout} />

@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 from tempfile import TemporaryDirectory
 
@@ -56,3 +57,17 @@ class ProfilePicturesTests(TestCase):
         response = self.client.patch("/api/auth/me", {"profile_picture": SimpleUploadedFile("fake.png", b"invalid")}, format="multipart")
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Profile.objects.get(user=self.user).profile_picture)
+
+    def test_store_photo_upload_preserves_workspace_fields_and_schedule(self):
+        hours = [{"day": day, "enabled": True, "sessions": [{"start": "08:00", "end": "20:00"}]} for day in range(7)]
+        response = self.client.patch(f"/api/partner/stores/{self.store.pk}", {
+            "profile_picture": photo(), "weekly_hours": json.dumps(hours),
+            "category": "Roti & kue", "landmark": "Dekat taman", "name": "Toko baru",
+        }, format="multipart")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.store.refresh_from_db()
+        self.assertEqual(self.store.weekly_hours, hours)
+        self.assertEqual(self.store.landmark, "Dekat taman")
+        self.assertEqual(self.store.category, "Roti & kue")
+        self.assertEqual(self.store.name, "Toko baru")
+        self.assertTrue(self.store.profile_picture)

@@ -1,5 +1,9 @@
 "use client";
 
+import ProfilePictureInput, {
+  pictureFormData,
+  pictureRequestBody,
+} from "./profile-picture";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Check, MapPin, Search, Plus, Trash2 } from "lucide-react";
@@ -66,9 +70,11 @@ export default function StoreForm({
     opening_time: store?.opening_time.slice(0, 5) || "08:00",
     closing_time: store?.closing_time.slice(0, 5) || "21:00",
   }));
+  const [pictureDirty, setPictureDirty] = useState(false);
   const [hours, setHours] = useState(() => storeSchedule(store));
   const initial = useRef(JSON.stringify({ fields, address, point, hours }));
   const dirty =
+    pictureDirty ||
     JSON.stringify({ fields, address, point, hours }) !== initial.current;
   const initialFields = useRef(fields);
   const changed =
@@ -164,20 +170,21 @@ export default function StoreForm({
       return;
     }
 
+    const body = pictureFormData(event.currentTarget);
     setSaving(true);
     setError("");
     try {
       const saved = await api<Store>(
         store ? `partner/stores/${store.id}` : "partner/stores",
         store ? "PATCH" : "POST",
-        {
+        pictureRequestBody(body, {
           ...fields,
           weekly_hours: hours,
           address: normalize(address),
           ...point,
           location_confirmed: confirmed,
           ...(token ? { geocode_token: token } : {}),
-        },
+        }),
       );
       onSaved(saved);
     } catch (e) {
@@ -207,6 +214,11 @@ export default function StoreForm({
         <fieldset disabled={saving} className={s.form}>
           <section id="store-identity" aria-label="Identitas toko">
             <h2>A · Identitas toko</h2>
+            <ProfilePictureInput
+              current={store?.profile_picture}
+              disabled={saving}
+              onDirtyChange={setPictureDirty}
+            />
             <label className={s.label}>
               Nama toko
               <input

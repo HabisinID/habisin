@@ -1,4 +1,5 @@
 "use client";
+import { Avatar } from "./profile-picture";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -166,7 +167,10 @@ export default function RoleWorkspace({
                   className={s.avatar}
                   aria-label={`Akun ${user.name || user.username}`}
                 >
-                  {(user.name || user.username).slice(0, 2).toUpperCase()}
+                  <Avatar
+                    src={user.profile_picture}
+                    name={user.name || user.username}
+                  />
                 </span>
                 <LogoutButton className={s.mobileLogout} onLogout={logout} />
               </>

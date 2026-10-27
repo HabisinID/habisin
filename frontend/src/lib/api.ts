@@ -1,4 +1,5 @@
 export type User = {
+  profile_picture?: string | null;
   id: number;
   username: string;
   name: string;
@@ -123,6 +124,7 @@ export type ModerationEntry = {
 };
 
 export type Store = {
+  profile_picture?: string | null;
   id: number;
   name: string;
   description: string;
