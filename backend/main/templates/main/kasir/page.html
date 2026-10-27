@@ -348,8 +348,10 @@
       scanStatus.textContent = "Arahkan QR di tiket pembeli ke kamera.";
       scanning = true;
       const tick = async () => {
-        if (!scanning) return;
+        if (!scanning || mine !== session) return;
         const text = (await read())?.trim().toUpperCase();
+        // A read can finish after this session closed, even if a new one has opened.
+        if (mine !== session) return;
         if (text && TICKET_CODE.test(text)) {
           scanner.close();
           boxes.forEach((box) => (box.value = ""));
