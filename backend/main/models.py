@@ -188,3 +188,26 @@ class ListingStockAction(models.Model):
     previous_stock = models.PositiveIntegerField()
     expires_at = models.DateTimeField()
     used = models.BooleanField(default=False)
+
+class PartnerApproval(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="partner_approval")
+    status = models.CharField(
+        max_length=20, 
+        default="pending", 
+        choices=[("pending", "Menunggu"), ("approved", "Disetujui"), ("rejected", "Ditolak")]
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.status}"
+
+class ModerationLog(models.Model):
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="moderation_logs")
+    action_type = models.CharField(max_length=50)
+    target_name = models.CharField(max_length=255)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.action_type}] oleh {self.admin_user} pada {self.created_at}"
