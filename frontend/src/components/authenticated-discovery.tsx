@@ -270,7 +270,7 @@ export default function AuthenticatedDiscovery({
         {/* design.pen: favourites are a filter chip on Jelajahi, not a TopNav link. */}
         {user && (
           <button
-            className={styles.chip}
+            className={`${styles.chip} inline-flex items-center gap-1.5`}
             aria-pressed={savedOnly}
             onClick={() => setSavedOnly(!savedOnly)}
           >
