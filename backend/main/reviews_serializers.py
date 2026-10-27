@@ -34,7 +34,14 @@ class ReviewWriteSerializer(serializers.ModelSerializer):
             store = reservation.listing.store_profile
             if store is None:
                 raise serializers.ValidationError({"reservation_id": "Pesanan ini belum terhubung ke profil toko."})
+            if self.instance is None and Review.objects.filter(
+                user=user, listing=reservation.listing
+            ).exists():
+                raise serializers.ValidationError({
+                    "reservation_id": "Kamu sudah mengulas makanan ini. Ubah ulasan yang sudah ada.",
+                })
             attrs["reservation"] = reservation
+            attrs["listing"] = reservation.listing
             attrs["store"] = store
             attrs["user"] = reservation.user
         elif self.instance is None:
@@ -48,19 +55,27 @@ class ReviewWriteSerializer(serializers.ModelSerializer):
 
 class ReviewPublicSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.first_name", read_only=True)
+    listing_id = serializers.IntegerField(read_only=True)
+    listing_name = serializers.CharField(source="listing.name", read_only=True)
 
     class Meta:
         model = Review
-        fields = ["id", "user_name", "rating", "comment", "created_at", "updated_at"]
+        fields = ["id", "listing_id", "listing_name", "user_name", "rating", "comment", "created_at", "updated_at"]
 
 
 class ReviewMineSerializer(serializers.ModelSerializer):
-    reservation_id = serializers.IntegerField(read_only=True)
+    reservation_id = serializers.IntegerField(read_only=True, allow_null=True)
+    listing_id = serializers.IntegerField(read_only=True)
+    listing_name = serializers.CharField(source="listing.name", read_only=True)
+    product_image = serializers.SerializerMethodField()
     store_name = serializers.CharField(source="store.name", read_only=True)
+
+    def get_product_image(self, review):
+        return review.listing.image_file.url if review.listing.image_file else review.listing.image
 
     class Meta:
         model = Review
-        fields = ["id", "reservation_id", "store_name", "rating", "comment", "created_at", "updated_at"]
+        fields = ["id", "reservation_id", "listing_id", "listing_name", "product_image", "store_name", "rating", "comment", "created_at", "updated_at"]
 
 
 class ComplaintWriteSerializer(serializers.ModelSerializer):
@@ -68,8 +83,13 @@ class ComplaintWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Complaint
-        fields = ["id", "reservation_id", "description", "status", "created_at"]
+        fields = ["id", "reservation_id", "reason", "description", "status", "created_at"]
         read_only_fields = ["id", "status", "created_at"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["reason"].required = True
+        return fields
 
     def validate_description(self, value):
         value = value.strip()
@@ -109,4 +129,4 @@ class ComplaintMineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Complaint
-        fields = ["id", "reservation_id", "store_name", "description", "status", "created_at"]
+        fields = ["id", "reservation_id", "store_name", "reason", "description", "status", "created_at"]

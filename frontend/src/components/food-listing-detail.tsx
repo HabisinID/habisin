@@ -13,6 +13,7 @@ import { designFont } from "@/lib/design-font";
 import { useReservationPolicy } from "@/hooks/use-reservation-policy";
 import ListingImage from "./listing-image";
 import { PickupProgress, PriceSticker } from "./food-post-card";
+import ProductReviewPrompt from "./product-review-prompt";
 import styles from "./food-discovery.module.css";
 export default function FoodListingDetail({
   item,
@@ -308,9 +309,12 @@ export default function FoodListingDetail({
             </section>
             <section className={styles.address}>
               <h2>Ulasan makanan</h2>
-              <p className={styles.muted}>
-                Belum ada data ulasan yang tersedia.
-              </p>
+              <ProductReviewPrompt
+                key={item.id}
+                listingId={item.id}
+                storeId={item.store_id ?? null}
+                user={user}
+              />
             </section>
           </aside>
           <div className={styles.information}>

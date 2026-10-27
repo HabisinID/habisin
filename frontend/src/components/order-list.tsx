@@ -12,7 +12,7 @@ import {
   timeLeft,
 } from "@/lib/orders";
 import { OrderSkeleton } from "./order-shell";
-import BuyerFeedback from "./buyer-feedback";
+import { OrderFeedbackActions } from "./buyer-feedback";
 import { errorClass, primaryButton } from "./store-ui";
 
 const statusBadge: Record<Reservation["status"], string> = {
@@ -191,6 +191,11 @@ function HistoryCard({
       >
         Hapus dari riwayat
       </button>
+      {order.status === "picked_up" && (
+        <div className="basis-full border-t border-line pt-4">
+          <OrderFeedbackActions order={order} />
+        </div>
+      )}
     </li>
   );
 }
@@ -370,7 +375,6 @@ export default function OrderList() {
               </ul>
             )}
           </div>
-          <BuyerFeedback orders={shown} />
           {tab === "active" && (
             <p className="mt-4 text-sm text-muted">
               Pesanan yang selesai diambil, dibatalkan, atau kedaluwarsa pindah

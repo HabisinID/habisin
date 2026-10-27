@@ -191,7 +191,8 @@ class ListingStockAction(models.Model):
 
 
 class Review(models.Model):
-    reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, related_name="review")
+    reservation = models.ForeignKey(Reservation, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviews")
+    listing = models.ForeignKey(Listing, on_delete=models.PROTECT, related_name="reviews")
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_reviews")
     rating = models.PositiveSmallIntegerField()
@@ -201,15 +202,25 @@ class Review(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
-        constraints = [models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="review_rating_between_1_5")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="review_rating_between_1_5"),
+            models.UniqueConstraint(fields=["user", "listing"], name="review_user_product_unique"),
+        ]
 
 
 class Complaint(models.Model):
     STATUS_CHOICES = [("open", "Terbuka"), ("reviewed", "Ditinjau"), ("resolved", "Selesai")]
+    REASON_CHOICES = [
+        ("hygiene", "Masalah kebersihan"),
+        ("freshness", "Makanan basi atau tidak segar"),
+        ("mismatch", "Makanan tidak sesuai pesanan"),
+        ("other", "Masalah lainnya"),
+    ]
 
     reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, related_name="complaint")
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="complaints")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_complaints")
+    reason = models.CharField(max_length=12, choices=REASON_CHOICES, default="other")
     description = models.TextField(max_length=2000)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
     created_at = models.DateTimeField(auto_now_add=True)

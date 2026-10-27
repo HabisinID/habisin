@@ -14,6 +14,7 @@ export default function StoreReviews({
 }) {
   const [data, setData] = useState<StoreReviewsData | null>(null);
   const [error, setError] = useState("");
+  const [visibleCount, setVisibleCount] = useState(4);
 
   useEffect(() => {
     let active = true;
@@ -38,7 +39,7 @@ export default function StoreReviews({
         </h2>
         {data && (
           <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Star size={17} fill="currentColor" className="text-amber-500" />
+            <Star size={17} fill="currentColor" className="text-warning" />
             <strong className="text-dark">
               {data.average_rating === null
                 ? "Belum ada rating"
@@ -62,7 +63,7 @@ export default function StoreReviews({
         </p>
       ) : (
         <ul className="divide-y divide-line rounded-xl border border-line">
-          {data.reviews.map((review) => (
+          {data.reviews.slice(0, visibleCount).map((review) => (
             <li className="space-y-2 p-4" key={review.id}>
               <div className="flex items-center justify-between gap-3">
                 <strong className="text-sm">
@@ -75,11 +76,14 @@ export default function StoreReviews({
                   <Star
                     size={15}
                     fill="currentColor"
-                    className="text-amber-500"
+                    className="text-warning"
                   />
                   {review.rating}/5
                 </span>
               </div>
+              <p className="text-xs font-semibold text-brand">
+                Produk: {review.listing_name}
+              </p>
               {review.comment && (
                 <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">
                   {review.comment}
@@ -98,6 +102,14 @@ export default function StoreReviews({
             </li>
           ))}
         </ul>
+      )}
+      {data && data.reviews.length > visibleCount && (
+        <button
+          className="text-sm font-semibold text-brand underline-offset-4 hover:underline"
+          onClick={() => setVisibleCount((count) => count + 4)}
+        >
+          Lihat ulasan lainnya
+        </button>
       )}
     </section>
   );
