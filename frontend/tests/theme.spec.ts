@@ -44,6 +44,7 @@ test("the theme switcher cycles Sistem, Terang, Gelap and remembers the choice",
     .getByRole("banner")
     .getByRole("button", { name: /^Tema tampilan/ });
   await expect(toggle).toHaveAccessibleName("Tema tampilan: Sistem");
+  await page.waitForLoadState("networkidle");
   await toggle.click();
   await expect(toggle).toHaveAccessibleName("Tema tampilan: Terang");
   expect(await theme(page)).toBe("light");
@@ -103,7 +104,7 @@ test("the theme switcher sits right before Daftar gratis for guests", async ({
     "Masuk",
     "Daftar gratis",
   ]);
-  expect(await toggle.boundingBox()).toMatchObject({ width: 40, height: 40 });
+  expect(await toggle.boundingBox()).toMatchObject({ width: 44, height: 44 });
 });
 
 test("the theme switcher sits right before the avatar once signed in", async ({

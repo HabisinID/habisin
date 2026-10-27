@@ -11,16 +11,14 @@ import {
 } from "./backend-fixtures";
 
 async function openFormDetails(page: Page) {
-  const details = page.locator("details").filter({
-    has: page
-      .locator("summary")
-      .filter({ hasText: "Detail toko & informasi makanan" }),
-  });
-  if (!(await details.evaluate((el) => (el as HTMLDetailsElement).open)))
-    await details.locator("summary").click();
+  await expect(
+    page.getByRole("heading", { name: "Detail toko & informasi makanan" }),
+  ).toBeVisible();
 }
 async function finishPublished(page: Page) {
-  await expect(page.getByText("Listing berhasil ditayangkan.")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByText("Listing berhasil ditayangkan."),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Kembali ke listing", exact: true })
     .click();
@@ -81,12 +79,11 @@ test("partner CRUD validates, updates the catalog, and preserves ownership", asy
   try {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await expect(
       page.getByText("Belum ada listing.", { exact: true }),
     ).toBeVisible();
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);
@@ -106,14 +103,14 @@ test("partner CRUD validates, updates the catalog, and preserves ownership", asy
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Listing", exact: true }),
+      page.getByRole("button", { name: "Tambah listing", exact: true }),
     ).toBeFocused();
     expect(
       (await (await page.request.get("/api/listings")).json()).some(
         (row: { id: number }) => row.id === item.id,
       ),
     ).toBe(true);
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await page
       .getByRole("button", { name: `Ubah ${name}`, exact: true })
       .click();
@@ -127,31 +124,41 @@ test("partner CRUD validates, updates the catalog, and preserves ownership", asy
       page.getByText("Perubahan listing berhasil disimpan."),
     ).toBeVisible();
     await page
-      .getByRole("button", { name: `Nonaktifkan ${updatedName}`, exact: true })
+      .getByRole("switch", { name: `Nonaktifkan ${updatedName}`, exact: true })
       .click();
+    await page.getByRole("button", { name: "Batal" }).click();
+    await expect(page.getByRole("switch")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await page
-      .getByRole("group", { name: "Konfirmasi aksi listing" })
-      .getByRole("button", { name: "Batal" })
-      .click();
-    await expect(page.getByText("Aktif", { exact: true })).toBeVisible();
-    await page
-      .getByRole("button", { name: `Nonaktifkan ${updatedName}`, exact: true })
+      .getByRole("switch", { name: `Nonaktifkan ${updatedName}`, exact: true })
       .click();
     await page.getByRole("button", { name: "Ya, nonaktifkan" }).click();
-    await expect(page.getByText("Nonaktif", { exact: true })).toBeVisible();
+    await expect(page.getByRole("switch")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     expect(
       (await (await page.request.get("/api/listings")).json()).some(
         (row: { id: number }) => row.id === item.id,
       ),
     ).toBe(false);
     await page
-      .getByRole("button", { name: `Aktifkan ${updatedName}`, exact: true })
+      .getByRole("switch", { name: `Aktifkan ${updatedName}`, exact: true })
       .click();
-    await expect(page.getByText("Listing diaktifkan.")).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: `${updatedName} ditayangkan.` }),
+    ).toBeVisible();
     await page
       .getByRole("button", { name: `Hapus ${updatedName}`, exact: true })
       .click();
-    await page.getByRole("button", { name: "Ya, hapus" }).click();
+    await page.getByRole("dialog").getByRole("checkbox").check();
+    await page
+      .getByRole("button", { name: "Hapus permanen", exact: true })
+      .click();
     await expect(
       page.getByText("Belum ada listing.", { exact: true }),
     ).toBeVisible();
@@ -180,19 +187,22 @@ test("mobile inventory handles loading, server failure, retry, and a free listin
   });
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await expect(page.getByText("Memuat listing…")).toBeVisible();
     release();
-    await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-      "Inventaris sementara tidak tersedia.",
-    );
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Inventaris sementara tidak tersedia." }),
+    ).toContainText("Inventaris sementara tidak tersedia.");
     await page.unroute("**/api/partner/listings");
-    await page.getByRole("button", { name: "Coba lagi", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Coba lagi listing", exact: true })
+      .click();
     await expect(
       page.getByText("Belum ada listing.", { exact: true }),
     ).toBeVisible();
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);
@@ -203,9 +213,7 @@ test("mobile inventory handles loading, server failure, retry, and a free listin
     await page.getByRole("button", { name: "Tayangkan listing" }).click();
     await finishPublished(page);
     await expect(
-      page
-        .getByRole("dialog")
-        .getByRole("cell", { name: "Harga: Gratis", exact: true }),
+      page.getByRole("cell").filter({ hasText: "Gratis" }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -214,8 +222,8 @@ test("mobile inventory handles loading, server failure, retry, and a free listin
     ).toBe(true);
     expect(
       await page
-        .getByRole("dialog")
-        .evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth),
+        .locator("main")
+        .evaluate((main) => main.scrollWidth <= main.clientWidth),
     ).toBe(true);
     await page.screenshot({ path: "/tmp/habisin-module3-mobile.png" });
   } finally {
@@ -225,54 +233,60 @@ test("mobile inventory handles loading, server failure, retry, and a free listin
   }
 });
 
-test("reserved listings show edit/delete conflicts and can still be deactivated", async ({
+test("reserved listing fields and delete are locked, remaining stock and deactivate still work", async ({
   page,
   request,
 }) => {
-  const stores = await register(page.request, "partner");
-  const data = { ...listing(`Reserved ${Date.now()}`), store_id: stores[0].id };
-  const created = await mutate(page.request, "partner/listings", data);
-  expect(created.status()).toBe(201);
-  const item = await created.json();
+  const stores = await register(page.request, "partner", 1);
+  const item = await (
+    await mutate(page.request, "partner/listings", {
+      ...listing(`Reserved ${Date.now()}`),
+      store_id: stores[0].id,
+    })
+  ).json();
   await register(request, "buyer");
+  const order = await (
+    await mutate(request, "reservations", { listing_id: item.id, quantity: 1 })
+  ).json();
+  await page.goto("/partner/listings");
+  await page
+    .getByRole("button", { name: `Hapus ${item.name}`, exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("checkbox").check();
+  await expect(
+    dialog.getByRole("button", { name: "Hapus permanen", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: `Ubah ${item.name}`, exact: true })
+    .click();
+  await expect(page.getByLabel("Harga sekarang (Rp)")).toBeDisabled();
+  await expect(page.getByLabel("Toko penjual", { exact: true })).toBeDisabled();
+  await page.getByLabel("Jumlah porsi", { exact: true }).fill("2");
+  await page
+    .getByRole("button", { name: "Simpan perubahan", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("switch").click();
+  await page.getByRole("button", { name: "Ya, nonaktifkan" }).click();
+  await expect(page.getByRole("switch")).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
   expect(
     (
-      await mutate(request, "reservations", {
-        listing_id: item.id,
-        quantity: 1,
-      })
+      await mutate(
+        page.request,
+        `partner/listings/${item.id}`,
+        { price: 5000 },
+        "PATCH",
+      )
     ).status(),
-  ).toBe(201);
-  try {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
-    await page
-      .getByRole("button", { name: `Hapus ${data.name}`, exact: true })
-      .click();
-    await page.getByRole("button", { name: "Ya, hapus" }).click();
-    await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-      "Listing memiliki riwayat pesanan",
-    );
-    await page
-      .getByRole("button", { name: `Ubah ${data.name}`, exact: true })
-      .click();
-    await page.getByLabel("Harga sekarang (Rp)").fill("5000");
-    await page
-      .getByRole("button", { name: "Simpan perubahan", exact: true })
-      .click();
-    await expect(page.locator("#listing-price-error")).toHaveText(
-      "Tidak dapat diubah selama ada pesanan aktif.",
-    );
-    await page.getByRole("button", { name: "Kembali ke listing" }).click();
-    await page
-      .getByRole("button", { name: `Nonaktifkan ${data.name}`, exact: true })
-      .click();
-    await page.getByRole("button", { name: "Ya, nonaktifkan" }).click();
-    await expect(page.getByText("Listing dinonaktifkan.")).toBeVisible();
-  } finally {
-    await mutate(request, "auth/me", { password }, "DELETE");
-    await cleanup(page.request);
-  }
+  ).toBe(400);
+  await mutate(request, `reservations/${order.id}/cancel`);
+  await cleanup(request);
+  await cleanup(page.request);
 });
 
 test("store selection is explicit and pickup location follows the selected branch", async ({
@@ -281,9 +295,8 @@ test("store selection is explicit and pickup location follows the selected branc
   const stores = await register(page.request, "partner");
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);
@@ -322,9 +335,8 @@ test("store loading failures, empty options, and retry preserve the listing draf
   );
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);
@@ -388,14 +400,8 @@ for (const [fixture, mobile] of [
         mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
       );
       await page.goto("/");
+      await page.goto("/partner/listings");
       await page
-        .getByRole("button", {
-          name: "Listing",
-          exact: true,
-        })
-        .click();
-      await page
-        .getByRole("dialog")
         .getByRole("button", { name: "Tambah listing", exact: true })
         .click();
       await openFormDetails(page);
@@ -583,9 +589,8 @@ test("crop cancel, upload retry and URL replacement keep drafts intact", async (
   await register(page.request, "partner");
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);
@@ -652,9 +657,8 @@ test("photo source checks reject animation, oversize and undersized crops before
   await register(page.request, "partner", 1);
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Listing", exact: true }).click();
+    await page.goto("/partner/listings");
     await page
-      .getByRole("dialog")
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
     await openFormDetails(page);

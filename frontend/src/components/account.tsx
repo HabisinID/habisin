@@ -4,7 +4,7 @@ import { ArrowRight, Eye, EyeOff, Leaf, ShieldCheck } from "lucide-react";
 import Modal from "./modal";
 import { api, type User } from "@/lib/api";
 
-function PasswordInput(props: Omit<ComponentProps<"input">, "type">) {
+export function PasswordInput(props: Omit<ComponentProps<"input">, "type">) {
   const [visible, setVisible] = useState(false);
   return (
     <span className="relative block">

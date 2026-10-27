@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import CancellationNotice from "./cancellation-notice";
 import { useEffect, useState } from "react";
 import { ShoppingBag, Ticket } from "lucide-react";
 import { rupiah, type Reservation } from "@/lib/api";
@@ -31,7 +32,10 @@ const legend: [Reservation["status"], string][] = [
     "picked_up",
     "Kasir sudah memverifikasi kodemu. Ulasan bisa dikirim setelahnya.",
   ],
-  ["cancelled", "Kamu membatalkan pesanan. Porsi dikembalikan ke toko."],
+  [
+    "cancelled",
+    "Pesanan dibatalkan oleh pembeli atau mitra. Porsi dikembalikan ke toko.",
+  ],
   ["expired", "Tidak diambil sampai batas ambil. Porsi kembali ke toko."],
 ];
 
@@ -182,6 +186,7 @@ function HistoryCard({
             timeZone: "Asia/Jakarta",
           })}
         </p>
+        <CancellationNotice order={order} />
       </div>
       <button
         className="text-sm font-semibold text-muted hover:text-dark"
@@ -202,18 +207,29 @@ export default function OrderList() {
   const [now, setNow] = useState(0);
   useEffect(() => {
     let active = true;
-    orderApi
-      .list()
-      .then((data) => {
-        if (!active) return;
-        setOrders(data);
-        setNow(Date.now());
-      })
-      .catch((e) => active && setError(e.message));
+    const refresh = () => {
+      void orderApi
+        .list()
+        .then((data) => {
+          if (active) {
+            setOrders(data);
+            setNow(Date.now());
+            setError("");
+          }
+        })
+        .catch((e) => {
+          if (active) setError(e.message);
+        });
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    const polling = setInterval(refresh, 15000);
     // Pickup countdowns and the sumbu bar re-render once a minute.
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => {
       active = false;
+      window.removeEventListener("focus", refresh);
+      clearInterval(polling);
       clearInterval(timer);
     };
   }, []);

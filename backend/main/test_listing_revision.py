@@ -211,6 +211,8 @@ class LinkedListingTests(TestCase):
     def test_store_delete_conflicts_and_account_delete_keeps_ticket_snapshot(self):
         order = self.reserve()
         self.assertEqual(self.client.delete(f"/api/partner/stores/{self.a.pk}", {"confirmation_name": self.a.name}, format="json").status_code, 409)
+        self.assertEqual(self.client.delete("/api/auth/me", {"password": "Linked-Secure-927!"}, format="json").status_code, 409)
+        Reservation.objects.filter(pk=order["id"]).update(status="picked_up")
         self.assertEqual(self.client.delete("/api/auth/me", {"password": "Linked-Secure-927!"}, format="json").status_code, 204)
         self.assertFalse(Store.objects.filter(owner_id=self.partner.pk).exists())
         self.item.refresh_from_db()

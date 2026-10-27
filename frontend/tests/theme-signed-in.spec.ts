@@ -63,12 +63,9 @@ for (const mode of ["light", "dark"] as const) {
       try {
         await page.goto("/");
         await checkContrast(page, mode, "mitra · dasbor");
-        await page
-          .getByRole("button", { name: "Listing", exact: true })
-          .click();
+        await page.goto("/partner/listings");
         await checkContrast(page, mode, "mitra · kelola listing");
         await page
-          .getByRole("dialog")
           .getByRole("button", { name: "Tambah listing", exact: true })
           .click();
         await checkContrast(page, mode, "mitra · tambah listing");

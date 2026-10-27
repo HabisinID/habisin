@@ -17,6 +17,7 @@ export default function SiteHeader({
   children,
   navLabel = "Navigasi utama",
   className = "",
+  showLogo = true,
 }: {
   nav?: NavItem[];
   actions?: React.ReactNode;
@@ -24,11 +25,12 @@ export default function SiteHeader({
   children?: React.ReactNode;
   navLabel?: string;
   className?: string;
+  showLogo?: boolean;
 }) {
   return (
     <header className={`${styles.header} ${className}`}>
       <div className={styles.inner}>
-        <HabisinLogo />
+        {showLogo && <HabisinLogo />}
         {children}
         {nav.length > 0 && (
           <nav aria-label={navLabel} className={styles.nav}>

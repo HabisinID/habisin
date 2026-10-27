@@ -13,7 +13,7 @@ class ListingConflict(APIException):
 
 def available_listings(queryset=None):
     queryset = Listing.objects.all() if queryset is None else queryset
-    return queryset.filter(active=True, stock__gt=0, pickup_end__gt=timezone.now()).filter(
+    return queryset.filter(active=True, stock__gt=0, pickup_end__gt=timezone.now(), moderated_at__isnull=True, deleted_at__isnull=True).filter(
         Q(store_profile__isnull=True) | Q(store_profile__is_open=True)
     )
 
@@ -34,3 +34,13 @@ def lock_listing(pk, owner=None, target_store_id=None):
     if item.store_profile_id:
         item.store_profile = stores[item.store_profile_id]
     return item
+
+
+def ensure_partner_listing_mutable(item):
+    if item.deleted_at:
+        from django.http import Http404
+        raise Http404("Listing sudah dihapus.")
+    if item.moderated_at:
+        raise ListingConflict("Listing diturunkan admin dan terkunci. " + item.moderation_reason)
+    if item.store_profile_id and item.store_profile.closed_at:
+        raise ListingConflict("Toko ditutup permanen; listing tidak dapat diubah.")

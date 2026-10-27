@@ -23,7 +23,6 @@ import PartnerListings from "@/components/partner-listings";
 import BuyerHeader from "@/components/buyer-header";
 import SiteHeader from "@/components/site-header";
 import { orderApi } from "@/lib/orders";
-import PartnerDashboard from "@/components/partner-dashboard";
 import { api, type Listing, type User } from "@/lib/api";
 import demo from "@/lib/demo.json";
 import ListingDeepLink from "@/components/listing-deep-link";
@@ -69,6 +68,15 @@ export default function Home() {
   const pathname = usePathname();
   const guestExplore = pathname === "/jelajahi";
   const [user, setUser] = useState<User | null>(null);
+  useEffect(() => {
+    if (
+      pathname !== "/" ||
+      new URLSearchParams(window.location.search).has("listing")
+    )
+      return;
+    if (user?.role === "partner") router.replace("/partner");
+    else if (user?.role === "admin") router.replace("/admin");
+  }, [user, router, pathname]);
   const {
     items,
     setItems,
@@ -107,9 +115,8 @@ export default function Home() {
   }, [favoritesSnapshot]);
   const [buyerQuery, setBuyerQuery] = useState("");
   const [buyerFavorites, setBuyerFavorites] = useState(false);
-  const [partnerRevision, setPartnerRevision] = useState(0);
-  const [partnerCopy, setPartnerCopy] = useState(false);
-  const [partnerStart, setPartnerStart] = useState(false);
+  const [partnerCopy] = useState(false);
+  const [partnerStart] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -258,17 +265,14 @@ export default function Home() {
       setPanel("login");
       return;
     }
+    if (user.role === "partner" || user.role === "admin") {
+      router.push(user.role === "partner" ? "/partner" : "/admin");
+      return;
+    }
     setDashboardError("");
     setPanel("partner");
-    if (user?.role === "admin")
-      api<{ users: number | null; listings: number; message: string }>(
-        "dashboard",
-      )
-        .then(setDashboard)
-        .catch((e) => setDashboardError(e.message));
   }
   function updateCatalog(item: Listing | null, id: number) {
-    setPartnerRevision((n) => n + 1);
     refresh();
     setItems((current) => {
       const remaining = current.filter((row) => row.id !== id);
@@ -366,32 +370,10 @@ export default function Home() {
       )}
 
       <main>
-        {user?.role === "partner" && !selected ? (
-          <div hidden={panel === "partner" || panel === "profile"}>
-            <PartnerDashboard
-              user={user}
-              now={now}
-              revision={partnerRevision}
-              onListings={() => {
-                setPartnerStart(false);
-                setPartnerCopy(false);
-                setPanel("partner");
-              }}
-              onAdd={() => {
-                setPartnerStart(true);
-                setPartnerCopy(false);
-                setPanel("partner");
-              }}
-              onCopy={() => {
-                setPartnerStart(true);
-                setPartnerCopy(true);
-                setPanel("partner");
-              }}
-              onAccount={() => setPanel("profile")}
-              onLogout={signOut}
-              onChanged={updateCatalog}
-            />
-          </div>
+        {user?.role === "partner" && !guestExplore && !selected ? (
+          <p role="status" className="p-6">
+            Membuka ruang kerja mitra…
+          </p>
         ) : user || guestExplore || selected ? (
           <>
             <div hidden={!!selected}>
@@ -488,7 +470,7 @@ export default function Home() {
           onUser={(newUser) => {
             setUser(newUser);
             setNotice(`Selamat datang, ${newUser.name}!`);
-            if (newUser.role === "partner") router.push("/partner/store");
+            if (newUser.role === "partner") router.push("/partner");
           }}
         />
       )}

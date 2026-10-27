@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import CancellationNotice from "./cancellation-notice";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, LoaderCircle } from "lucide-react";
@@ -81,6 +82,7 @@ export default function OrderPayment({ id }: { id: string }) {
   return (
     <main className="grid min-h-[calc(100vh-64px)] grid-cols-[1fr_520px] compact:grid-cols-1">
       <section className="px-20 py-12 compact:px-8 tablet:px-4 tablet:py-6">
+        <CancellationNotice order={order} />
         <Link
           href={`/pesanan/${order.id}`}
           className="inline-flex items-center gap-2 text-sm font-bold text-brand"
@@ -120,6 +122,11 @@ export default function OrderPayment({ id }: { id: string }) {
               </p>
               <h2 className="mt-2 text-2xl font-bold">{listing.store}</h2>
               <p className="mt-1 text-sm text-muted">{listing.address}</p>
+              {listing.store_summary?.landmark && (
+                <p className="text-sm text-muted">
+                  Patokan: {listing.store_summary.landmark}
+                </p>
+              )}
             </div>
             <div className="text-right tablet:text-left">
               <p className="font-mono text-xs tracking-widest text-muted uppercase">

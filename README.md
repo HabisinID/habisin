@@ -7,6 +7,8 @@ Web app berbasis peta interaktif (map-first progressive web app) yang mempertemu
 **Kategori:** Web App Berbasis Peta Interaktif (Map-First PWA)
 **Domain Masalah:** Food Waste Management, Environmental Sustainability
 
+Ruang kerja mitra, pesanan, profil cabang, dan moderasi minimum: [cakupan/API/batas fitur](docs/partner-workspace-revision.md).
+
 **Mulai di sini:** [Setup lokal](#menjalankan-demo-lokal) · [Konfigurasi](#konfigurasi-environment) · [Verifikasi](#verifikasi) · [Troubleshooting](#troubleshooting)
 
 ---

@@ -4,7 +4,11 @@
 .map :global(.habisin-map-popup .leaflet-popup-content-wrapper) {
   border-radius: 12px;
   box-shadow: 0 3px 14px #00000066;
+  background: var(--color-surface);
   color: var(--color-dark);
+}
+.map :global(.habisin-map-popup .leaflet-popup-tip) {
+  background: var(--color-surface);
 }
 .map :global(.habisin-map-popup .leaflet-popup-content) {
   margin: 14px 16px;

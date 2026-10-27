@@ -60,7 +60,16 @@ export async function register(
         longitude,
         description: "Dapur roti surplus",
         opening_time: "08:00",
-        closing_time: "23:00",
+        // Keep the test store open beyond now, including runs after 23:00 WIB.
+        closing_time: new Date(Date.now() + 4 * 3600000).toLocaleTimeString(
+          "en-GB",
+          {
+            timeZone: "Asia/Jakarta",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          },
+        ),
         location_confirmed: true,
         geocode_token: token,
       });

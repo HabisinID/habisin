@@ -6,6 +6,7 @@ import { api, ApiError, type User } from "@/lib/api";
 import { designFont } from "@/lib/design-font";
 import { useBrowserLocation } from "@/hooks/use-browser-location";
 import SiteHeader from "./site-header";
+import LogoutButton from "./logout-button";
 import { errorClass, primaryButton } from "./store-ui";
 import s from "./workspace.module.css";
 
@@ -95,7 +96,7 @@ export default function OrderShell({
   return (
     <>
       <SiteHeader
-        className={designFont.className}
+        className={`${designFont.className} compact-header`}
         navLabel="Navigasi pembeli"
         nav={[
           { label: "Beranda", href: "/" },
@@ -104,9 +105,12 @@ export default function OrderShell({
         ]}
         end={
           user && (
-            <span className={s.avatar} title={name}>
-              {initials}
-            </span>
+            <>
+              <span className={s.avatar} title={name}>
+                {initials}
+              </span>
+              <LogoutButton />
+            </>
           )
         }
       >
@@ -120,9 +124,19 @@ export default function OrderShell({
             placeholder="Cari roti, nasi, atau nama toko"
           />
         </form>
-        <button className={s.location} onClick={locate} disabled={locating}>
+        <button
+          className={`${s.location} header-location`}
+          aria-label={
+            locating ? "Mencari lokasi…" : `${location} · Pakai lokasiku`
+          }
+          title={location}
+          onClick={locate}
+          disabled={locating}
+        >
           <MapPin size={16} />
-          {locating ? "Mencari lokasi…" : `${location} · Pakai lokasiku`}
+          <span className="header-location-text">
+            {locating ? "Mencari lokasi…" : location}
+          </span>
         </button>
       </SiteHeader>
       {notice && (

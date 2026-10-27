@@ -41,35 +41,47 @@ async function mockApi(page: Page, user: typeof partner | null = partner) {
       json: { results: [result], geocode_token: "test-geocode-token" },
     });
   });
-  await page.route(/\/api\/partner\/stores(?:\/\d+)?$/, async (route) => {
-    const request = route.request();
-    const id = Number(new URL(request.url()).pathname.split("/")[4]);
-    if (request.method() === "GET")
-      return route.fulfill({
-        json: id ? stores.get(id) : { stores: [...stores.values()] },
+  await page.route(
+    /\/api\/partner\/stores(?:\/\d+)?(?:\/close)?$/,
+    async (route) => {
+      const request = route.request();
+      const id = Number(new URL(request.url()).pathname.split("/")[4]);
+      if (request.method() === "GET")
+        return route.fulfill({
+          json: id ? stores.get(id) : { stores: [...stores.values()] },
+        });
+      const data = request.postDataJSON();
+      writes.push({ method: request.method(), data });
+      if (request.url().endsWith("/close")) {
+        store = {
+          ...stores.get(id)!,
+          is_open: false,
+          closed_at: new Date().toISOString(),
+        };
+        stores.set(id, store);
+        return route.fulfill({ json: store });
+      }
+      if (request.method() === "DELETE") {
+        expect(data.confirmation_name).toBe(stores.get(id)?.name);
+        stores.delete(id);
+        store = null;
+        return route.fulfill({ status: 204 });
+      }
+      store = {
+        id: id || nextId++,
+        created_at: "2026-10-22T00:00:00Z",
+        updated_at: "2026-10-22T00:00:00Z",
+        is_open: true,
+        ...(id ? stores.get(id) : {}),
+        ...data,
+      } as Store;
+      stores.set(store.id, store);
+      await route.fulfill({
+        status: request.method() === "POST" ? 201 : 200,
+        json: store,
       });
-    const data = request.postDataJSON();
-    writes.push({ method: request.method(), data });
-    if (request.method() === "DELETE") {
-      expect(data.confirmation_name).toBe(stores.get(id)?.name);
-      stores.delete(id);
-      store = null;
-      return route.fulfill({ status: 204 });
-    }
-    store = {
-      id: id || nextId++,
-      created_at: "2026-10-22T00:00:00Z",
-      updated_at: "2026-10-22T00:00:00Z",
-      is_open: true,
-      ...(id ? stores.get(id) : {}),
-      ...data,
-    } as Store;
-    stores.set(store.id, store);
-    await route.fulfill({
-      status: request.method() === "POST" ? 201 : 200,
-      json: store,
-    });
-  });
+    },
+  );
   await page.route("**/api/stores/*", (route) =>
     route.fulfill(
       store ? { json: store } : { status: 404, json: { detail: "Not found" } },
@@ -80,27 +92,28 @@ async function mockApi(page: Page, user: typeof partner | null = partner) {
 async function start(page: Page) {
   await page.goto("/partner/store");
   await page
-    .getByRole("button", { name: "Daftarkan toko", exact: true })
+    .getByRole("button", { name: "Daftarkan toko pertama", exact: true })
     .click();
   await page.getByLabel("Nama toko", { exact: true }).fill("Dapur Berkah");
   await page
     .getByLabel("Deskripsi toko")
     .fill("Masakan rumahan segar untuk tetangga.");
-  await page.getByLabel("Alamat toko", { exact: true }).fill(address);
+  await page.getByLabel("Alamat lengkap", { exact: true }).fill(address);
+  await page.getByRole("radio", { name: "Roti & kue", exact: true }).check();
 }
 async function confirm(page: Page) {
-  await page.getByRole("button", { name: "Cari alamat di peta" }).click();
+  await page.getByRole("button", { name: "Cari lokasi toko" }).click();
   await expect(
     page.getByRole("region", { name: "Peta konfirmasi posisi toko" }),
   ).toBeVisible();
   await page.getByRole("checkbox", { name: "Saya sudah memastikan" }).check();
 }
 
-test("partner creates, edits, closes, reopens, and deletes a store", async ({
+test("partner creates, edits, temporarily closes, reopens and permanently closes store", async ({
   page,
 }) => {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (e) => errors.push(e.message));
   const api = await mockApi(page);
   await start(page);
   await expect(
@@ -121,55 +134,47 @@ test("partner creates, edits, closes, reopens, and deletes a store", async ({
     .getByRole("button", { name: "Daftarkan toko", exact: true })
     .click();
   await expect(
-    page
-      .locator("main")
-      .getByRole("status")
-      .filter({ hasNotText: "Memuat peta" }),
-  ).toContainText("sudah terdaftar");
+    page.getByText(
+      "Data toko berhasil diperbarui. Perubahan tampil ke pembeli.",
+    ),
+  ).toBeVisible();
   expect(api.store()?.latitude).toBe(-6.361);
   expect(api.writes[0].data.geocode_token).toBe("test-geocode-token");
-  expect(api.writes[0].data.location_confirmed).toBe(true);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { name: "Dapur Berkah", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Edit toko", exact: true }).click();
+  await page.reload();
+  await expect(page.getByLabel("Nama toko", { exact: true })).toHaveValue(
+    "Dapur Berkah",
+  );
   await page.getByLabel("Nama toko", { exact: true }).fill("Dapur Tetangga");
-  await page.getByLabel("Jam buka (WIB)").fill("22:00");
-  await page.getByLabel("Jam tutup (WIB)").fill("04:00");
+  await page.getByLabel("Jam buka Senin sesi 1", { exact: true }).fill("22:00");
   await page
-    .getByLabel("Alamat toko", { exact: true })
+    .getByLabel("Jam tutup Senin sesi 1", { exact: true })
+    .fill("04:00");
+  await page.getByRole("button", { name: "Salin ke semua hari" }).click();
+  await page
+    .getByLabel("Alamat lengkap", { exact: true })
     .fill("Jalan Melati 22, Depok");
   await expect(
     page.getByRole("button", { name: "Simpan perubahan toko" }),
   ).toBeDisabled();
-  await expect(
-    page.getByRole("region", { name: "Peta konfirmasi posisi toko" }),
-  ).toHaveCount(0);
   await confirm(page);
   await page.getByRole("button", { name: "Simpan perubahan toko" }).click();
   await expect(
-    page
-      .locator("main")
-      .getByRole("status")
-      .filter({ hasNotText: "Memuat peta" }),
-  ).toContainText("berhasil diperbarui");
-  expect(api.lookups()).toBe(2);
-  expect(api.store()?.address).toBe("Jalan Melati 22, Depok");
-  await expect(
-    page.getByText(/22:00–04:00 WIB \(hari berikutnya\)/),
+    page.getByText(
+      "Data toko berhasil diperbarui. Perubahan tampil ke pembeli.",
+    ),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Tutup toko sementara" }).click();
+  expect(api.lookups()).toBe(2);
+  expect(api.store()?.weekly_hours?.[0].sessions[0].end).toBe("04:00");
+  await page
+    .getByRole("button", { name: "Tutup sementara", exact: true })
+    .click();
   await expect(
-    page.getByText("Toko ditutup sementara", { exact: true }),
+    page.getByRole("button", { name: "Buka kembali" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Lihat profil publik" }).click();
-  await expect(page).toHaveURL(/\/stores\/7$/, { timeout: 15000 });
+  await expect(page).toHaveURL(/\/stores\/7$/);
   await expect(
     page.getByRole("heading", { name: "Dapur Tetangga" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Toko ditutup sementara", { exact: true }),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -178,28 +183,27 @@ test("partner creates, edits, closes, reopens, and deletes a store", async ({
     ),
   ).toBe(true);
   await page.goto("/partner/store");
-  await page.getByRole("button", { name: "Aktifkan kembali toko" }).click();
-  await expect(page.getByText("Toko aktif", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Hapus toko", exact: true }).click();
+  await page.getByRole("button", { name: "Buka kembali" }).click();
+  await expect(
+    page.getByRole("button", { name: "Tutup sementara", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Tutup toko permanen", exact: true })
+    .click();
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByRole("button", { name: "Hapus toko permanen" }),
+    dialog.getByRole("button", { name: "Tutup permanen", exact: true }),
   ).toBeDisabled();
   await dialog
     .getByLabel("Ketik nama toko untuk konfirmasi")
     .fill("Dapur Tetangga");
-  await dialog.getByRole("button", { name: "Hapus toko permanen" }).click();
+  await dialog
+    .getByRole("button", { name: "Tutup permanen", exact: true })
+    .click();
   await expect(
-    page
-      .locator("main")
-      .getByRole("status")
-      .filter({ hasNotText: "Memuat peta" }),
-  ).toContainText("berhasil dihapus");
-  expect(api.store()).toBeNull();
-  await page.goto("/stores/7");
-  await expect(
-    page.getByRole("heading", { name: "Toko tidak ditemukan." }),
+    page.getByText("Toko ditutup permanen dan tidak dapat dibuka kembali."),
   ).toBeVisible();
+  expect(api.store()?.closed_at).toBeTruthy();
   expect(errors).toEqual([]);
 });
 
@@ -216,14 +220,14 @@ test("geocoding failures and invalid coordinates cannot save a store", async ({
       json: { detail: "Pencarian alamat sedang tidak tersedia." },
     }),
   );
-  await page.getByRole("button", { name: "Cari alamat di peta" }).click();
+  await page.getByRole("button", { name: "Cari lokasi toko" }).click();
   await expect(page.locator("main").getByRole("alert")).toContainText(
     "tidak tersedia",
   );
   await page.route("**/api/partner/geocode", (route) =>
     route.fulfill({ json: { results: [], geocode_token: null } }),
   );
-  await page.getByRole("button", { name: "Cari alamat di peta" }).click();
+  await page.getByRole("button", { name: "Cari lokasi toko" }).click();
   await expect(
     page
       .locator("main")
@@ -255,16 +259,18 @@ test("anonymous visitors can sign in and buyers cannot manage stores", async ({
 }) => {
   await mockApi(page, null);
   await page.goto("/partner/store");
-  await page.getByRole("button", { name: "Buat akun mitra" }).click();
+  await page.getByRole("button", { name: "Masuk", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByLabel("Daftar sebagai")).toHaveValue("partner");
+  await expect(
+    page.getByRole("heading", { name: "Senang kamu kembali." }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Tutup", exact: true }).click();
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({ json: { ...partner, role: "buyer" } }),
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { name: "Halaman khusus mitra" }),
+    page.getByRole("heading", { name: "Akses khusus mitra" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Daftarkan toko" }),
@@ -280,37 +286,39 @@ test("partner keeps two stores separate when editing and closing a branch", asyn
   await page
     .getByRole("button", { name: "Daftarkan toko", exact: true })
     .click();
+  await expect(
+    page.getByText(
+      "Data toko berhasil diperbarui. Perubahan tampil ke pembeli.",
+    ),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Tambah toko", exact: true }).click();
   await page.getByLabel("Nama toko", { exact: true }).fill("Dapur Cabang Dua");
-  await page.getByLabel("Deskripsi toko").fill("Cabang kedua yang terpisah.");
-  await page.getByLabel("Alamat toko", { exact: true }).fill(address);
+  await page.getByLabel("Deskripsi toko").fill("Cabang kedua");
+  await page.getByRole("radio", { name: "Roti & kue", exact: true }).check();
+  await page.getByLabel("Alamat lengkap", { exact: true }).fill(address);
   await confirm(page);
   await page
     .getByRole("button", { name: "Daftarkan toko", exact: true })
     .click();
+  await expect(page.getByLabel("Nama toko", { exact: true })).toHaveValue(
+    "Dapur Cabang Dua",
+  );
+  await page
+    .getByRole("button", { name: "Tutup sementara", exact: true })
+    .click();
   await expect(
-    page.getByRole("heading", { name: "Dapur Cabang Dua", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Tutup toko sementara" }).click();
-  await expect(
-    page.getByText("Toko ditutup sementara", { exact: true }),
+    page.getByRole("button", { name: "Buka kembali" }),
   ).toBeVisible();
   expect(api.stores.get(7)?.is_open).toBe(true);
   expect(api.stores.get(8)?.is_open).toBe(false);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Kelola toko Dapur Berkah", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Dapur Berkah", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Toko aktif", { exact: true })).toBeVisible();
+  await page.getByLabel("Pilih cabang toko").selectOption("7");
+  await expect(page.getByLabel("Nama toko", { exact: true })).toHaveValue(
+    "Dapur Berkah",
+  );
   await page.reload();
   await expect(
-    page.getByRole("button", {
-      name: "Kelola toko Dapur Cabang Dua",
-      exact: true,
-    }),
+    page.getByText("Pilih cabang yang ingin dikelola."),
   ).toBeVisible();
   expect(
     await page.evaluate(

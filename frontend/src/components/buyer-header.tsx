@@ -1,8 +1,9 @@
 "use client";
-import { MapPin, LogOut, Search } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import type { User } from "@/lib/api";
 import { designFont } from "@/lib/design-font";
 import SiteHeader from "./site-header";
+import LogoutButton from "./logout-button";
 import s from "./workspace.module.css";
 export default function BuyerHeader({
   user,
@@ -34,7 +35,7 @@ export default function BuyerHeader({
 }) {
   return (
     <SiteHeader
-      className={designFont.className}
+      className={`${designFont.className} compact-header`}
       navLabel="Navigasi pembeli"
       nav={[
         {
@@ -59,7 +60,7 @@ export default function BuyerHeader({
       actions={
         // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
         !user && (
-          <button className="mobile:hidden" onClick={onLogin}>
+          <button className="header-login-desktop" onClick={onLogin}>
             Masuk
           </button>
         )
@@ -74,17 +75,19 @@ export default function BuyerHeader({
             >
               {(user.name || user.username).slice(0, 2).toUpperCase()}
             </button>
-            <button aria-label="Keluar" onClick={onLogout}>
-              <LogOut size={18} />
-            </button>
+            <LogoutButton onLogout={onLogout} />
           </>
         ) : (
           <>
-            <button className="hidden mobile:inline-flex" onClick={onLogin}>
+            <button className="header-login-mobile" onClick={onLogin}>
               Masuk
             </button>
-            <button className={s.primary} onClick={onRegister}>
-              Daftar gratis
+            <button
+              className={s.primary}
+              aria-label="Daftar gratis"
+              onClick={onRegister}
+            >
+              Daftar<span className="header-signup-long"> gratis</span>
             </button>
           </>
         )
@@ -108,9 +111,17 @@ export default function BuyerHeader({
           </button>
         )}
       </label>
-      <button className={s.location} onClick={onLocate} disabled={locating}>
+      <button
+        className={`${s.location} header-location`}
+        aria-label={locating ? "Mencari lokasi…" : `${location} · Ubah lokasi`}
+        title={location}
+        onClick={onLocate}
+        disabled={locating}
+      >
         <MapPin size={16} />
-        {locating ? "Mencari lokasi…" : `${location} · Ubah`}
+        <span className="header-location-text">
+          {locating ? "Mencari lokasi…" : location}
+        </span>
       </button>
     </SiteHeader>
   );

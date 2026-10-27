@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0012_merge_modules_3_4_and_orders')]
+    final = [('main', '0013_partner_workspace_moderation')]
 
     def upgrade_from(self, origin, status):
         executor = MigrationExecutor(connection)
@@ -41,6 +41,9 @@ class MergeMigrationTests(TransactionTestCase):
             self.assertEqual(merged.get_model('auth','User').objects.get(pk=user.pk).password,'hashed-fixture')
             restored = merged.get_model('main','Listing').objects.get(pk=listing.pk)
             self.assertEqual(restored.stock,3)
+            self.assertIsNone(restored.moderated_at)
+            self.assertIsNone(restored.deleted_at)
+            self.assertEqual(merged.get_model("main","Store").objects.get(pk=store.pk).weekly_hours,[])
             self.assertEqual(merged.get_model('main','Store').objects.get(pk=store.pk).owner_id,user.pk)
             if origin.startswith('0011'):
                 self.assertEqual(restored.image_file.name,'listings/preserved.jpg')

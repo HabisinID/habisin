@@ -52,25 +52,28 @@ export function LandingHeader({
 }) {
   return (
     <SiteHeader
-      className={designFont.className}
+      className={`${designFont.className} landing-header compact-header`}
       nav={[
         { label: "Jelajahi", href: "/jelajahi" },
         { label: "Dampak", href: "/#dampak" },
         { label: "Untuk Mitra", href: "/#mitra" },
       ]}
       actions={
-        // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
-        <button className="mobile:hidden" onClick={onLogin}>
+        <button className="header-login-desktop" onClick={onLogin}>
           Masuk
         </button>
       }
       end={
         <>
-          <button className="hidden mobile:inline-flex" onClick={onLogin}>
+          <button className="header-login-mobile" onClick={onLogin}>
             Masuk
           </button>
-          <button className={s.primary} onClick={onRegister}>
-            Daftar gratis
+          <button
+            className={s.primary}
+            aria-label="Daftar gratis"
+            onClick={onRegister}
+          >
+            Daftar<span className="header-signup-long"> gratis</span>
           </button>
         </>
       }
@@ -83,9 +86,17 @@ export function LandingHeader({
           placeholder="Cari roti, nasi, atau nama toko"
         />
       </form>
-      <button className={s.location} onClick={onLocate} disabled={locating}>
+      <button
+        className={`${s.location} header-location`}
+        aria-label={locating ? "Mencari lokasi…" : `${location} · Ubah lokasi`}
+        title={location}
+        onClick={onLocate}
+        disabled={locating}
+      >
         <MapPin size={16} />
-        {locating ? "Mencari lokasi…" : `${location} · Ubah`}
+        <span className="header-location-text">
+          {locating ? "Mencari lokasi…" : location}
+        </span>
       </button>
     </SiteHeader>
   );
