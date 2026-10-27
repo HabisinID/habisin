@@ -84,7 +84,7 @@ export default function StoreMapPopup({
         <label className="block text-xs font-semibold">
           Toko lain di lokasi ini
           <select
-            className="mt-2 min-h-11 w-full rounded-md border border-[var(--color-border)] bg-white p-2 text-xs"
+            className="mt-2 min-h-11 w-full rounded-md border border-[var(--color-border)] bg-surface p-2 text-xs"
             value={group.key}
             onChange={(event) => onStore(event.target.value)}
           >

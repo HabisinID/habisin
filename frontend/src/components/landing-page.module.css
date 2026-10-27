@@ -15,7 +15,7 @@
   outline-offset: 4px;
 }
 .header {
-  background: white;
+  background: var(--color-surface);
   min-height: 64px;
   padding: 0 32px;
   display: flex;
@@ -121,7 +121,7 @@
 }
 .primary {
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
 }
 .header .primary {
   min-height: 40px;
@@ -129,7 +129,7 @@
   padding: 10px 16px;
 }
 .secondary {
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 .muted {
@@ -157,7 +157,7 @@
 }
 .receipt,
 .exampleTicket {
-  background: white;
+  background: var(--color-surface);
   border-top: 6px dotted var(--color-line);
   box-shadow: 0 3px 12px #00000014;
   padding: 20px;
@@ -265,6 +265,7 @@
   width: 44px;
   height: 44px;
   background: var(--color-yellow);
+  color: var(--color-on-sticker);
   border: 1px solid var(--color-dark);
   border-radius: 6px;
   transform: rotate(3deg);
@@ -309,8 +310,8 @@
   color: var(--color-muted);
 }
 .partner {
-  background: var(--color-dark);
-  color: var(--color-line);
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
   padding: 88px 64px 88px 80px;
   display: grid;
   grid-template-columns: minmax(0, 600px) minmax(0, 1fr);
@@ -319,7 +320,8 @@
 }
 .partner .eyebrow,
 .partner p {
-  color: var(--color-border);
+  color: var(--color-on-inverse);
+  opacity: 0.85;
 }
 .partner h2 {
   margin: 24px 0;
@@ -347,8 +349,8 @@
   color: var(--color-dark);
 }
 .verificationExample {
-  background: var(--color-dark);
-  border: 1px solid var(--color-dark);
+  background: var(--color-inverse);
+  border: 1px solid var(--color-on-inverse);
   border-radius: 8px;
   padding: 32px;
 }
@@ -362,14 +364,14 @@
   height: 72px;
   display: grid;
   place-items: center;
-  background: var(--color-dark);
-  border: 1px solid var(--color-dark);
+  background: var(--color-inverse);
+  border: 1px solid var(--color-on-inverse);
   border-radius: 6px;
   font-family: ui-monospace, monospace;
   font-size: 32px;
 }
 .verificationNote {
-  background: var(--color-dark);
+  background: var(--color-inverse);
   padding: 16px;
   display: flex;
   gap: 12px;
@@ -423,7 +425,7 @@
 }
 .liveFigures small {
   font-size: 12px;
-  color: #8a5a00;
+  color: var(--color-urgency-text);
 }
 .faq {
   display: grid;
@@ -472,7 +474,6 @@
   color: var(--color-brand);
 }
 .footer nav span {
-  opacity: 0.6;
   min-height: 36px;
 }
 .footerBottom {

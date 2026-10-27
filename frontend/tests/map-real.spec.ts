@@ -99,27 +99,29 @@ test("real stores → map → profile → detail → reserve/cancel obey branch 
     await expect(
       page.getByRole("region", { name: "Detail makanan", exact: true }),
     ).toContainText(stores[0].address);
+    // Modul 7 page flow: summary page → payment page → Pesanan saya.
     await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
+    await expect(page).toHaveURL(/\/pesanan\/\d+$/);
+    await page.getByRole("button", { name: /^Bayar Rp/ }).click();
     await page
       .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
       .click();
-    await expect(
-      page.getByRole("heading", { name: "Makananmu sudah dipesan!" }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/pesanan$/);
     const orders = await (await page.request.get("/api/reservations")).json();
     expect(orders[0].listing.store_id).toBe(stores[0].id);
     expect(orders[0].listing.image).toBe(a1.image);
     expect(orders[0].listing.stock).toBe(3);
-    await page.getByRole("button", { name: "Lihat pesanan saya" }).click();
+    const card = page.locator(".order-card");
     const cancelled = page.waitForResponse(
       (r) =>
         r.url().endsWith(`/api/reservations/${orders[0].id}/cancel`) &&
         r.request().method() === "POST",
     );
-    await page.getByRole("button", { name: "Batalkan", exact: true }).click();
+    await card.getByRole("button", { name: "Batalkan pesanan" }).click();
+    await card.getByRole("button", { name: "Ya, batalkan" }).click();
     expect((await cancelled).status()).toBe(200);
-    await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.getByRole("tab", { name: /^Riwayat/ }).click();
+    await expect(card).toContainText("Dibatalkan");
     expect(
       (await (await request.get("/api/partner/listings")).json()).find(
         (i: { id: number }) => i.id === a1.id,

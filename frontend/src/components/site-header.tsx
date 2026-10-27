@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HabisinLogo from "./habisin-logo";
+import ThemeToggle from "./theme-toggle";
 import styles from "./site-header.module.css";
 export type NavItem = {
   label: string;
@@ -7,6 +8,8 @@ export type NavItem = {
   onClick?: () => void;
   current?: boolean;
 };
+// Shared top bar: logo, page content (search, location), page links, the
+// page's `actions`, then the theme switcher, always the top-right item.
 export default function SiteHeader({
   nav = [{ label: "Jelajahi", href: "/jelajahi" }],
   actions,
@@ -24,7 +27,7 @@ export default function SiteHeader({
     <header className={`${styles.header} ${className}`}>
       <div className={styles.inner}>
         <HabisinLogo />
-        {children}
+        {children && <div className={styles.content}>{children}</div>}
         {nav.length > 0 && (
           <nav aria-label={navLabel} className={styles.nav}>
             {nav.map((item) =>
@@ -48,7 +51,10 @@ export default function SiteHeader({
             )}
           </nav>
         )}
-        {actions && <div className={styles.actions}>{actions}</div>}
+        <div className={styles.actions}>
+          {actions}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

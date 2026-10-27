@@ -1,5 +1,7 @@
 # HABISIN
 
+[![CI](https://github.com/HabisinID/habisin/actions/workflows/ci.yml/badge.svg)](https://github.com/HabisinID/habisin/actions/workflows/ci.yml)
+
 > **Save Food, Cut Waste, Feed Communities.**
 
 Web app berbasis peta interaktif (map-first progressive web app) yang mempertemukan gerai makanan berlebih dengan masyarakat sekitar. Melalui transparansi geolokasi dan reservasi instan, HABISIN memfasilitasi penebusan makanan surplus dengan diskon signifikan maupun klaim donasi gratis sebelum batas waktu operasional berakhir.
@@ -270,12 +272,12 @@ Pisahkan beberapa nilai dengan koma tanpa spasi.
 2. Cari/filter makanan, simpan favorit, atau pilih marker toko di tampilan **Peta**.
    Tombol lokasi meminta izin GPS dan menghitung ulang jarak dari lokasi pengguna.
 3. Buka produk, pilih jumlah porsi dan catatan pengambilan, lalu pilih
-   **Lanjut ke ringkasan**. Periksa atau ubah pesanan, lalu pilih
-   **Simulasikan pembayaran berhasil**. Tidak ada pembayaran sungguhan; stok ditahan
-   sejak pesanan dibuat dan kode tiket tersimpan di SQLite.
-4. Buka **Pesanan saya** untuk melanjutkan pembayaran, melihat tiket, membatalkan
-   pesanan, atau menghapus pesanan selesai/dibatalkan dari riwayat. Pembatalan
-   mengembalikan stok dan tidak bisa menggandakan pengembalian stok. Lihat
+   **Lanjut ke ringkasan**. Di halaman ringkasan, ubah porsi atau catatan bila perlu,
+   pilih **Bayar**, lalu **Simulasikan pembayaran berhasil**. Tidak ada pembayaran
+   sungguhan; stok ditahan sejak pesanan dibuat dan kode tiket tersimpan di SQLite.
+4. Buka **Pesanan** di header untuk melanjutkan pembayaran, melihat kode tiket,
+   membatalkan pesanan, atau menghapus pesanan selesai/dibatalkan dari riwayat.
+   Pembatalan mengembalikan stok dan tidak bisa menggandakan pengembalian stok. Lihat
    [panduan Modul 7](docs/module-7.md) untuk status pesanan dan API pemesanan.
 5. Klik nama akun untuk mengubah profil/password atau menghapus akun dengan
    konfirmasi password. Penghapusan akun membatalkan pesanan dan mengembalikan stok.
@@ -398,7 +400,20 @@ katalog profil toko, deep link makanan, dan lifecycle peta yang mempertahankan v
 
 ### Verifikasi
 
-Jalankan setiap blok dari root repository. Tes backend memakai database tes terpisah.
+**CI otomatis.** Setiap pull request dan push ke `main` menjalankan
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) di GitHub Actions:
+
+| Job | Isi |
+| --- | --- |
+| Backend | `manage.py check`, cek migrasi yang belum dibuat, tes Django dengan coverage minimal 90% |
+| Frontend | ESLint, TypeScript, dan `next build` |
+| End-to-end | Menjalankan Django (migrate + `seed_demo`) dan build produksi Next.js, lalu semua tes Playwright |
+
+Jika job end-to-end gagal, log Django/Next.js dan hasil Playwright tersedia sebagai
+artifact `e2e-debug` di halaman run tersebut. Jangan merge PR dengan CI merah.
+
+Untuk menjalankan pemeriksaan yang sama secara lokal, jalankan setiap blok dari root
+repository. Tes backend memakai database tes terpisah.
 
 ```bash
 cd backend
