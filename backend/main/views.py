@@ -9,17 +9,18 @@ from django.db import transaction, IntegrityError
 from django.db.models import F
 from django.middleware.csrf import get_token
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
 from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
-from .models import Profile, Listing, Reservation, Store, ListingStockAction
+from .models import Profile, Listing, Reservation, Store, ListingStockAction, PartnerApproval, ModerationLog
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
 from .reservation_policy import reservation_policy
 from django.db.models.deletion import ProtectedError
 from rest_framework import serializers as drf_serializers
-from .serializers import PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer
+from .serializers import PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer, PartnerApprovalSerializer, ModerationLogSerializer
 
 
 class AuthThrottle(AnonRateThrottle):
@@ -362,3 +363,51 @@ def listing_reservation_policy(request, pk):
     if item is None:
         return Response({"detail": "Makanan tidak ditemukan."}, status=404)
     return Response(reservation_policy(request.user, item))
+
+
+class IsAdminUser(permissions.BasePermission):
+    """Custom permission: Hanya mengizinkan admin (is_staff=True) yang boleh akses."""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_staff
+
+
+class PartnerApprovalViewSet(viewsets.ModelViewSet):
+    queryset = PartnerApproval.objects.all().order_by("-requested_at")
+    serializer_class = PartnerApprovalSerializer
+    permission_classes = [IsAdminUser]
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        approval = self.get_object()
+        approval.status = "approved"
+        approval.reviewed_at = timezone.now()
+        approval.save()
+
+        ModerationLog.objects.create(
+            admin_user=request.user,
+            action_type="APPROVE_PARTNER",
+            target_name=approval.user.username,
+            reason=request.data.get("reason", "Disetujui oleh admin")
+        )
+        return Response({"detail": "Mitra berhasil disetujui."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        approval = self.get_object()
+        approval.status = "rejected"
+        approval.reviewed_at = timezone.now()
+        approval.save()
+
+        ModerationLog.objects.create(
+            admin_user=request.user,
+            action_type="REJECT_PARTNER",
+            target_name=approval.user.username,
+            reason=request.data.get("reason", "Ditolak oleh admin")
+        )
+        return Response({"detail": "Mitra ditolak."}, status=status.HTTP_200_OK)
+
+
+class ModerationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ModerationLog.objects.all().order_by("-created_at")
+    serializer_class = ModerationLogSerializer
+    permission_classes = [IsAdminUser]
