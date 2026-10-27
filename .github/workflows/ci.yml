@@ -45,6 +45,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
+      # next-env.d.ts (image and route types) is gitignored, so generate it first.
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run build
 
