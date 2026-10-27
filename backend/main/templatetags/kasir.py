@@ -11,13 +11,15 @@ def pickup_code(code):
 
 @register.filter
 def buyer_short(user):
-    """Rani Ayu → "Rani A.": enough for the cashier to call the buyer, no more."""
-    if not user.first_name:
-        return user.username
-    return f"{user.first_name} {user.last_name[0]}." if user.last_name else user.first_name
+    """Rani Ayu → "Rani A.": enough for the cashier to call the buyer, no more.
+
+    Sign-up keeps the whole name in first_name, so split the full name.
+    """
+    words = (user.get_full_name() or user.username).split()
+    return f"{words[0]} {words[-1][0]}." if len(words) > 1 else words[0]
 
 
 @register.filter
 def rupiah(value):
-    """10000 → "Rp10.000"; donations show "Gratis", like rupiah() in frontend/src/lib/api.ts."""
-    return f"Rp{value:,}".replace(",", ".") if value else "Gratis"
+    """10000 → "Rp 10.000"; donations show "Gratis", like rupiah() in frontend/src/lib/api.ts."""
+    return f"Rp {value:,}".replace(",", ".") if value else "Gratis"
