@@ -5,7 +5,7 @@
       <span>
         {% if log.reservation %}
           <span class="who">{{ log.reservation.user|buyer_short }}</span>
-          <span class="what">{{ log.reservation.listing.name }} × {{ log.reservation.quantity }}</span>
+          <span class="what">{% if log.outcome != "picked_up" %}{{ log.get_outcome_display }} · {% endif %}{{ log.reservation.listing.name }} × {{ log.reservation.quantity }}</span>
         {% else %}
           <span class="who mono">{{ log.code|pickup_code }}</span>
           <span class="what">{{ log.get_outcome_display }}</span>

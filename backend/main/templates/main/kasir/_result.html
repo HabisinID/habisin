@@ -20,7 +20,7 @@
 {% elif outcome == "handed_over" %}
   <div class="panel ok" data-outcome="handed_over" data-waiting="{{ waiting }}">
     <h3>Diserahkan pukul {{ order.picked_up_at|time:"H.i" }} <span class="mono">{{ code_text }}</span></h3>
-    <p>{{ order.listing.name }} × {{ order.quantity }} untuk {{ order.user|buyer_short }}.</p>
+    <p>{{ order.listing.name }} × {{ order.quantity }} untuk {{ order.user|buyer_short }}</p>
     <div class="actions">
       <button class="secondary" type="button" data-undo hx-post="/api/partner/kasir/{{ order.pk }}/undo" hx-target="#result">Urungkan · <span>60</span> dtk</button>
     </div>
