@@ -71,3 +71,19 @@ class EnvironmentSettingsTests(SimpleTestCase):
         result = load_settings(env)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SCHEMA", result.stderr)
+
+    def test_a_mistyped_production_flag_stops_startup(self):
+        # "Tru" or "1" must not quietly fall back to SQLite on PWS.
+        for value in ["Tru", "1", "yes"]:
+            result = load_settings({**PRODUCTION_ENV, "PRODUCTION": value})
+            self.assertNotEqual(result.returncode, 0, value)
+            self.assertIn("PRODUCTION", result.stderr, value)
+        result = load_settings({**PRODUCTION_ENV, "PRODUCTION": " TRUE "})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["engine"], "django.db.backends.postgresql")
+
+    def test_production_with_debug_still_needs_a_real_secret_key(self):
+        env = {key: value for key, value in PRODUCTION_ENV.items() if key != "SECRET_KEY"}
+        result = load_settings({**env, "DEBUG": "True"})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("SECRET_KEY", result.stderr)
