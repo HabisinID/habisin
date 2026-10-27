@@ -27,7 +27,11 @@ load_dotenv('.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'local-demo-only-change-before-deployment')
 
 # PRODUCTION=True on PWS: PostgreSQL from ITF and debug off unless DEBUG is set.
-PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
+# Anything but true/false stops startup, so a typo never falls back to SQLite on PWS.
+production_flag = os.getenv("PRODUCTION", "False").strip().lower()
+if production_flag not in {"true", "false"}:
+    raise ImproperlyConfigured(f"PRODUCTION must be True or False, not {production_flag!r}.")
+PRODUCTION = production_flag == "true"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", str(not PRODUCTION)).lower() == "true"
@@ -171,7 +175,8 @@ NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org/
 NOMINATIM_USER_AGENT = os.getenv("NOMINATIM_USER_AGENT", "HABISIN/1.0 (partner store onboarding)")
 TIME_ZONE = "Asia/Jakarta"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-if not DEBUG and SECRET_KEY == "local-demo-only-change-before-deployment":
+# PRODUCTION=True may still turn DEBUG on, but never with the public demo key.
+if (PRODUCTION or not DEBUG) and SECRET_KEY == "local-demo-only-change-before-deployment":
     raise RuntimeError("Set SECRET_KEY before running in production.")
 
 # Uploaded listing photos use Django storage; production requires persistent storage.
