@@ -79,7 +79,7 @@ def page(request):
     stores = list(request.user.stores.values_list("name", flat=True))
     now = timezone.localtime()
     return render(request, "main/kasir/page.html", {
-        "store": stores[0] if len(stores) == 1 else f"{len(stores)} toko",
+        "store": stores[0] if len(stores) == 1 else f"{len(stores)} toko" if stores else "Belum ada toko",
         "day": DAYS[now.weekday()],
         "now": now,
         "waiting": waiting_count(request.user),

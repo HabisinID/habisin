@@ -97,6 +97,15 @@
     .secondary { background: none; color: var(--brand); }
     .primary:active, .secondary:active { transform: scale(.97); }
     .hint { color: var(--muted); font-size: 12px; }
+    .scan { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid color-mix(in srgb, var(--on-inverse) 20%, transparent); }
+    .scan button { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--on-inverse); background: none; color: var(--on-inverse); font-weight: 700; transition: transform .12s; }
+    .scan button:active { transform: scale(.97); }
+    .scan span { font-size: 12px; opacity: .8; }
+    dialog { width: min(480px, calc(100vw - 32px)); border: 0; border-radius: 20px; padding: 24px; background: var(--surface); color: var(--dark); }
+    dialog::backdrop { background: rgb(0 0 0 / .55); }
+    dialog h2 { margin: 0 0 12px; font-size: 20px; }
+    dialog video { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: #000; }
+    dialog p { margin: 12px 0 16px; }
 
     .recent h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; color: var(--muted); }
     .recent ol { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
@@ -168,6 +177,10 @@
             </div>
           </form>
           <p class="keys">F2 = isi kode · Enter = tandai sudah diambil · Esc = kode lain</p>
+          <div class="scan">
+            <button type="button" id="scan-open">Pindai QR</button>
+            <span>Kamera laptop membaca QR di tiket pembeli.</span>
+          </div>
         </div>
         <div id="result" aria-live="polite">
           {% include "main/kasir/_waiting.html" %}
@@ -182,6 +195,12 @@
     </main>
   </div>
 </div>
+<dialog id="scanner" aria-labelledby="scan-title">
+  <h2 id="scan-title">Pindai QR tiket</h2>
+  <video id="scan-video" playsinline muted></video>
+  <p id="scan-status" role="status"></p>
+  <button class="secondary" type="button" id="scan-close">Tutup</button>
+</dialog>
 <template id="waiting-template">{% include "main/kasir/_waiting.html" %}</template>
 <script>
   const ALPHABET = "{{ alphabet }}";
@@ -240,6 +259,8 @@
   });
 
   document.addEventListener("keydown", (e) => {
+    // Inside the scanner, Esc closes the dialog (native) and nothing else applies.
+    if (scanner.open) return;
     if (e.key === "F2") {
       e.preventDefault();
       boxes[Math.max(0, code().length - (code().length === boxes.length ? 1 : 0))].focus();
@@ -256,6 +277,86 @@
   });
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-other-code]")) clearCode();
+  });
+
+  // Pindai QR: the browser's own BarcodeDetector where it exists (Android,
+  // macOS); otherwise jsQR, loaded on first use (Chrome for Windows has none).
+  const scanner = document.getElementById("scanner");
+  const video = document.getElementById("scan-video");
+  const scanStatus = document.getElementById("scan-status");
+  const TICKET_CODE = new RegExp(`^[${ALPHABET}]{5}$`);
+  let stream = null;
+  let scanning = false;
+
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/jsqr@1.4.0/dist/jsQR.js";
+      script.integrity = "sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx";
+      script.crossOrigin = "anonymous";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.append(script);
+    });
+  }
+  async function qrReader() {
+    if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      return async () => (await detector.detect(video))[0]?.rawValue;
+    }
+    await loadJsQR();
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    return () => {
+      if (!video.videoWidth) return null;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+      const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+      return jsQR(frame.data, frame.width, frame.height)?.data;
+    };
+  }
+  function stopCamera() {
+    scanning = false;
+    stream?.getTracks().forEach((track) => track.stop());
+    stream = null;
+    video.srcObject = null;
+  }
+  async function startScan() {
+    scanStatus.textContent = "Membuka kamera…";
+    scanner.showModal();
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+      await video.play();
+      const read = await qrReader();
+      scanStatus.textContent = "Arahkan QR di tiket pembeli ke kamera.";
+      scanning = true;
+      const tick = async () => {
+        if (!scanning) return;
+        const text = (await read())?.trim().toUpperCase();
+        if (text && TICKET_CODE.test(text)) {
+          scanner.close();
+          boxes.forEach((box) => (box.value = ""));
+          fill(0, text);
+          return;
+        }
+        if (text) scanStatus.textContent = "QR ini bukan tiket HABISIN. Arahkan QR di tiket pembeli.";
+        requestAnimationFrame(tick);
+      };
+      tick();
+    } catch (error) {
+      console.warn("Pindai QR:", error);
+      stopCamera();
+      scanStatus.textContent = "Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau ketik kodenya di kotak.";
+    }
+  }
+  document.getElementById("scan-open").addEventListener("click", startScan);
+  document.getElementById("scan-close").addEventListener("click", () => scanner.close());
+  scanner.addEventListener("close", () => {
+    stopCamera();
+    if (code().length < boxes.length) boxes[0].focus();
   });
 
   // Theme switcher, as in frontend/src/components/theme-toggle.tsx: Sistem → Terang → Gelap.

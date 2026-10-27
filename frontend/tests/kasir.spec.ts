@@ -65,9 +65,15 @@ test("the cashier types a code, hands the order over and sees it used after", as
 // Feeds the camera a canvas with the ticket's QR. BarcodeDetector is removed so
 // the jsQR fallback runs, as on Chrome for Windows.
 async function fakeCamera(page: Page, code: string | null) {
+  // An <img> only decodes SVG that declares its namespace.
   const svg = code
     ? renderToStaticMarkup(
-        createElement(QRCodeSVG, { value: code, size: 240, marginSize: 2 }),
+        createElement(QRCodeSVG, {
+          value: code,
+          size: 240,
+          marginSize: 2,
+          xmlns: "http://www.w3.org/2000/svg",
+        }),
       )
     : null;
   await page.addInitScript((svg) => {

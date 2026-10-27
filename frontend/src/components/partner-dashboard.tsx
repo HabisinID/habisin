@@ -172,10 +172,11 @@ export default function PartnerDashboard({
       <aside className={s.partnerSidebar}>
         <HabisinLogo />
         <small>Mitra</small>
-        <button className={s.verify} disabled>
+        {/* Modul 8: the cashier page is rendered by Django, so a plain link. */}
+        <a className={s.verify} href="/api/partner/kasir">
           <ShieldCheck size={18} />
-          Verifikasi kode <small>Segera hadir</small>
-        </button>
+          Verifikasi kode
+        </a>
         <nav aria-label="Navigasi mitra">
           <button
             aria-current={section === "dashboard" ? "page" : undefined}
@@ -298,7 +299,6 @@ export default function PartnerDashboard({
             </div>
             <p className={s.muted}>
               Data pesanan akun ini · belum menunjukkan makanan selesai diambil.
-              Verifikasi kode menyusul.
             </p>
           </section>
         )}
