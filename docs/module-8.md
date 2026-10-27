@@ -6,6 +6,11 @@ itu di halaman **Verifikasi kode**, menyerahkan pesanan, lalu menandainya sudah 
 Jalankan `python manage.py migrate` dari `backend/` untuk membuat tabel
 `VerificationLog` (migrasi `0013_verification_log`).
 
+PR #12 juga menambah migrasi bernomor `0013`. Bila keduanya sudah ada di `main`,
+`migrate` berhenti karena ada dua migrasi terakhir. Yang menggabungkan belakangan
+menjalankan `python manage.py makemigrations --merge` lalu meng-commit migrasi
+penggabungnya sebelum `migrate`.
+
 ## Alur penggunaan
 
 1. **Pembeli** membayar pesanan (Modul 7). Di **Pesanan saya**, kartu pesanan aktif
