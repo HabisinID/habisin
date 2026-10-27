@@ -85,7 +85,7 @@ WSGI_APPLICATION = 'habisin.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 if PRODUCTION:
-    missing = [name for name in ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"] if not os.getenv(name)]
+    missing = [name for name in ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "SCHEMA"] if not os.getenv(name)]
     if missing:
         raise ImproperlyConfigured(f"PRODUCTION=True needs these environment variables: {', '.join(sorted(missing))}.")
     DATABASES = {
@@ -97,7 +97,8 @@ if PRODUCTION:
             'HOST': os.getenv('DB_HOST'),
             'PORT': os.getenv('DB_PORT'),
             # ITF gives each project schema (tugas_kelompok) inside a shared database.
-            'OPTIONS': {'options': f"-c search_path={os.getenv('SCHEMA', 'public')}"},
+            # Required: without it, migrations would land in "public" and stay there.
+            'OPTIONS': {'options': f"-c search_path={os.getenv('SCHEMA')}"},
             # Reuse connections between requests, but check them before use.
             'CONN_MAX_AGE': 60,
             'CONN_HEALTH_CHECKS': True,
