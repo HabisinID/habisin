@@ -93,8 +93,8 @@ export function Auth({
       }
       onClose={onClose}
     >
-      <div className="auth-intro flex gap-3 items-center mb-[23px] [&_p]:text-[12px] [&_p]:leading-[1.8] [&_p]:text-[var(--color-muted)]">
-        <span className="round-leaf w-11 h-11 rounded-[13px] bg-[var(--color-light)] text-brand grid place-items-center shrink-0">
+      <div className="auth-intro flex gap-3 items-center mb-[23px] [&_p]:text-[12px] [&_p]:leading-[1.8] [&_p]:text-muted">
+        <span className="round-leaf w-11 h-11 rounded-[13px] bg-surface-2 text-brand grid place-items-center shrink-0">
           <Leaf />
         </span>
         <p>
@@ -105,7 +105,7 @@ export function Auth({
       </div>
       <form
         onSubmit={submit}
-        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[var(--color-muted)] [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
+        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-muted [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-surface [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-surface [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
       >
         {mode === "register" && (
           <label>
@@ -177,21 +177,21 @@ export function Auth({
         )}
         {error && (
           <p
-            className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[var(--color-error-tint)] text-[var(--color-error)]"
+            className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error"
             role="alert"
           >
             {error}
           </p>
         )}
         <button
-          className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)] w-full mt-[5px]"
+          className="button primary full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] bg-brand text-on-brand hover:bg-brand-hover hover:[transform:translateY(-1px)] w-full mt-[5px]"
           disabled={busy}
         >
           {busy ? "Sebentar…" : mode === "login" ? "Masuk" : "Buat akun"}
           <ArrowRight size={18} />
         </button>
       </form>
-      <p className="auth-switch text-center text-[11px] my-[22px] mx-0 text-[var(--color-muted)] [&_button]:font-bold [&_button]:text-brand [&_button]:pl-[5px]">
+      <p className="auth-switch text-center text-[11px] my-[22px] mx-0 text-muted [&_button]:font-bold [&_button]:text-brand [&_button]:pl-[5px]">
         {mode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
         <button
           onClick={() => {
@@ -202,7 +202,7 @@ export function Auth({
           {mode === "login" ? "Daftar gratis" : "Masuk"}
         </button>
       </p>
-      <p className="secure-note flex items-center justify-center gap-[5px] text-[9px] text-[var(--color-muted)] [border-top:1px_solid_var(--color-line)] pt-[17px] tablet:text-[8px]">
+      <p className="secure-note flex items-center justify-center gap-[5px] text-[9px] text-muted [border-top:1px_solid_var(--color-line)] pt-[17px] tablet:text-[8px]">
         <ShieldCheck size={15} /> Sesi aman. Password tersimpan terenkripsi satu
         arah.
       </p>
@@ -253,8 +253,8 @@ export function Profile({
   }
   return (
     <Modal title="Akun kamu" onClose={onClose}>
-      <div className="profile-identity flex items-center gap-[13px] mt-[10px] mr-0 mb-[25px] ml-0 [&_p]:text-[11px] [&_p]:text-[var(--color-muted)] [&_p]:mt-[5px]">
-        <span className="avatar w-[45px] h-[45px] rounded-[50%] bg-[var(--color-light)] text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
+      <div className="profile-identity flex items-center gap-[13px] mt-[10px] mr-0 mb-[25px] ml-0 [&_p]:text-[11px] [&_p]:text-muted [&_p]:mt-[5px]">
+        <span className="avatar w-[45px] h-[45px] rounded-[50%] bg-light text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
           {(user.name || user.username)[0].toUpperCase()}
         </span>
         <div>
@@ -269,7 +269,7 @@ export function Profile({
           </p>
         </div>
       </div>
-      <div className="tabs flex bg-[var(--color-light)] p-1 rounded-[7px] mb-[22px] [&_button]:[flex:1] [&_button]:text-[11px] [&_button]:p-[10px] [&_button]:rounded-[5px] [&_.active]:bg-[white] [&_.active]:text-brand [&_.active]:shadow-[0_1px_5px_#0001]">
+      <div className="tabs flex bg-surface-2 p-1 rounded-[7px] mb-[22px] [&_button]:[flex:1] [&_button]:text-[11px] [&_button]:p-[10px] [&_button]:rounded-[5px] [&_.active]:bg-surface [&_.active]:text-brand [&_.active]:shadow-[0_1px_5px_#0001]">
         {[
           ["profile", "Profil"],
           ["password", "Password"],
@@ -289,7 +289,7 @@ export function Profile({
         ))}
       </div>
       <form
-        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-[var(--color-muted)] [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-[white] [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-[white] [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
+        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-muted [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-surface [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-surface [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
         key={tab}
         onSubmit={submit}
       >
@@ -339,7 +339,7 @@ export function Profile({
         )}
         {tab === "delete" && (
           <>
-            <p className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[var(--color-error-tint)] text-[var(--color-error)]">
+            <p className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error">
               Akun dan riwayat pesanan akan dihapus permanen. Pesanan aktif
               dibatalkan dan stok dikembalikan.
             </p>
@@ -359,7 +359,7 @@ export function Profile({
         )}
         {error && (
           <p
-            className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[var(--color-error-tint)] text-[var(--color-error)]"
+            className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error"
             role="alert"
           >
             {error}
@@ -367,14 +367,14 @@ export function Profile({
         )}
         {message && (
           <p
-            className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-[var(--color-light)] text-[var(--color-brand)]"
+            className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-surface-2 text-success"
             role="status"
           >
             {message}
           </p>
         )}
         <button
-          className={`button full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] w-full mt-[5px] ${tab === "delete" ? "danger bg-[var(--color-error)] text-white" : "primary bg-brand text-white hover:bg-[var(--color-brand)] hover:[transform:translateY(-1px)]"}`}
+          className={`button full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] w-full mt-[5px] ${tab === "delete" ? "danger bg-error text-on-error" : "primary bg-brand text-on-brand hover:bg-brand-hover hover:[transform:translateY(-1px)]"}`}
           disabled={busy}
         >
           {busy

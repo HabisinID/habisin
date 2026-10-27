@@ -47,10 +47,13 @@ export default function BuyerHeader({
           current: active === "favorites",
           onClick: () => onNavigate("favorites"),
         },
+        // Modul 7: orders live on their own page; guests get the sign-in gate first.
         {
           label: "Pesanan saya",
           current: active === "orders",
-          onClick: () => onNavigate("orders"),
+          ...(user
+            ? { href: "/pesanan" }
+            : { onClick: () => onNavigate("orders") }),
         },
       ]}
       actions={
@@ -70,8 +73,13 @@ export default function BuyerHeader({
         ) : (
           <>
             <button onClick={onLogin}>Masuk</button>
-            <button className={s.primary} onClick={onRegister}>
-              Daftar gratis
+            {/* Mobile shows "Daftar" so the top bar fits on one row. */}
+            <button
+              className={s.primary}
+              aria-label="Daftar gratis"
+              onClick={onRegister}
+            >
+              Daftar<span className="mobile:hidden"> gratis</span>
             </button>
           </>
         )

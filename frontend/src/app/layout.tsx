@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { themeScript } from "@/lib/theme";
+import { ThemeSync } from "@/components/theme-toggle";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -29,8 +31,16 @@ export default function RootLayout({
       lang="id"
       data-scroll-behavior="smooth"
       className={`${jakarta.variable} ${jetbrains.variable}`}
+      // The theme script sets data-theme before React hydrates.
+      suppressHydrationWarning
     >
-      <body>{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
+        <ThemeSync />
+        {children}
+      </body>
     </html>
   );
 }
