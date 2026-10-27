@@ -1,5 +1,7 @@
 # HABISIN
 
+[![CI](https://github.com/HabisinID/habisin/actions/workflows/ci.yml/badge.svg)](https://github.com/HabisinID/habisin/actions/workflows/ci.yml)
+
 > **Save Food, Cut Waste, Feed Communities.**
 
 Web app berbasis peta interaktif (map-first progressive web app) yang mempertemukan gerai makanan berlebih dengan masyarakat sekitar. Melalui transparansi geolokasi dan reservasi instan, HABISIN memfasilitasi penebusan makanan surplus dengan diskon signifikan maupun klaim donasi gratis sebelum batas waktu operasional berakhir.
@@ -398,7 +400,20 @@ katalog profil toko, deep link makanan, dan lifecycle peta yang mempertahankan v
 
 ### Verifikasi
 
-Jalankan setiap blok dari root repository. Tes backend memakai database tes terpisah.
+**CI otomatis.** Setiap pull request dan push ke `main` menjalankan
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) di GitHub Actions:
+
+| Job | Isi |
+| --- | --- |
+| Backend | `manage.py check`, cek migrasi yang belum dibuat, tes Django dengan coverage minimal 90% |
+| Frontend | ESLint, TypeScript, dan `next build` |
+| End-to-end | Menjalankan Django (migrate + `seed_demo`) dan build produksi Next.js, lalu semua tes Playwright |
+
+Jika job end-to-end gagal, log Django/Next.js dan hasil Playwright tersedia sebagai
+artifact `e2e-debug` di halaman run tersebut. Jangan merge PR dengan CI merah.
+
+Untuk menjalankan pemeriksaan yang sama secara lokal, jalankan setiap blok dari root
+repository. Tes backend memakai database tes terpisah.
 
 ```bash
 cd backend
