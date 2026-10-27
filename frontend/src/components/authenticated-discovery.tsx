@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { List, Map, LocateFixed } from "lucide-react";
+import { Heart, List, Map, LocateFixed } from "lucide-react";
 import { listingCategories, type Listing, type User } from "@/lib/api";
 import { discover, type MapBounds, type Origin } from "@/lib/discovery";
 import { designFont } from "@/lib/design-font";
@@ -267,26 +267,26 @@ export default function AuthenticatedDiscovery({
         >
           Masih ≥ 2 porsi
         </button>
+        {/* design.pen: favourites are a filter chip on Jelajahi, not a TopNav link. */}
+        {user && (
+          <button
+            className={styles.chip}
+            aria-pressed={savedOnly}
+            onClick={() => setSavedOnly(!savedOnly)}
+          >
+            <Heart size={15} aria-hidden="true" />
+            Favorit saya
+          </button>
+        )}
       </div>
       <details className={styles.advanced}>
         <summary>
           Filter lainnya
-          {savedOnly ||
-          maxPrice !== Infinity ||
-          ["Camilan", "Sehat"].includes(category)
+          {maxPrice !== Infinity || ["Camilan", "Sehat"].includes(category)
             ? " · aktif"
             : ""}
         </summary>
         <div className={styles.tools}>
-          {user && user.role !== "buyer" && (
-            <button
-              className={styles.chip}
-              aria-pressed={savedOnly}
-              onClick={() => setSavedOnly(!savedOnly)}
-            >
-              Favorit
-            </button>
-          )}
           <label>
             Kategori
             <select
