@@ -244,3 +244,47 @@ test("the theme switcher is the top-right item of the cashier page at every widt
     expect(layout.top, `@${width}px`).toBeLessThan(40);
   }
 });
+
+test("a QR read from a closed scanner session is ignored", async ({ page }) => {
+  await register(page.request, "partner", 0);
+  // A slow detector: the first read finishes only after the dialog is reopened.
+  await page.addInitScript(() => {
+    const state = { reads: 0 };
+    (window as { detector?: typeof state }).detector = state;
+    class SlowDetector {
+      static async getSupportedFormats() {
+        return ["qr_code"];
+      }
+      async detect() {
+        if (++state.reads > 1) return [];
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        return [{ rawValue: "H7K49" }];
+      }
+    }
+    (window as { BarcodeDetector?: unknown }).BarcodeDetector = SlowDetector;
+    // A canvas that keeps drawing, so the video starts playing.
+    navigator.mediaDevices.getUserMedia = async () => {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d")!;
+      setInterval(() => context.fillRect(0, 0, 10, 10), 50);
+      return canvas.captureStream(10);
+    };
+  });
+  await page.goto("/api/partner/kasir");
+  const open = page.getByRole("button", { name: "Pindai QR" });
+  const dialog = page.getByRole("dialog");
+  await open.click();
+  // The first session's slow read has started.
+  await page.waitForFunction(
+    () => (window as { detector?: { reads: number } }).detector!.reads === 1,
+  );
+  await dialog.getByRole("button", { name: "Tutup" }).click();
+  await open.click();
+  // The second session is scanning too, and the first read has finished.
+  await page.waitForFunction(
+    () => (window as { detector?: { reads: number } }).detector!.reads > 1,
+  );
+  await page.waitForTimeout(800);
+  await expect(dialog).toBeVisible();
+  await expect(page.getByLabel("Karakter 1")).toHaveValue("");
+});
