@@ -64,3 +64,10 @@ class EnvironmentSettingsTests(SimpleTestCase):
         result = load_settings(env)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("DB_HOST, DB_PASSWORD", result.stderr)
+
+    def test_production_refuses_to_start_without_a_schema(self):
+        # Without SCHEMA, migrations would land in "public" and stay there.
+        env = {key: value for key, value in PRODUCTION_ENV.items() if key != "SCHEMA"}
+        result = load_settings(env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("SCHEMA", result.stderr)
