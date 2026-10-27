@@ -169,3 +169,41 @@ test("closing the scanner while the camera is still opening turns it off", async
     )
     .toBe(true);
 });
+
+test("reopening the scanner before the first camera arrives leaves no camera on", async ({
+  page,
+}) => {
+  await register(page.request, "partner", 0);
+  // The first camera is slow (permission prompt), the second one is quick.
+  await page.addInitScript(() => {
+    const cameras: MediaStream[] = [];
+    (window as { cameras?: MediaStream[] }).cameras = cameras;
+    let calls = 0;
+    navigator.mediaDevices.getUserMedia = async () => {
+      const wait = ++calls === 1 ? 800 : 100;
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      const stream = document.createElement("canvas").captureStream();
+      cameras.push(stream);
+      return stream;
+    };
+  });
+  await page.goto("/api/partner/kasir");
+  const open = page.getByRole("button", { name: "Pindai QR" });
+  const close = page.getByRole("dialog").getByRole("button", { name: "Tutup" });
+  await open.click();
+  await close.click();
+  await open.click();
+  await page.waitForFunction(
+    () => (window as { cameras?: MediaStream[] }).cameras!.length === 2,
+  );
+  await close.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as { cameras?: MediaStream[] })
+          .cameras!.flatMap((stream) => stream.getTracks())
+          .every((track) => track.readyState === "ended"),
+      ),
+    )
+    .toBe(true);
+});
