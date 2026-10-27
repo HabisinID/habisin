@@ -289,6 +289,9 @@
   const TICKET_CODE = new RegExp(`^[${ALPHABET}]{5}$`);
   let stream = null;
   let scanning = false;
+  // Each opening of the dialog is a session; closing it ends the session, so a
+  // camera that arrives late (permission prompt, jsQR loading) is turned off.
+  let session = 0;
 
   function loadJsQR() {
     if (window.jsQR) return Promise.resolve();
@@ -326,22 +329,21 @@
     video.srcObject = null;
   }
   async function startScan() {
+    const mine = ++session;
     scanStatus.textContent = "Membuka kamera…";
     scanner.showModal();
-    // The dialog can be closed while we wait (permission prompt, jsQR loading);
-    // then the camera that arrives late must be turned off again.
-    const closed = () => {
-      if (scanner.open) return false;
-      stopCamera();
-      return true;
-    };
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      if (closed()) return;
+      const camera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      if (mine !== session) {
+        camera.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = camera;
       video.srcObject = stream;
       await video.play();
       const read = await qrReader();
-      if (closed()) return;
+      // Closed meanwhile: the close handler already stopped this camera.
+      if (mine !== session) return;
       scanStatus.textContent = "Arahkan QR di tiket pembeli ke kamera.";
       scanning = true;
       const tick = async () => {
@@ -358,6 +360,7 @@
       };
       tick();
     } catch (error) {
+      if (mine !== session) return;
       console.warn("Pindai QR:", error);
       stopCamera();
       scanStatus.textContent = "Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau ketik kodenya di kotak.";
@@ -366,6 +369,7 @@
   document.getElementById("scan-open").addEventListener("click", startScan);
   document.getElementById("scan-close").addEventListener("click", () => scanner.close());
   scanner.addEventListener("close", () => {
+    session++;
     stopCamera();
     if (code().length < boxes.length) boxes[0].focus();
   });
