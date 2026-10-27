@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Listing, Reservation, Store
+from .models import Listing, Reservation, Store, PartnerApproval, ModerationLog
 from .geocoding import normalize_address, validate_location_token
 from .listing_services import ListingConflict
 from .listing_media import normalize_listing_image
@@ -260,3 +260,20 @@ class StoreSerializer(serializers.ModelSerializer):
         if (address_changed or coordinates_changed) and not confirmed:
             raise serializers.ValidationError({"location_confirmed": "Konfirmasi posisi pin toko sebelum menyimpan."})
         return attrs
+
+class PartnerApprovalSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source="user.username")
+
+    class Meta:
+        model = PartnerApproval
+        fields = ["id", "user", "username", "status", "requested_at", "reviewed_at"]
+        read_only_fields = ["id", "user", "requested_at"]
+
+
+class ModerationLogSerializer(serializers.ModelSerializer):
+    admin_username = serializers.ReadOnlyField(source="admin_user.username")
+
+    class Meta:
+        model = ModerationLog
+        fields = ["id", "admin_user", "admin_username", "action_type", "target_name", "reason", "created_at"]
+        read_only_fields = ["id", "admin_user", "created_at"]
