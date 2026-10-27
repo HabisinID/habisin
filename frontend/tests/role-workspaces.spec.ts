@@ -158,8 +158,8 @@ test("partner starts on operational dashboard and can mark sold out, undo, inspe
       page.getByRole("heading", { name: "Dashboard Roti", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /Verifikasi kode/ }),
-    ).toBeDisabled();
+      page.getByRole("link", { name: /Verifikasi kode/ }),
+    ).toHaveAttribute("href", "/api/partner/kasir");
     await page.getByRole("button", { name: "Bulan", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Bulan", exact: true }),

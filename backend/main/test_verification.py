@@ -49,6 +49,9 @@ class VerificationTests(TestCase):
         self.assertEqual(self.client.get(PAGE).status_code, 403)
         self.assertEqual(self.check("H7K49").status_code, 403)
 
+    def test_page_offers_qr_scanning(self):
+        self.assertContains(self.client.get(PAGE), "Pindai QR")
+
     def test_page_counts_orders_waiting_for_pickup(self):
         self.order("H7K49")
         self.order("AAAAA", status="pending")
