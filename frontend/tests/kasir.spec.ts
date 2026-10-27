@@ -207,3 +207,40 @@ test("reopening the scanner before the first camera arrives leaves no camera on"
     )
     .toBe(true);
 });
+
+test("the theme switcher is the top-right item of the cashier page at every width", async ({
+  page,
+}) => {
+  await register(page.request, "partner", 0);
+  await page.goto("/api/partner/kasir");
+  for (const width of [390, 760, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const layout = await page.evaluate(() => {
+      const visible = (el: Element) => {
+        const box = el.getBoundingClientRect();
+        return box.width > 0 && getComputedStyle(el).display !== "none";
+      };
+      const toggles = [
+        ...document.querySelectorAll("[data-theme-toggle]"),
+      ].filter(visible);
+      const toggle = toggles[0].getBoundingClientRect();
+      const sameRow = (box: DOMRect) =>
+        box.top < toggle.bottom && box.bottom > toggle.top;
+      const onItsRight = [...document.querySelectorAll("a, button, input")]
+        .filter((el) => visible(el) && !el.hasAttribute("data-theme-toggle"))
+        .map((el) => el.getBoundingClientRect())
+        .filter((box) => sameRow(box) && box.left >= toggle.right - 1);
+      return {
+        toggles: toggles.length,
+        top: toggle.top,
+        onItsRight: onItsRight.length,
+      };
+    });
+    expect(layout, `@${width}px`).toEqual({
+      toggles: 1,
+      top: layout.top,
+      onItsRight: 0,
+    });
+    expect(layout.top, `@${width}px`).toBeLessThan(40);
+  }
+});

@@ -73,6 +73,15 @@ class VerificationTests(TestCase):
         self.assertContains(response, "Roti Cabang × 2")
         self.assertEqual(self.logs(), [])
 
+    def test_buyer_name_is_shortened_even_when_stored_whole(self):
+        # Sign-up stores the whole name in first_name.
+        User.objects.filter(pk=self.buyer.pk).update(first_name="Rani Ayu Lestari", last_name="")
+        self.order()
+        response = self.check("H7K49")
+        self.assertContains(response, "Rani L.")
+        self.assertNotContains(response, "Lestari")
+        self.assertContains(response, "Rp 10.000")
+
     def test_unknown_code_is_rejected_and_logged(self):
         response = self.check("XXXXX")
         self.assertEqual(response.context["outcome"], "not_found")
