@@ -21,6 +21,8 @@ baru. Pesanan lama berstatus `reserved` otomatis menjadi `paid`.
    dan kode tiket (`H7K · 49`). Pesanan yang belum dibayar dapat dilanjutkan
    (**Lanjutkan pembayaran**), pesanan aktif dapat **dibatalkan** dengan konfirmasi
    (stok kembali), dan pesanan di tab **Riwayat** dapat **dihapus dari riwayat**.
+   **Lihat tiket** membuka tiket digital berisi QR untuk kasir; lihat
+   [Modul 8](module-8.md).
 
 Pembatalan dan penghapusan memakai *optimistic update*: tampilan langsung berubah,
 lalu dikembalikan seperti semula disertai pesan error jika server menolak.
