@@ -2,8 +2,9 @@ import { expect, test } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { food } from "./discovery-data";
 
-// TopNav/Pembeli in design.pen: search, location chip, Beranda · Jelajahi ·
-// Pesanan, then the avatar. One BuyerHeader on discovery and order pages.
+// TopNav/Pembeli in design.pen: search, location chip, Jelajahi · Pesanan,
+// then the avatar. One BuyerHeader on discovery and order pages. Beranda is
+// for guests only: signed in, "/" is the catalog, the same page as Jelajahi.
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/**", (route) =>
     route.fulfill({ status: 503, json: { detail: "Offline preview" } }),
@@ -48,15 +49,7 @@ test("signed-in buyers get the design TopNav on discovery and order pages", asyn
     await page.goto(path, { waitUntil: "networkidle" });
     const banner = page.getByRole("banner");
     const nav = buyerNav(page);
-    await expect(nav.getByRole("link")).toHaveText([
-      "Beranda",
-      "Jelajahi",
-      "Pesanan",
-    ]);
-    await expect(nav.getByRole("link", { name: "Beranda" })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    await expect(nav.getByRole("link")).toHaveText(["Jelajahi", "Pesanan"]);
     await expect(nav.getByRole("link", { name: "Jelajahi" })).toHaveAttribute(
       "href",
       "/jelajahi",
@@ -80,7 +73,7 @@ test("signed-in buyers get the design TopNav on discovery and order pages", asyn
   }
 });
 
-test("guests see the same links, and Pesanan asks them to sign in first", async ({
+test("guests also get Beranda (the landing page), and Pesanan asks them to sign in first", async ({
   page,
 }) => {
   await page.route("**/api/auth/me", (route) =>
@@ -93,6 +86,10 @@ test("guests see the same links, and Pesanan asks them to sign in first", async 
     "Jelajahi",
     "Pesanan",
   ]);
+  await expect(nav.getByRole("link", { name: "Beranda" })).toHaveAttribute(
+    "href",
+    "/",
+  );
   await nav.getByRole("button", { name: "Pesanan", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
