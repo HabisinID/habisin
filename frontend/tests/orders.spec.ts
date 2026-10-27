@@ -1,67 +1,16 @@
 import { expect, test } from "./fixtures";
 import type { Page } from "@playwright/test";
-
-// Runs against the real backend, like demo.spec.ts: both servers and a fresh
-// seed_demo catalog are required.
-const password = "Order-Flow-Secure-927!";
-const ticketCode =
-  /^[ACDEFHJKMNPRTUVWXY3479]{3} · [ACDEFHJKMNPRTUVWXY3479]{2}$/;
-
-async function csrf(page: Page) {
-  return (await (await page.request.get("/api/auth/csrf")).json()).csrfToken;
-}
-
-async function signUpBuyer(page: Page) {
-  const response = await page.request.post("/api/auth/register", {
-    data: {
-      name: "Order Tester",
-      username: `order_${Date.now()}`,
-      email: "order@example.com",
-      password,
-      role: "buyer",
-    },
-    headers: { "X-CSRFToken": await csrf(page) },
-  });
-  expect(response.status()).toBe(201);
-  const ready = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/listings",
-  );
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await ready;
-}
+import {
+  deleteAccount,
+  payFromSummary,
+  signUpBuyer,
+  startOrder,
+  ticketCode,
+} from "./order-helpers";
 
 // Deleting the account cancels its active orders and restores catalog stock.
 // afterEach gets its own timeout, so cleanup still runs after a failed step.
-test.afterEach(async ({ page }) => {
-  await page.unrouteAll({ behavior: "ignoreErrors" });
-  await page.request.delete("/api/auth/me", {
-    data: { password },
-    headers: { "X-CSRFToken": await csrf(page) },
-  });
-});
-
-async function startOrder(page: Page, quantity: string, note = "") {
-  await page.getByRole("button", { name: "Daftar", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Pesan Surprise Pastry Box", exact: true })
-    .click();
-  await page.getByLabel("Jumlah porsi").fill(quantity);
-  if (note) await page.getByLabel("Catatan pengambilan").fill(note);
-  await page.getByRole("button", { name: "Lanjut ke ringkasan" }).click();
-  await expect(page).toHaveURL(/\/pesanan\/\d+$/);
-  await expect(
-    page.getByRole("heading", { name: "Ringkasan pesanan" }),
-  ).toBeVisible();
-}
-
-async function payFromSummary(page: Page) {
-  await page.getByRole("button", { name: /^Bayar Rp/ }).click();
-  await expect(page).toHaveURL(/\/pesanan\/\d+\/bayar$/);
-  await page
-    .getByRole("button", { name: "Simulasikan pembayaran berhasil" })
-    .click();
-  await expect(page).toHaveURL(/\/pesanan$/);
-}
+test.afterEach(async ({ page }) => deleteAccount(page));
 
 const saved = (page: Page) =>
   page.waitForResponse(
@@ -202,7 +151,7 @@ test("guests are asked to sign in before seeing orders", async ({ page }) => {
 async function expectDesignTopNav(page: Page) {
   const banner = page.getByRole("banner");
   await expect(
-    banner.getByRole("searchbox", { name: "Cari makanan atau toko" }),
+    banner.getByRole("textbox", { name: "Cari makanan atau toko" }),
   ).toBeVisible();
   await expect(
     banner.getByRole("button", { name: /Pakai lokasiku/ }),
@@ -240,7 +189,7 @@ test("order pages share the buyer TopNav from the design", async ({ page }) => {
 
   const search = page
     .getByRole("banner")
-    .getByRole("searchbox", { name: "Cari makanan atau toko" });
+    .getByRole("textbox", { name: "Cari makanan atau toko" });
   await search.fill("pastry");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/jelajahi\?q=pastry$/);

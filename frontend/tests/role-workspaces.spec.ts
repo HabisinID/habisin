@@ -90,12 +90,12 @@ test("buyer starts on map, header and pills match, card focus clears after two z
     page.getByRole("button", { name: "Daftar", exact: true }),
   ).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: "/tmp/habisin-role-buyer-list-desktop.png" });
-  // "Pesanan saya" is a link to the /pesanan page (Modul 7); the rest are buttons.
+  // TopNav/Pembeli in design.pen: Beranda · Jelajahi · Pesanan.
   const labels = await page
     .getByRole("navigation", { name: "Navigasi pembeli" })
     .locator("a, button")
     .allTextContents();
-  expect(labels).toEqual(["Jelajahi", "Favorit", "Pesanan saya"]);
+  expect(labels).toEqual(["Beranda", "Jelajahi", "Pesanan"]);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -158,8 +158,8 @@ test("partner starts on operational dashboard and can mark sold out, undo, inspe
       page.getByRole("heading", { name: "Dashboard Roti", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /Verifikasi kode/ }),
-    ).toBeDisabled();
+      page.getByRole("link", { name: /Verifikasi kode/ }),
+    ).toHaveAttribute("href", "/api/partner/kasir");
     await page.getByRole("button", { name: "Bulan", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Bulan", exact: true }),

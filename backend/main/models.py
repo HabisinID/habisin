@@ -227,3 +227,20 @@ class Complaint(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+
+
+class VerificationLog(models.Model):
+    """Modul 8: every code a cashier handed over or turned away, for "Verifikasi terakhir"."""
+    OUTCOMES = [("picked_up", "Diambil"), ("not_found", "Tidak ditemukan"), ("other_store", "Milik toko lain"), ("used", "Sudah dipakai"), ("cancelled", "Dibatalkan"), ("expired", "Kedaluwarsa"), ("unpaid", "Belum dibayar")]
+
+    partner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="verification_logs")
+    # Empty for unknown codes and other stores' orders, so their details never reach this partner.
+    reservation = models.ForeignKey(Reservation, null=True, blank=True, on_delete=models.SET_NULL)
+    code = models.CharField(max_length=5)
+    outcome = models.CharField(max_length=12, choices=OUTCOMES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        # "Verifikasi terakhir" reads a partner's newest rows on every check.
+        indexes = [models.Index(fields=["partner", "-created_at", "-id"], name="verlog_partner_recent_idx")]

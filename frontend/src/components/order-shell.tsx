@@ -1,13 +1,10 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapPin, Search } from "lucide-react";
 import { api, ApiError, type User } from "@/lib/api";
-import { designFont } from "@/lib/design-font";
-import { useBrowserLocation } from "@/hooks/use-browser-location";
-import SiteHeader from "./site-header";
+import BuyerHeader from "./buyer-header";
 import { errorClass, primaryButton } from "./store-ui";
-import s from "./workspace.module.css";
 
 // Placeholder blocks shown while an order page loads (design: "memuat (skeleton)").
 // The label stays available to screen readers.
@@ -61,7 +58,7 @@ export default function OrderShell({
   );
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const { location, locating, locate } = useBrowserLocation(setNotice);
+  const router = useRouter();
   useEffect(() => {
     let active = true;
     api<User>("auth/me")
@@ -83,48 +80,20 @@ export default function OrderShell({
     };
   }, []);
 
-  const name = user ? user.name || user.username : "";
-  // Initials of the first two words, as on the design's avatar ("Rani Ayu" → RA).
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
+  async function signOut() {
+    await api("auth/logout", "POST").catch(() => {});
+    router.push("/");
+  }
   return (
     <>
-      <SiteHeader
-        className={designFont.className}
-        navLabel="Navigasi pembeli"
-        nav={[
-          { label: "Beranda", href: "/" },
-          { label: "Jelajahi", href: "/jelajahi" },
-          { label: "Pesanan", href: "/pesanan", current: true },
-        ]}
-        actions={
-          user && (
-            <span className={s.avatar} title={name}>
-              {initials}
-            </span>
-          )
-        }
-      >
-        {/* Searching leaves the order pages for Jelajahi, like the landing page. */}
-        <form action="/jelajahi" role="search" className={s.headerSearch}>
-          <Search size={18} aria-hidden="true" />
-          <input
-            type="search"
-            name="q"
-            aria-label="Cari makanan atau toko"
-            placeholder="Cari roti, nasi, atau nama toko"
-          />
-        </form>
-        <button className={s.location} onClick={locate} disabled={locating}>
-          <MapPin size={16} />
-          {locating ? "Mencari lokasi…" : `${location} · Pakai lokasiku`}
-        </button>
-      </SiteHeader>
+      {/* The buyer TopNav shared with Jelajahi; searching opens Jelajahi. */}
+      <BuyerHeader
+        user={user}
+        active="orders"
+        onNotice={setNotice}
+        onLogout={signOut}
+        onLogin={() => router.push("/")}
+      />
       {notice && (
         <p
           className="mx-auto max-w-[1440px] px-16 pt-3 text-sm text-muted tablet:px-4"

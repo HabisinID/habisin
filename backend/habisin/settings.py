@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,8 +26,15 @@ load_dotenv('.env')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'local-demo-only-change-before-deployment')
 
+# PRODUCTION=True on PWS: PostgreSQL from ITF and debug off unless DEBUG is set.
+# Anything but true/false stops startup, so a typo never falls back to SQLite on PWS.
+production_flag = os.getenv("PRODUCTION", "False").strip().lower()
+if production_flag not in {"true", "false"}:
+    raise ImproperlyConfigured(f"PRODUCTION must be True or False, not {production_flag!r}.")
+PRODUCTION = production_flag == "true"
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+DEBUG = os.getenv("DEBUG", str(not PRODUCTION)).lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 
@@ -80,12 +88,33 @@ WSGI_APPLICATION = 'habisin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if PRODUCTION:
+    missing = [name for name in ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "SCHEMA"] if not os.getenv(name)]
+    if missing:
+        raise ImproperlyConfigured(f"PRODUCTION=True needs these environment variables: {', '.join(sorted(missing))}.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            # ITF gives each project schema (tugas_kelompok) inside a shared database.
+            # Required: without it, migrations would land in "public" and stay there.
+            'OPTIONS': {'options': f"-c search_path={os.getenv('SCHEMA')}"},
+            # Reuse connections between requests, but check them before use.
+            'CONN_MAX_AGE': 60,
+            'CONN_HEALTH_CHECKS': True,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -146,7 +175,8 @@ NOMINATIM_URL = os.getenv("NOMINATIM_URL", "https://nominatim.openstreetmap.org/
 NOMINATIM_USER_AGENT = os.getenv("NOMINATIM_USER_AGENT", "HABISIN/1.0 (partner store onboarding)")
 TIME_ZONE = "Asia/Jakarta"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-if not DEBUG and SECRET_KEY == "local-demo-only-change-before-deployment":
+# PRODUCTION=True may still turn DEBUG on, but never with the public demo key.
+if (PRODUCTION or not DEBUG) and SECRET_KEY == "local-demo-only-change-before-deployment":
     raise RuntimeError("Set SECRET_KEY before running in production.")
 
 # Uploaded listing photos use Django storage; production requires persistent storage.

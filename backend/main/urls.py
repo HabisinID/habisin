@@ -2,9 +2,15 @@ from django.urls import path
 from . import views
 from . import store_views, commerce_views
 from . import reviews_views
+from . import verification
 
 urlpatterns = [
     path("partner/dashboard", commerce_views.partner_dashboard),
+    path("partner/kasir", verification.page),
+    path("partner/kasir/check", verification.check),
+    path("partner/kasir/recent", verification.recent),
+    path("partner/kasir/<int:pk>/pickup", verification.pickup),
+    path("partner/kasir/<int:pk>/undo", verification.undo),
     path("partner/listings/<int:pk>/sold-out", commerce_views.sold_out),
     path("partner/listings/<int:pk>/undo-sold-out", commerce_views.undo_sold_out),
     path("auth/csrf", views.csrf),

@@ -1,5 +1,7 @@
 # HABISIN
 
+[![CI](https://github.com/HabisinID/habisin/actions/workflows/ci.yml/badge.svg)](https://github.com/HabisinID/habisin/actions/workflows/ci.yml)
+
 > **Save Food, Cut Waste, Feed Communities.**
 
 Web app berbasis peta interaktif (map-first progressive web app) yang mempertemukan gerai makanan berlebih dengan masyarakat sekitar. Melalui transparansi geolokasi dan reservasi instan, HABISIN memfasilitasi penebusan makanan surplus dengan diskon signifikan maupun klaim donasi gratis sebelum batas waktu operasional berakhir.
@@ -389,16 +391,46 @@ cleanup pada media pengguna sebagai bagian tes; tes memakai direktori sementara.
 
 ### Status implementasi
 
-Modul 1 (akun), Modul 2 (toko), Modul 3 (listing), Modul 4 (discovery) dan Modul 7 (pesanan dan pembayaran simulasi) tersedia. Implementasi belum mencakup seluruh 10 modul. Persetujuan mitra/moderasi,
-moderation log, verifikasi kasir/QR, ulasan/komplain, statistik dampak aktual, dan PWA
+Modul 1 (akun), Modul 2 (toko), Modul 3 (listing), Modul 4 (discovery), Modul 7 (pesanan dan pembayaran simulasi) dan Modul 8 (tiket digital dan verifikasi kode kasir, termasuk Pindai QR) tersedia. Implementasi belum mencakup seluruh 10 modul. Persetujuan mitra/moderasi,
+moderation log, ulasan/komplain, statistik dampak aktual, dan PWA
 offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
 demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Katalog awal berisi
 data demo; akun mitra dapat membuat listing sendiri. Modul 4 menyediakan popup toko,
 katalog profil toko, deep link makanan, dan lifecycle peta yang mempertahankan viewport.
 
+### Dari pesanan sampai diambil (Modul 7–8)
+
+Pembeli membayar, membuka tiket, lalu kasir mencocokkan kodenya. Detail ada di
+[docs/module-7.md](docs/module-7.md) dan [docs/module-8.md](docs/module-8.md).
+
+| Pesanan saya | Tiket digital |
+| --- | --- |
+| ![Pesanan saya dengan kode dan tombol Lihat tiket](docs/screenshots/modul-8/01-pesanan-saya.png) | ![Tiket berisi QR, kode, linimasa, dan Buka rute](docs/screenshots/modul-8/02-tiket.png) |
+
+| Kasir: kode cocok | Kasir: diserahkan, bisa diurungkan 60 detik |
+| --- | --- |
+| ![Halaman kasir menampilkan Kode cocok](docs/screenshots/modul-8/03-kasir-kode-cocok.png) | ![Halaman kasir setelah Tandai sudah diambil](docs/screenshots/modul-8/04-kasir-diserahkan.png) |
+
+| Kasir: kode yang sama ditolak | Tiket pembeli ikut berubah |
+| --- | --- |
+| ![Kode yang sama ditolak karena sudah dipakai](docs/screenshots/modul-8/05-kasir-sudah-dipakai.png) | ![Tiket menampilkan Sudah dipakai dan kode dicoret](docs/screenshots/modul-8/06-tiket-sudah-dipakai.png) |
+
 ### Verifikasi
 
-Jalankan setiap blok dari root repository. Tes backend memakai database tes terpisah.
+**CI otomatis.** Setiap pull request dan push ke `main` menjalankan
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) di GitHub Actions:
+
+| Job | Isi |
+| --- | --- |
+| Backend | `manage.py check`, cek migrasi yang belum dibuat, tes Django dengan coverage minimal 90% |
+| Frontend | ESLint, TypeScript, dan `next build` |
+| End-to-end | Menjalankan Django (migrate + `seed_demo`) dan build produksi Next.js, lalu semua tes Playwright |
+
+Jika job end-to-end gagal, log Django/Next.js dan hasil Playwright tersedia sebagai
+artifact `e2e-debug` di halaman run tersebut. Jangan merge PR dengan CI merah.
+
+Untuk menjalankan pemeriksaan yang sama secara lokal, jalankan setiap blok dari root
+repository. Tes backend memakai database tes terpisah.
 
 ```bash
 cd backend
@@ -551,9 +583,9 @@ Flow Tambah/Ubah listing memakai app bar dan CTA menetap pada mobile serta sideb
 
 Pembeli masuk ke **Jelajahi → Peta**. Seluruh header atas memakai `SiteHeader` dengan navigasi per peran, logo PNG terbaru dan tulisan `habisin.`; sidebar mitra dipertahankan. Header pembeli memuat pencarian, lokasi, Jelajahi, Favorit, Pesanan saya dan Akun. Pin toko menampilkan nama/rentang harga; klik kartu memfokuskan pin, dua tingkat zoom keluar melepas pilihan.
 
-Integrasi memakai **OrderSummary/OrderList Modul 7**: buat pending → ringkasan/edit catatan/jumlah → pembayaran simulasi → tiket kode teks. Keranjang/batch checkout dan pembatalan mitra ditunda; endpoint `/api/checkout` dan `/api/partner/reservations/:id/cancel` tidak tersedia. Tabel/kolom historisnya tetap dipertahankan. QR/verifikasi kasir belum tersedia.
+Integrasi memakai **OrderSummary/OrderList Modul 7**: buat pending → ringkasan/edit catatan/jumlah → pembayaran simulasi → tiket kode teks. Keranjang/batch checkout dan pembatalan mitra ditunda; endpoint `/api/checkout` dan `/api/partner/reservations/:id/cancel` tidak tersedia. Tabel/kolom historisnya tetap dipertahankan. QR/verifikasi kasir saat itu belum tersedia; kini ada di [Modul 8](docs/module-8.md).
 
-Mitra masuk ke dashboard **Baris 10 · Mitra · Dasbor**. Sidebar menyediakan Dasbor, Listing, Pesanan, Profil toko dan Akun; Verifikasi kode belum aktif. `GET /api/partner/dashboard?period=today|week|month|year` hanya membaca data akun sendiri. Grafik/angka menunjukkan porsi terpesan dan nominal simulasi, bukan klaim pengambilan selesai. Listing dan toko tetap memakai CRUD existing. **Tandai habis** mengubah stok nol melalui `POST /api/partner/listings/:id/sold-out`; respons menyertakan token undo60detik. `POST /api/partner/listings/:id/undo-sold-out` menerima `token` sekali; perubahan stok atau pembatalan pesanan membatalkan token lama agar tidak menimpa stok terbaru. Refresh dashboard setiap30detik/saat fokus/mutasi; keputusan transaksi tetap di server.
+Mitra masuk ke dashboard **Baris 10 · Mitra · Dasbor**. Sidebar menyediakan Dasbor, Listing, Pesanan, Profil toko dan Akun; Verifikasi kode kini membuka halaman kasir [Modul 8](docs/module-8.md). `GET /api/partner/dashboard?period=today|week|month|year` hanya membaca data akun sendiri. Grafik/angka menunjukkan porsi terpesan dan nominal simulasi, bukan klaim pengambilan selesai. Listing dan toko tetap memakai CRUD existing. **Tandai habis** mengubah stok nol melalui `POST /api/partner/listings/:id/sold-out`; respons menyertakan token undo60detik. `POST /api/partner/listings/:id/undo-sold-out` menerima `token` sekali; perubahan stok atau pembatalan pesanan membatalkan token lama agar tidak menimpa stok terbaru. Refresh dashboard setiap30detik/saat fokus/mutasi; keputusan transaksi tetap di server.
 
 Migrasi additive `0010_listingstockaction_checkoutbatch` menambah tabel token checkout/undo. Backup database kerja sebelum migrasi; suite browser harus memakai backend/media sementara pada panduan verifikasi. Tidak ada dependency baru untuk fitur ini.
 
@@ -562,7 +594,7 @@ Migrasi additive `0010_listingstockaction_checkoutbatch` menambah tabel token ch
 
 Beranda publik memakai Leaflet di Margonda Raya, Depok. Section **Makanan di sekitarmu** menampilkan maksimal empat listing aktif dari API dan disembunyikan bila kosong atau katalog belum tersambung. Angka nasional memiliki sumber/periode; angka katalog tidak diklaim sebagai transaksi terselamatkan.
 
-Tamu dapat membuka `/jelajahi`, mencari, memfilter, berpindah peta/daftar dan membaca detail makanan. Pembelian, favorit dan CTA pendaftaran toko meminta login. Footer hanya mengaktifkan halaman atau bagian yang tersedia. Logo terbaru tetap disertai tulisan `habisin.`. QR dan verifikasi kasir tetap tahap berikutnya.
+Tamu dapat membuka `/jelajahi`, mencari, memfilter, berpindah peta/daftar dan membaca detail makanan. Pembelian, favorit dan CTA pendaftaran toko meminta login. Footer hanya mengaktifkan halaman atau bagian yang tersedia. Logo terbaru tetap disertai tulisan `habisin.`. QR dan verifikasi kasir kini tersedia di [Modul 8](docs/module-8.md).
 
 ### Branch: `feat/pemesanan-dan-mock-payment`
 
@@ -582,3 +614,62 @@ Lihat [kontrak integrasi dan migrasi](docs/integrate-main-modules-3-4.md).
 Migrasi `0012_merge_modules_3_4_and_orders` menyatukan kedua riwayat migrasi secara additive.
 Database kerja wajib dicadangkan bersama MEDIA_ROOT sebelum migrasi operasional.
 Resolusi merge tidak menjalankan migrasi/seed pada database kerja, membuat commit, atau push. Lihat catatan verifikasi integrasi untuk penyimpangan origin tes dan langkah pembersihan fixture.
+
+### Branch: `feat/modul-8-tiket-dan-verifikasi`
+
+Tools: Claude Code (Anthropic) untuk menulis kode, tes, dan dokumentasi dalam sesi lokal
+tanpa tautan chat publik; CodeRabbit sebagai AI reviewer di setiap pull request. Anggota
+tim lain memakai Codex (OpenAI) di branch mereka.
+
+**Tujuan.** Menyelesaikan Modul 8 (tiket digital, verifikasi kode kasir, Pindai QR)
+dengan TDD yang terlihat di git, lalu memeriksa ulang hasilnya dengan review AI dan
+review teman.
+
+**Strategi prompt.**
+
+- Memberi konteks tertulis lebih dulu: berkas serah-terima berisi aturan tim, aturan
+  bisnis Modul 7, teks dan state desain Modul 8 dari `design.pen`, dan jebakan yang pernah
+  ditemui. AI diminta membaca kode yang ada sebelum menulis.
+- Meminta urutan TDD eksplisit: commit `test(...)` yang dibuktikan gagal karena alasan
+  yang benar, baru `feat`/`fix` sampai hijau.
+- Membatasi ruang ubah: AI hanya mengubah berkas Modul 7–8; berkas teman diubah hanya
+  setelah disetujui (tautan Verifikasi kode di dasbor mitra), sisanya ditulis sebagai
+  catatan untuk pemiliknya.
+- Keputusan produk diambil manusia: HTMX untuk halaman kasir, mempertahankan Pindai QR
+  setelah menimbang dependensinya, dan menyimpan htmx/jsQR di repo agar demo tidak
+  bergantung pada CDN.
+
+**Bantuan AI digunakan untuk:**
+
+- **Backend:** model `VerificationLog`, view kasir, decorator `@partner_only` dan
+  `@partner_owns_reservation`, rate limit 30 cek/menit, serah dan urungkan 60 detik.
+- **Halaman kasir (HTMX):** template Django, 5 kotak kode, pintasan keyboard, Pindai QR
+  (BarcodeDetector dengan jsQR sebagai cadangan), tema terang/gelap yang sinkron dengan
+  aplikasi.
+- **Tiket pembeli (React):** halaman tiket, QR, linimasa, sumbu, varian status.
+- **Pengujian:** unit test backend dan tes Playwright (termasuk kamera tiruan dan
+  pemeriksaan tata letak di 390/760/1440 px).
+- **Dokumentasi:** [docs/module-8.md](docs/module-8.md), screenshot, dan bagian ini.
+
+**Keterbatasan AI yang ditemui.**
+
+- Asumsi lingkungan yang keliru: `BarcodeDetector` ternyata tidak ada di Chrome Windows,
+  `next-env.d.ts` tidak ikut di CI karena di-gitignore, dan skrip edit di Windows sempat
+  mengosongkan berkas karena encoding serta mengubah line ending.
+- Bug yang lolos dari tulisan pertama dan baru ditemukan CodeRabbit: Enter di tombol
+  "Kode lain" ikut menandai pesanan, kamera tetap menyala bila dialog ditutup saat izin
+  kamera masih diminta, dan hasil refresh lama bisa menimpa tiket yang sudah dibatalkan.
+- Tes e2e yang gagal karena timeout sempat meninggalkan listing uji di katalog.
+- Pemeriksaan visual tetap perlu manusia: tombol tema yang bergeser di 760 px dan nama
+  pembeli yang tampil lengkap baru terlihat dari screenshot.
+
+**Perbaikan dan verifikasi manual.**
+
+- Setiap temuan CodeRabbit dicek terhadap kode, diberi tes regresi lebih dulu, lalu
+  diperbaiki (lihat commit `test:`/`fix:` di PR #16).
+- Pembersihan tes dipindah ke `afterEach`; berkas vendor diberi hash SRI dan
+  `.gitattributes`; CI dijalankan ulang setelah perbaikan.
+- Alur penuh diperiksa di browser lewat Playwright dan screenshot (desktop, tablet,
+  ponsel, tema gelap) sebelum di-commit.
+- Violin memutuskan setiap perubahan cakupan, menyetujui perubahan pada berkas teman,
+  dan melakukan push sendiri; merge menunggu review teman dan CI.
