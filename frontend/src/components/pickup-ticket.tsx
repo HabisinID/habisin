@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeft, Check, MapPin } from "lucide-react";
 import { rupiah, type Reservation } from "@/lib/api";
@@ -21,6 +21,16 @@ const URGENT_SPAN = 30 * 60000;
 // Picks up the cashier's "Tandai sudah diambil" while the ticket stays open.
 const REFRESH_EVERY = 15000;
 
+// Only a paid order asks the buyer to come; the others say what happened.
+function heading(order: Reservation) {
+  const deadline = clock(order.listing.pickup_end);
+  if (order.status === "picked_up" && order.picked_up_at)
+    return `Diambil pukul ${clock(order.picked_up_at)}`;
+  if (order.status === "cancelled") return "Pesanan dibatalkan";
+  if (order.status === "expired") return `Batas ambil ${deadline} sudah lewat`;
+  return `Ambil sebelum ${deadline}`;
+}
+
 // Modul 8: the buyer's pickup ticket. The receipt on the left is what the
 // cashier reads (QR or code); the right side is for the buyer.
 export default function PickupTicket({ id }: { id: string }) {
@@ -31,22 +41,30 @@ export default function PickupTicket({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Only the newest read may update the ticket: refreshes can overlap, and a
+  // read started before a cancel must not bring the paid ticket back.
+  const latestRead = useRef(0);
 
   useEffect(() => {
     let active = true;
-    const load = () =>
-      orderApi
+    const load = () => {
+      const read = ++latestRead.current;
+      return orderApi
         .get(id)
         .then((data) => {
-          if (!active) return;
+          if (!active || read !== latestRead.current) return;
           // An unpaid order has no ticket yet: finish paying first.
           if (data.status === "pending")
             return router.replace(`/pesanan/${id}`);
           setOrder(data);
+          setError("");
           setNow(Date.now());
           setPrinted((first) => first || Date.now());
         })
-        .catch((e) => active && setError(e.message));
+        .catch(
+          (e) => active && read === latestRead.current && setError(e.message),
+        );
+    };
     load();
     const refresh = setInterval(load, REFRESH_EVERY);
     const tick = setInterval(() => setNow(Date.now()), 30000);
@@ -73,6 +91,7 @@ export default function PickupTicket({ id }: { id: string }) {
     );
 
   async function cancel() {
+    latestRead.current++;
     setBusy(true);
     setError("");
     try {
@@ -187,9 +206,7 @@ export default function PickupTicket({ id }: { id: string }) {
             {statusLabel[order.status]}
           </p>
           <p className="mt-2 text-3xl font-bold tablet:text-2xl">
-            {used && order.picked_up_at
-              ? `Diambil pukul ${clock(order.picked_up_at)}`
-              : `Ambil sebelum ${clock(listing.pickup_end)}`}
+            {heading(order)}
           </p>
           {paid && (
             <>

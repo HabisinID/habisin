@@ -203,3 +203,5 @@ class VerificationLog(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+        # "Verifikasi terakhir" reads a partner's newest rows on every check.
+        indexes = [models.Index(fields=["partner", "-created_at", "-id"], name="verlog_partner_recent_idx")]

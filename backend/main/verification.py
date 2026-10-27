@@ -49,7 +49,8 @@ def partner_owns_reservation(view):
             if before is None:
                 return render(request, "main/kasir/_message.html", {"message": "Pesanan tidak ditemukan di toko ini."}, status=404)
             lock_listing(before.listing_id)
-            order = Reservation.objects.select_for_update().select_related("listing", "user").get(pk=pk)
+            # of=("self",): the listing is locked above; never lock the buyer's user row.
+            order = Reservation.objects.select_for_update(of=("self",)).select_related("listing", "user").get(pk=pk)
             return view(request, order, *args, **kwargs)
     return wrapper
 

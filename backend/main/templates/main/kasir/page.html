@@ -269,8 +269,9 @@
       e.preventDefault();
       clearCode();
     } else if (e.key === "Enter") {
+      // A focused button (such as "Kode lain") keeps its own Enter.
       const mark = document.querySelector("[data-pickup]");
-      if (mark) {
+      if (mark && !e.target.closest("button, a")) {
         e.preventDefault();
         mark.click();
       }
@@ -327,11 +328,20 @@
   async function startScan() {
     scanStatus.textContent = "Membuka kamera…";
     scanner.showModal();
+    // The dialog can be closed while we wait (permission prompt, jsQR loading);
+    // then the camera that arrives late must be turned off again.
+    const closed = () => {
+      if (scanner.open) return false;
+      stopCamera();
+      return true;
+    };
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      if (closed()) return;
       video.srcObject = stream;
       await video.play();
       const read = await qrReader();
+      if (closed()) return;
       scanStatus.textContent = "Arahkan QR di tiket pembeli ke kamera.";
       scanning = true;
       const tick = async () => {
