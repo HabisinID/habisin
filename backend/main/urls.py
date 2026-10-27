@@ -1,8 +1,16 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from . import store_views, commerce_views
+from rest_framework.routers import DefaultRouter
+
+# router untuk Admin Panel (Partner Approval & Moderation Log)
+router = DefaultRouter()
+router.register(r"admin/partner-approvals", views.PartnerApprovalViewSet, basename="partnerapproval")
+router.register(r"admin/moderation-logs", views.ModerationLogViewSet, basename="moderationlog")
 
 urlpatterns = [
+    path("", include(router.urls)),
+
     path("partner/dashboard", commerce_views.partner_dashboard),
     path("partner/listings/<int:pk>/sold-out", commerce_views.sold_out),
     path("partner/listings/<int:pk>/undo-sold-out", commerce_views.undo_sold_out),
