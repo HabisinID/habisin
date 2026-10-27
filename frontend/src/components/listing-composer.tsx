@@ -631,10 +631,13 @@ export default function ListingComposer({
     >
       <aside className={styles.sidebar} aria-label="Navigasi mitra">
         <HabisinLogo />
-        <button className={`${styles.navItem} ${styles.verify}`} disabled>
+        <a
+          className={`${styles.navItem} ${styles.verify}`}
+          href="/api/partner/kasir"
+        >
           <ShieldCheck size={20} />
-          Verifikasi kode<small>Belum tersedia</small>
-        </button>
+          Verifikasi kode
+        </a>
         <button className={styles.navItem} disabled={busy} onClick={onCancel}>
           <LayoutDashboard size={18} />
           Dasbor

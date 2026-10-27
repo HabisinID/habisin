@@ -158,7 +158,7 @@ test("logged dashboard follows four columns, real metadata, filters, focus and m
   await page
     .getByRole("button", { name: "Simpan Food 701 ke favorit", exact: true })
     .click();
-  await page.getByRole("button", { name: "Favorit", exact: true }).click();
+  await page.getByRole("button", { name: "Favorit saya", exact: true }).click();
   await expect(page.locator(".food-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Semua", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -402,7 +402,7 @@ test("logged catalog and quota failures keep data and recover with retry", async
   ).toHaveAttribute("max", "1");
   await page
     .getByRole("navigation", { name: "Navigasi pembeli" })
-    .getByRole("button", { name: "Jelajahi", exact: true })
+    .getByRole("link", { name: "Jelajahi", exact: true })
     .click();
   await expect(detail(page)).toHaveCount(0);
   catalogFailure = true;

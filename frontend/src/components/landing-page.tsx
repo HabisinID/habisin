@@ -298,7 +298,7 @@ export default function LandingPage({
               ],
               [
                 "Tunjukkan kode saat mengambil",
-                "Datang sebelum batas ambil dan tunjukkan kode tiket kepada toko. Verifikasi kode oleh kasir sedang dikembangkan.",
+                "Datang sebelum batas ambil dan tunjukkan tiket kepada kasir. Kasir mencocokkan kode atau memindai QR tiket untuk memverifikasi pengambilan pesanan.",
               ],
             ].map(([title, body], index) => (
               <li key={title}>
