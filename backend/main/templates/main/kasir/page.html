@@ -21,7 +21,8 @@
   </script>
   {# 4xx results (rejected, rate limited) still carry HTML for the result panel. #}
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[234]..","swap":true},{"code":"...","swap":false,"error":true}]}'>
-  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+  {# htmx 2.0.4 (0BSD) from frontend/public/vendor, so the page works without a CDN; only an eslint-disable line was added. #}
+  <script src="/vendor/htmx.min.js" integrity="sha384-N54l2pKTNFctjXuxsKOzVhpD3oDiQPMmrmGT6UzlWqDvIwzRmG3jJ/QvRkVfl8Ew"></script>
   <style>
     /* Tokens copied from frontend/src/app/globals.css (design.pen "Fondasi"). */
     :root {
@@ -280,7 +281,7 @@
   });
 
   // Pindai QR: the browser's own BarcodeDetector where it exists (Android,
-  // macOS); otherwise jsQR, loaded on first use (Chrome for Windows has none).
+  // macOS); otherwise jsQR from /vendor, loaded on first use (Chrome for Windows has none).
   const scanner = document.getElementById("scanner");
   const video = document.getElementById("scan-video");
   const scanStatus = document.getElementById("scan-status");
@@ -292,9 +293,9 @@
     if (window.jsQR) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "https://unpkg.com/jsqr@1.4.0/dist/jsQR.js";
-      script.integrity = "sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx";
-      script.crossOrigin = "anonymous";
+      // jsQR 1.4.0 (Apache-2.0), kept in frontend/public/vendor so scanning works offline; only an eslint-disable line was added.
+      script.src = "/vendor/jsQR.js";
+      script.integrity = "sha384-VSTuqEyM8ULRrCWdwYxMuNwMvOCArPxEXFl0BSI0Y56gbByvyirIQ8jsnyBYypE9";
       script.onload = resolve;
       script.onerror = reject;
       document.head.append(script);
