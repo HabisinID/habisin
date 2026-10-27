@@ -122,3 +122,67 @@ test("a free order says Gratis on the receipt", async ({ page }) => {
   });
   await expect(page.getByTestId("ticket-price")).toHaveText("Gratis");
 });
+
+test("cancelled and expired tickets no longer ask to pick up", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  await page.getByRole("button", { name: "Batalkan pesanan" }).click();
+  await page.getByRole("button", { name: "Ya, batalkan" }).click();
+  await expect(page.getByText("Pesanan dibatalkan")).toBeVisible();
+  await expect(page.getByText(/^Ambil sebelum/)).toHaveCount(0);
+  await showAs(page, id, (order) => {
+    order.status = "expired";
+  });
+  await expect(
+    page.getByText(/^Batas ambil \d{2}\.\d{2} sudah lewat$/),
+  ).toBeVisible();
+  await expect(page.getByText(/^Ambil sebelum/)).toHaveCount(0);
+});
+
+test("a failed refresh shows an error that clears once a refresh succeeds", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  const path = `**/api/reservations/${id}`;
+  await page.route(path, (route) =>
+    route.fulfill({ status: 500, json: { detail: "Server sedang sibuk." } }),
+  );
+  // Next.js adds its own role="alert" route announcer, so match the text.
+  const error = page
+    .getByRole("alert")
+    .filter({ hasText: "Server sedang sibuk" });
+  await page.evaluate(() => dispatchEvent(new Event("focus")));
+  await expect(error).toBeVisible();
+  await page.unroute(path);
+  await page.evaluate(() => dispatchEvent(new Event("focus")));
+  await expect(error).toHaveCount(0);
+});
+
+test("a slow refresh started before cancelling never brings the QR back", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  // The read fetches the paid order now, but answers only after the cancel.
+  await page.route(
+    `**/api/reservations/${id}`,
+    async (route) => {
+      const response = await route.fetch();
+      await held;
+      await route.fulfill({ response });
+    },
+    { times: 1 },
+  );
+  await page.evaluate(() => dispatchEvent(new Event("focus")));
+  await page.getByRole("button", { name: "Batalkan pesanan" }).click();
+  await page.getByRole("button", { name: "Ya, batalkan" }).click();
+  await expect(page.getByText("Pesanan dibatalkan")).toBeVisible();
+  release();
+  await page.waitForTimeout(500);
+  await expect(page.getByText("Pesanan dibatalkan")).toBeVisible();
+  await expect(page.getByRole("img", { name: /^QR kode ambil/ })).toHaveCount(
+    0,
+  );
+});

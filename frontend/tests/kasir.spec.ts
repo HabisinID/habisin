@@ -27,39 +27,54 @@ async function paidOrder(partner: APIRequestContext, buyer: APIRequestContext) {
   return order as { id: number; code: string };
 }
 
-// The buyer is deleted first, so their orders go before the partner's listing.
-async function tearDown(page: Page, buyer: APIRequestContext) {
-  await cleanup(buyer);
+// afterEach has its own timeout, so a failed test still removes its accounts.
+// The buyer goes first, taking their orders, so the partner's listing can go.
+test.afterEach(async ({ page, request }) => {
+  await cleanup(request);
   await cleanup(page.request);
-}
+});
 
 test("the cashier types a code, hands the order over and sees it used after", async ({
   page,
   request,
 }) => {
-  try {
-    const order = await paidOrder(page.request, request);
-    await page.goto("/");
-    await page.getByRole("link", { name: /Verifikasi kode/ }).click();
-    await expect(page).toHaveURL(/\/api\/partner\/kasir$/);
-    await page.getByLabel("Karakter 1").click();
-    await page.keyboard.type(order.code.toLowerCase());
-    await expect(page.getByText("Kode cocok")).toBeVisible();
-    await expect(page.getByText("Kasir Roti × 2")).toBeVisible();
-    await page.keyboard.press("Enter");
-    await expect(page.getByText(/^Diserahkan pukul/)).toBeVisible();
-    await expect(
-      page.getByRole("complementary").getByText("Diambil"),
-    ).toBeVisible();
-    await page.keyboard.type(order.code);
-    await expect(page.getByText(/^Sudah dipakai pukul/)).toBeVisible();
-    const after = await (
-      await request.get(`/api/reservations/${order.id}`)
-    ).json();
-    expect(after.status).toBe("picked_up");
-  } finally {
-    await tearDown(page, request);
-  }
+  const order = await paidOrder(page.request, request);
+  await page.goto("/");
+  await page.getByRole("link", { name: /Verifikasi kode/ }).click();
+  await expect(page).toHaveURL(/\/api\/partner\/kasir$/);
+  await page.getByLabel("Karakter 1").click();
+  await page.keyboard.type(order.code.toLowerCase());
+  await expect(page.getByText("Kode cocok")).toBeVisible();
+  await expect(page.getByText("Kasir Roti × 2")).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/^Diserahkan pukul/)).toBeVisible();
+  await expect(
+    page.getByRole("complementary").getByText("Diambil"),
+  ).toBeVisible();
+  await page.keyboard.type(order.code);
+  await expect(page.getByText(/^Sudah dipakai pukul/)).toBeVisible();
+  const after = await (
+    await request.get(`/api/reservations/${order.id}`)
+  ).json();
+  expect(after.status).toBe("picked_up");
+});
+
+test("Enter on Kode lain clears the code instead of handing the order over", async ({
+  page,
+  request,
+}) => {
+  const order = await paidOrder(page.request, request);
+  await page.goto("/api/partner/kasir");
+  await page.getByLabel("Karakter 1").click();
+  await page.keyboard.type(order.code);
+  await expect(page.getByText("Kode cocok")).toBeVisible();
+  await page.getByRole("button", { name: "Kode lain" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/^Menunggu kode/)).toBeVisible();
+  const after = await (
+    await request.get(`/api/reservations/${order.id}`)
+  ).json();
+  expect(after.status).toBe("paid");
 });
 
 // Feeds the camera a canvas with the ticket's QR. BarcodeDetector is removed so
@@ -102,35 +117,55 @@ test("Pindai QR reads the ticket's QR with the laptop camera", async ({
   page,
   request,
 }) => {
-  try {
-    const order = await paidOrder(page.request, request);
-    // htmx and jsQR come from the app itself, so a demo without a CDN still works.
-    await page.route("https://unpkg.com/**", (route) => route.abort());
-    await fakeCamera(page, order.code);
-    await page.goto("/api/partner/kasir");
-    await page.getByRole("button", { name: "Pindai QR" }).click();
-    await expect(page.getByText("Kode cocok")).toBeVisible();
-    await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(page.getByLabel("Karakter 5")).not.toHaveValue("");
-  } finally {
-    await tearDown(page, request);
-  }
+  const order = await paidOrder(page.request, request);
+  // htmx and jsQR come from the app itself, so a demo without a CDN still works.
+  await page.route("https://unpkg.com/**", (route) => route.abort());
+  await fakeCamera(page, order.code);
+  await page.goto("/api/partner/kasir");
+  await page.getByRole("button", { name: "Pindai QR" }).click();
+  await expect(page.getByText("Kode cocok")).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByLabel("Karakter 5")).not.toHaveValue("");
 });
 
 test("a blocked camera explains how to continue by typing", async ({
   page,
 }) => {
-  try {
-    await register(page.request, "partner", 0);
-    await fakeCamera(page, null);
-    await page.goto("/api/partner/kasir");
-    await page.getByRole("button", { name: "Pindai QR" }).click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText(/Kamera tidak bisa dibuka/)).toBeVisible();
-    await dialog.getByRole("button", { name: "Tutup" }).click();
-    await expect(dialog).toBeHidden();
-    await expect(page.getByLabel("Karakter 1")).toBeFocused();
-  } finally {
-    await cleanup(page.request);
-  }
+  await register(page.request, "partner", 0);
+  await fakeCamera(page, null);
+  await page.goto("/api/partner/kasir");
+  await page.getByRole("button", { name: "Pindai QR" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText(/Kamera tidak bisa dibuka/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Tutup" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByLabel("Karakter 1")).toBeFocused();
+});
+
+test("closing the scanner while the camera is still opening turns it off", async ({
+  page,
+}) => {
+  await register(page.request, "partner", 0);
+  // A camera that takes a while to open, like one behind a permission prompt.
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const stream = document.createElement("canvas").captureStream();
+      (window as { camera?: MediaStream }).camera = stream;
+      return stream;
+    };
+  });
+  await page.goto("/api/partner/kasir");
+  await page.getByRole("button", { name: "Pindai QR" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Tutup" }).click();
+  await page.waitForFunction(() => (window as { camera?: MediaStream }).camera);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as { camera?: MediaStream })
+          .camera!.getTracks()
+          .every((track) => track.readyState === "ended"),
+      ),
+    )
+    .toBe(true);
 });
