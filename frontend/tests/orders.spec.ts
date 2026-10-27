@@ -202,7 +202,7 @@ test("guests are asked to sign in before seeing orders", async ({ page }) => {
 async function expectDesignTopNav(page: Page) {
   const banner = page.getByRole("banner");
   await expect(
-    banner.getByRole("searchbox", { name: "Cari makanan atau toko" }),
+    banner.getByRole("textbox", { name: "Cari makanan atau toko" }),
   ).toBeVisible();
   await expect(
     banner.getByRole("button", { name: /Pakai lokasiku/ }),
@@ -240,7 +240,7 @@ test("order pages share the buyer TopNav from the design", async ({ page }) => {
 
   const search = page
     .getByRole("banner")
-    .getByRole("searchbox", { name: "Cari makanan atau toko" });
+    .getByRole("textbox", { name: "Cari makanan atau toko" });
   await search.fill("pastry");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/jelajahi\?q=pastry$/);

@@ -277,20 +277,6 @@ export default function Home() {
         : remaining;
     });
   }
-  function buyerNavigate(destination: string) {
-    if (!user && destination !== "explore") {
-      setRegistrationRole("buyer");
-      setPanel("login");
-      return;
-    }
-    closeDetail();
-    if (destination === "orders") void showOrders();
-    else {
-      setPanel(null);
-      setBuyerFavorites(destination === "favorites");
-      if (destination === "explore") setBuyerQuery("");
-    }
-  }
   const buyerHeader =
     user?.role === "buyer" || !user ? (
       <BuyerHeader
@@ -304,8 +290,7 @@ export default function Home() {
         location={location}
         locating={locating}
         onLocate={locate}
-        active={buyerFavorites ? "favorites" : "explore"}
-        onNavigate={buyerNavigate}
+        active="explore"
         onAccount={() => setPanel("profile")}
         onLogout={signOut}
         onLogin={() => {

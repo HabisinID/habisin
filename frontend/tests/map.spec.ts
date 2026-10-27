@@ -217,7 +217,7 @@ for (const outcome of [
       });
     }, outcome);
     await catalog(page, [food(301, 31)]);
-    const location = page.getByRole("button", { name: / · Ubah$/ });
+    const location = page.getByRole("button", { name: / · Pakai lokasiku$/ });
     const popup = page.getByRole("region", { name: /^Pilihan makanan/ });
     await pins(page).first().click();
     await expect(popup).toContainText("0.0 km");
