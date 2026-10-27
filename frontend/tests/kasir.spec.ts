@@ -104,6 +104,8 @@ test("Pindai QR reads the ticket's QR with the laptop camera", async ({
 }) => {
   try {
     const order = await paidOrder(page.request, request);
+    // htmx and jsQR come from the app itself, so a demo without a CDN still works.
+    await page.route("https://unpkg.com/**", (route) => route.abort());
     await fakeCamera(page, order.code);
     await page.goto("/api/partner/kasir");
     await page.getByRole("button", { name: "Pindai QR" }).click();
