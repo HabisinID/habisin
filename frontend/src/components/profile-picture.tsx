@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, Upload, X } from "lucide-react";
 
 export function Avatar({
   src,
@@ -35,6 +36,7 @@ export default function ProfilePictureInput({
   disabled?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [removed, setRemoved] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -45,51 +47,71 @@ export default function ProfilePictureInput({
   }, [preview]);
   const source = file ? preview : removed ? null : current;
   return (
-    <div className="space-y-3">
-      <span className="grid h-20 w-20 place-items-center rounded-full bg-light text-brand">
-        <Avatar src={source} name="Profil" />
-      </span>
-      <label className="block space-y-2 text-sm font-semibold">
-        Foto profil
-        <input
-          type="file"
-          name="profile_picture"
-          accept="image/jpeg,image/png,image/webp"
-          disabled={disabled}
-          className="block w-full text-sm"
-          onChange={(event) => {
-            const selected = event.target.files?.[0] ?? null;
-            setFile(selected);
-            setPreview(selected ? URL.createObjectURL(selected) : null);
-            setRemoved(false);
-            onDirtyChange?.(!!selected);
-          }}
-        />
-      </label>
-      <p className="text-xs text-muted">
-        JPEG, PNG, atau WebP statis. Maksimal 5 MiB dan 20 megapiksel.
-      </p>
-      {source && (
-        <button
-          type="button"
-          disabled={disabled}
-          className="text-sm font-semibold text-error"
-          onClick={(event) => {
-            const input = event.currentTarget
-              .closest("form")
-              ?.querySelector<HTMLInputElement>(
-                'input[name="profile_picture"]',
-              );
-            if (input) input.value = "";
-            setFile(null);
-            setPreview(null);
-            setRemoved(true);
-            onDirtyChange?.(!!current);
-          }}
+    <div className="flex items-start gap-4 rounded-xl border border-dashed border-border/60 bg-cream p-4 mobile:gap-3">
+      <span className="relative grid size-20 shrink-0 place-items-center rounded-full bg-light text-xl font-bold text-brand">
+        <span className="grid size-full place-items-center overflow-hidden rounded-full">
+          <Avatar src={source} name="Profil" />
+        </span>
+        <span
+          aria-hidden="true"
+          className="absolute -bottom-1 -right-1 grid size-7 place-items-center rounded-full border-2 border-cream bg-brand text-on-brand"
         >
-          Hapus foto
-        </button>
-      )}
+          <Camera size={13} />
+        </span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold">Foto profil</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          Biar lebih mudah dikenali.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs font-semibold hover:bg-light"
+          >
+            <Upload size={14} />
+            {source ? "Ganti foto" : "Pilih foto"}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            aria-label="Foto profil"
+            name="profile_picture"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={disabled}
+            className="sr-only"
+            onChange={(event) => {
+              const selected = event.target.files?.[0] ?? null;
+              setFile(selected);
+              setPreview(selected ? URL.createObjectURL(selected) : null);
+              setRemoved(false);
+              onDirtyChange?.(!!selected);
+            }}
+          />
+          {source && (
+            <button
+              type="button"
+              disabled={disabled}
+              className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-error"
+              onClick={() => {
+                if (inputRef.current) inputRef.current.value = "";
+                setFile(null);
+                setPreview(null);
+                setRemoved(true);
+                onDirtyChange?.(!!current);
+              }}
+            >
+              <X size={13} />
+              Hapus foto
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-muted">
+          JPEG, PNG, atau WebP · Maks. 5 MiB · 20 megapiksel
+        </p>
+      </div>
       {removed && <input type="hidden" name="profile_picture" value="" />}
     </div>
   );

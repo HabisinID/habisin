@@ -10,6 +10,14 @@ import RoleWorkspace from "./role-workspace";
 import { PasswordInput } from "./account";
 import Modal from "./modal";
 import s from "./role-workspace.module.css";
+import {
+  ProfileIdentity,
+  ProfileSectionHeading,
+  profileField,
+  profileLabel,
+  profilePrimary,
+  profileTabs,
+} from "./profile-ui";
 export default function WorkspaceAccount({
   role = "partner",
 }: {
@@ -106,181 +114,204 @@ function Account({
     }
   }
   return (
-    <section aria-label="Pengaturan akun mitra">
-      <p className={`${s.muted} mb-6`}>
-        Masuk sebagai <strong>{user.username}</strong> ·{" "}
-        {user.role === "admin" ? "Admin" : "Mitra"}
-      </p>
-      <div
-        className={`${s.filters} mb-8`}
-        role="group"
-        aria-label="Pengaturan akun"
-      >
-        {[
-          ["profile", "Data login"],
-          ["password", "Kata sandi"],
-          ["sessions", "Sesi aktif"],
-          ["delete", "Hapus akun"],
-        ].map(([key, label]) => (
-          <button
-            role="button"
-            aria-pressed={tab === key}
-            className={s.pill}
-            key={key}
-            onClick={() => choose(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {notice && (
-        <p role="status" className={s.message}>
-          {notice}
+    <section
+      aria-label="Pengaturan akun mitra"
+      className="mx-auto grid max-w-5xl grid-cols-[240px_minmax(0,1fr)] items-start gap-10 compact:grid-cols-1 compact:gap-6"
+    >
+      <aside className="space-y-5">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+          Ruang pribadi kamu
         </p>
-      )}
-      {tab === "sessions" ? (
-        <section className={`${s.card} max-w-2xl`}>
-          <h2 className={s.title}>Sesi aktif</h2>
-          <p className={`${s.muted} mt-4`}>
-            Kamu sedang masuk pada perangkat ini. Setelah kata sandi diubah,
-            perangkat lain diminta masuk ulang. Daftar perangkat belum tersedia.
-          </p>
-        </section>
-      ) : tab === "delete" ? (
-        <section className={`${s.card} max-w-2xl`}>
-          <h2 className={s.title}>Hapus akun</h2>
-          <p className={`${s.muted} my-4`}>
-            Tindakan permanen. Mitra harus menangani seluruh pesanan aktif
-            terlebih dahulu. Listing akan dinonaktifkan; riwayat pembeli
-            dipertahankan.
-          </p>
-          <button
-            className={s.danger}
-            onClick={() => {
-              setDeleting(true);
-              setPassword("");
-              setConfirmation(false);
-              setError("");
-            }}
-          >
-            Hapus akun
-          </button>
-        </section>
-      ) : (
-        <form className={`${s.form} max-w-2xl`} onSubmit={save}>
-          <h2 className={s.title}>
-            {tab === "password" ? "Ganti kata sandi" : "Data login"}
-          </h2>
-          {tab === "password" ? (
-            <>
-              <p className={s.muted}>
-                Setelah diganti, semua perangkat lain perlu masuk ulang. Sesi
-                perangkat ini tetap tersedia.
-              </p>
-              <label className={s.label}>
-                Kata sandi saat ini
-                <PasswordInput
-                  className={s.field}
-                  value={old}
-                  onChange={(e) => setOld(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-              </label>
-              <label className={s.label}>
-                Kata sandi baru
-                <PasswordInput
-                  className={s.field}
-                  value={next}
-                  onChange={(e) => setNext(e.target.value)}
-                  required
-                  minLength={8}
-                  maxLength={128}
-                  autoComplete="new-password"
-                />
-                <small>Minimal 8 karakter, campur huruf dan angka.</small>
-              </label>
-              {next && (
-                <div>
-                  <meter
-                    min={0}
-                    max={3}
-                    value={score}
-                    className="w-full accent-brand"
-                    aria-label="Kekuatan kata sandi"
-                  />
-                  <p className={s.muted}>
-                    {["Terlalu pendek", "Lemah", "Sedang", "Kuat"][score]}
-                  </p>
-                </div>
-              )}
-              <label className={s.label}>
-                Ulangi kata sandi baru
-                <PasswordInput
-                  className={s.field}
-                  value={repeat}
-                  onChange={(e) => setRepeat(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                />
-                {repeat && repeat !== next && (
-                  <small className="text-error" role="status">
-                    Harus sama dengan kata sandi baru.
-                  </small>
-                )}
-              </label>
-            </>
-          ) : (
-            <>
-              <label className={s.label}>
-                Username
-                <input className={s.field} value={user.username} disabled />
-              </label>
-              <ProfilePictureInput
-                current={user.profile_picture}
-                disabled={busy}
-              />
-              <label className={s.label}>
-                Nama lengkap
-                <input
-                  className={s.field}
-                  name="name"
-                  defaultValue={user.name}
-                  maxLength={150}
-                  required
-                />
-              </label>
-              <label className={s.label}>
-                Email
-                <input
-                  className={s.field}
-                  name="email"
-                  defaultValue={user.email}
-                  type="email"
-                  required
-                />
-              </label>
-            </>
-          )}
-          {error && (
-            <p className={s.error} role="alert">
-              {error}
-            </p>
-          )}
-          <div>
+        <ProfileIdentity user={user} />
+        <p className="px-1 text-xs leading-relaxed text-muted">
+          Satu akun untuk semua aktivitasmu di Habisin. Kelola profil dan
+          keamanan dari sini.
+        </p>
+      </aside>
+      <div className="min-w-0">
+        <div
+          className={`${profileTabs} mb-7`}
+          role="group"
+          aria-label="Pengaturan akun"
+        >
+          {[
+            ["profile", "Data login"],
+            ["password", "Kata sandi"],
+            ["sessions", "Sesi aktif"],
+            ["delete", "Hapus akun"],
+          ].map(([key, label]) => (
             <button
-              className={s.primary}
-              disabled={busy || (tab === "password" && !valid)}
+              role="button"
+              aria-pressed={tab === key}
+              key={key}
+              onClick={() => choose(key)}
             >
-              {busy
-                ? "Menyimpan…"
-                : tab === "password"
-                  ? "Simpan kata sandi"
-                  : "Simpan perubahan"}
+              {label}
             </button>
-          </div>
-        </form>
-      )}
+          ))}
+        </div>
+        {notice && (
+          <p role="status" className={s.message}>
+            {notice}
+          </p>
+        )}
+        {tab === "sessions" ? (
+          <section className={`${s.card} max-w-2xl`}>
+            <h2 className={s.title}>Sesi aktif</h2>
+            <p className={`${s.muted} mt-4`}>
+              Kamu sedang masuk pada perangkat ini. Setelah kata sandi diubah,
+              perangkat lain diminta masuk ulang. Daftar perangkat belum
+              tersedia.
+            </p>
+          </section>
+        ) : tab === "delete" ? (
+          <section className={`${s.card} max-w-2xl`}>
+            <h2 className={s.title}>Hapus akun</h2>
+            <p className={`${s.muted} my-4`}>
+              Tindakan permanen. Mitra harus menangani seluruh pesanan aktif
+              terlebih dahulu. Listing akan dinonaktifkan; riwayat pembeli
+              dipertahankan.
+            </p>
+            <button
+              className={s.danger}
+              onClick={() => {
+                setDeleting(true);
+                setPassword("");
+                setConfirmation(false);
+                setError("");
+              }}
+            >
+              Hapus akun
+            </button>
+          </section>
+        ) : (
+          <form className="flex min-w-0 flex-col gap-5" onSubmit={save}>
+            <ProfileSectionHeading
+              letter={tab === "password" ? "B" : "A"}
+              description={
+                tab === "password"
+                  ? "Kata sandi yang kuat membantu menjaga akunmu."
+                  : "Nama dan email untuk aktivitasmu sehari-hari."
+              }
+            >
+              {tab === "password" ? "Ganti kata sandi" : "Data login"}
+            </ProfileSectionHeading>
+            {tab === "password" ? (
+              <>
+                <p className={s.muted}>
+                  Setelah diganti, semua perangkat lain perlu masuk ulang. Sesi
+                  perangkat ini tetap tersedia.
+                </p>
+                <label className={profileLabel}>
+                  Kata sandi saat ini
+                  <PasswordInput
+                    className={profileField}
+                    value={old}
+                    onChange={(e) => setOld(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                </label>
+                <label className={profileLabel}>
+                  Kata sandi baru
+                  <PasswordInput
+                    className={profileField}
+                    value={next}
+                    onChange={(e) => setNext(e.target.value)}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                  />
+                  <small>Minimal 8 karakter, campur huruf dan angka.</small>
+                </label>
+                {next && (
+                  <div>
+                    <meter
+                      min={0}
+                      max={3}
+                      value={score}
+                      className="w-full accent-brand"
+                      aria-label="Kekuatan kata sandi"
+                    />
+                    <p className={s.muted}>
+                      {["Terlalu pendek", "Lemah", "Sedang", "Kuat"][score]}
+                    </p>
+                  </div>
+                )}
+                <label className={profileLabel}>
+                  Ulangi kata sandi baru
+                  <PasswordInput
+                    className={profileField}
+                    value={repeat}
+                    onChange={(e) => setRepeat(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                  />
+                  {repeat && repeat !== next && (
+                    <small className="text-error" role="status">
+                      Harus sama dengan kata sandi baru.
+                    </small>
+                  )}
+                </label>
+              </>
+            ) : (
+              <>
+                <label className={profileLabel}>
+                  Username
+                  <input
+                    className={profileField}
+                    value={user.username}
+                    disabled
+                  />
+                </label>
+                <ProfilePictureInput
+                  key={user.profile_picture}
+                  current={user.profile_picture}
+                  disabled={busy}
+                />
+                <label className={profileLabel}>
+                  Nama lengkap
+                  <input
+                    className={profileField}
+                    name="name"
+                    defaultValue={user.name}
+                    maxLength={150}
+                    required
+                  />
+                </label>
+                <label className={profileLabel}>
+                  Email
+                  <input
+                    className={profileField}
+                    name="email"
+                    defaultValue={user.email}
+                    type="email"
+                    required
+                  />
+                </label>
+              </>
+            )}
+            {error && (
+              <p className={s.error} role="alert">
+                {error}
+              </p>
+            )}
+            <div>
+              <button
+                className={profilePrimary}
+                disabled={busy || (tab === "password" && !valid)}
+              >
+                {busy
+                  ? "Menyimpan…"
+                  : tab === "password"
+                    ? "Simpan kata sandi"
+                    : "Simpan perubahan"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
       {deleting && (
         <Modal
           title="Hapus akun permanen?"
@@ -294,10 +325,10 @@ function Account({
               diselesaikan/dibatalkan dahulu. Riwayat transaksi pembeli tetap
               tersimpan.
             </p>
-            <label className={s.label}>
+            <label className={profileLabel}>
               Konfirmasi kata sandi
               <PasswordInput
-                className={s.field}
+                className={profileField}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

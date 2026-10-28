@@ -11,6 +11,14 @@ import { api, type GeocodeResult, type Store } from "@/lib/api";
 
 import { storeSchedule, weekdays } from "@/lib/store-profile";
 import s from "./role-workspace.module.css";
+import {
+  ProfileSectionHeading,
+  profileField,
+  profileLabel,
+  profileSection,
+  profilePrimary,
+  profileSecondary,
+} from "./profile-ui";
 
 const StoreMap = dynamic(() => import("./store-map"), {
   ssr: false,
@@ -197,7 +205,7 @@ export default function StoreForm({
   return (
     <form
       onSubmit={save}
-      className={s.form}
+      className="flex min-w-0 flex-col gap-8"
       aria-label={store ? "Ubah profil toko" : "Daftarkan toko"}
     >
       {error && (
@@ -205,25 +213,38 @@ export default function StoreForm({
           {error}
         </p>
       )}
-      <nav className={s.formSections} aria-label="Bagian profil toko">
+      <nav
+        className="flex flex-wrap gap-2 border-b border-line pb-5 text-xs font-semibold [&_a]:min-h-11 [&_a]:rounded-lg [&_a]:border [&_a]:border-line [&_a]:bg-surface [&_a]:px-4 [&_a]:py-3 [&_a:hover]:bg-light"
+        aria-label="Bagian profil toko"
+      >
         <a href="#store-identity">Identitas</a>
         <a href="#store-location">Lokasi</a>
         <a href="#store-hours">Jam buka</a>
       </nav>
-      <div className={s.grid}>
-        <fieldset disabled={saving} className={s.form}>
-          <section id="store-identity" aria-label="Identitas toko">
-            <h2>A · Identitas toko</h2>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(260px,0.65fr)] gap-10 compact:grid-cols-1">
+        <fieldset disabled={saving} className="flex min-w-0 flex-col gap-8">
+          <section
+            id="store-identity"
+            aria-label="Identitas toko"
+            className={profileSection}
+          >
+            <ProfileSectionHeading
+              numbered
+              letter="A"
+              description="Cerita singkat yang membuat pembeli mengenal tokomu."
+            >
+              Identitas toko
+            </ProfileSectionHeading>
             <ProfilePictureInput
               current={store?.profile_picture}
               disabled={saving}
               onDirtyChange={setPictureDirty}
             />
-            <label className={s.label}>
+            <label className={profileLabel}>
               Nama toko
               <input
                 aria-label="Nama toko"
-                className={s.field}
+                className={profileField}
                 value={fields.name}
                 onChange={(e) => update("name", e.target.value)}
                 required
@@ -234,10 +255,10 @@ export default function StoreForm({
                 Tampil di peta dan tiket pembeli · {fields.name.length}/60
               </small>
             </label>
-            <label className={s.label}>
+            <label className={profileLabel}>
               Deskripsi toko
               <textarea
-                className={s.field}
+                className={profileField}
                 value={fields.description}
                 onChange={(e) => update("description", e.target.value)}
                 required
@@ -248,11 +269,11 @@ export default function StoreForm({
                 Dibaca pembeli sebelum memesan · {fields.description.length}/280
               </small>
             </label>
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="mb-2 font-semibold text-sm">
                 Kategori toko
               </legend>
-              <div className={s.filters}>
+              <div className="flex min-w-0 flex-wrap gap-2">
                 {[
                   "Roti & kue",
                   "Nasi & lauk",
@@ -261,7 +282,10 @@ export default function StoreForm({
                   "Katering",
                   "Lainnya",
                 ].map((category) => (
-                  <label key={category} className={s.pill}>
+                  <label
+                    key={category}
+                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${fields.category === category ? "border-yellow bg-yellow text-on-sticker" : "border-border bg-surface hover:bg-light"}`}
+                  >
                     <input
                       type="radio"
                       name="store_category"
@@ -277,19 +301,25 @@ export default function StoreForm({
               </div>
             </fieldset>
           </section>
-          <section id="store-location" aria-label="Alamat dan lokasi toko">
-            <h2>B · Alamat &amp; lokasi</h2>
+          <section
+            id="store-location"
+            aria-label="Alamat dan lokasi toko"
+            className={profileSection}
+          >
+            <ProfileSectionHeading numbered letter="B">
+              Alamat &amp; lokasi
+            </ProfileSectionHeading>
             <p className={s.muted}>
               Alamat dipakai pembeli untuk rute; pin peta dipakai untuk jarak
               pencarian. Perubahan lokasi langsung berlaku setelah geocoding dan
               konfirmasi, selama tidak dikunci pesanan aktif.
             </p>
-            <label className={s.label} htmlFor="store-address">
+            <label className={profileLabel} htmlFor="store-address">
               Alamat lengkap
               <textarea
                 aria-label="Alamat lengkap"
                 id="store-address"
-                className={s.field}
+                className={profileField}
                 value={address}
                 onChange={(e) => changeAddress(e.target.value)}
                 required
@@ -300,29 +330,29 @@ export default function StoreForm({
               />
             </label>
             <div className={s.two}>
-              <label className={s.label}>
+              <label className={profileLabel}>
                 Kelurahan
                 <input
-                  className={s.field}
+                  className={profileField}
                   value={fields.neighborhood}
                   onChange={(e) => update("neighborhood", e.target.value)}
                   maxLength={120}
                 />
               </label>
-              <label className={s.label}>
+              <label className={profileLabel}>
                 Kota
                 <input
-                  className={s.field}
+                  className={profileField}
                   value={fields.city}
                   onChange={(e) => update("city", e.target.value)}
                   maxLength={80}
                 />
               </label>
             </div>
-            <label className={s.label}>
+            <label className={profileLabel}>
               Patokan (opsional)
               <input
-                className={s.field}
+                className={profileField}
                 value={fields.landmark}
                 onChange={(e) => update("landmark", e.target.value)}
                 maxLength={250}
@@ -333,7 +363,7 @@ export default function StoreForm({
               </small>
             </label>
             <button
-              className={s.secondary}
+              className={profileSecondary}
               type="button"
               onClick={search}
               disabled={searching || normalize(address).length < 5}
@@ -356,7 +386,7 @@ export default function StoreForm({
               </p>
             )}
             {results.length > 0 && (
-              <fieldset>
+              <fieldset className="min-w-0">
                 <legend className="mb-3 font-semibold">
                   Pilih hasil yang sesuai
                 </legend>
@@ -380,17 +410,20 @@ export default function StoreForm({
               </fieldset>
             )}
             {point && locationReady && (
-              <div className={s.form} aria-label="Konfirmasi lokasi">
+              <div
+                className="flex min-w-0 flex-col gap-8"
+                aria-label="Konfirmasi lokasi"
+              >
                 <h3 className={s.title}>
                   <MapPin size={18} className="inline" /> Pastikan pin tepat di
                   tokomu
                 </h3>
                 <div className={s.two}>
                   {(["latitude", "longitude"] as const).map((key) => (
-                    <label key={key} className={s.label}>
+                    <label key={key} className={profileLabel}>
                       {key === "latitude" ? "Latitude" : "Longitude"}
                       <input
-                        className={s.field}
+                        className={profileField}
                         type="number"
                         step="any"
                         value={coordinates[key]}
@@ -417,14 +450,23 @@ export default function StoreForm({
               </div>
             )}
           </section>
-          <section id="store-hours" aria-label="Jam buka toko">
-            <h2>C · Jam buka per hari</h2>
+          <section
+            id="store-hours"
+            aria-label="Jam buka toko"
+            className={profileSection}
+          >
+            <ProfileSectionHeading numbered letter="C">
+              Jam buka per hari
+            </ProfileSectionHeading>
             <p className={s.muted}>
               Waktu WIB. Jam tutup lebih awal berarti hari berikutnya. Maksimal
               tiga sesi per hari.
             </p>
             {hours.map((day, index) => (
-              <div key={day.day} className={s.schedule}>
+              <div
+                key={day.day}
+                className="grid grid-cols-[90px_minmax(0,1fr)] items-start gap-3 border-b border-line py-4 last:border-0 mobile:grid-cols-1"
+              >
                 <label className="font-semibold">
                   <input
                     type="checkbox"
@@ -452,10 +494,13 @@ export default function StoreForm({
                 <div className="space-y-2">
                   {day.enabled ? (
                     day.sessions.map((session, n) => (
-                      <div className={s.row} key={n}>
+                      <div
+                        className="flex flex-wrap items-center gap-2 [&_input]:w-[112px] [&_input]:max-w-full"
+                        key={n}
+                      >
                         <input
                           type="time"
-                          className={s.field}
+                          className={profileField}
                           value={session.start}
                           aria-label={`Jam buka ${weekdays[day.day]} sesi ${n + 1}`}
                           onChange={(e) =>
@@ -479,7 +524,7 @@ export default function StoreForm({
                         <span>–</span>
                         <input
                           type="time"
-                          className={s.field}
+                          className={profileField}
                           value={session.end}
                           aria-label={`Jam tutup ${weekdays[day.day]} sesi ${n + 1}`}
                           onChange={(e) =>
@@ -575,27 +620,35 @@ export default function StoreForm({
             ))}
           </section>
         </fieldset>
-        <aside className={s.preview} aria-label="Pratinjau profil toko">
-          {point ? (
-            <StoreMap
-              latitude={point.latitude}
-              longitude={point.longitude}
-              onChange={(next) => {
-                if (!saving) movePoint(next);
-              }}
-            />
-          ) : (
-            <div className={`${s.empty} min-h-64`}>
-              <MapPin size={30} />
-              <p>Cari alamat untuk menampilkan pin.</p>
-            </div>
-          )}
+        <aside
+          className="sticky top-6 min-w-0 self-start compact:static"
+          aria-label="Pratinjau profil toko"
+        >
+          <p className="mb-3 font-mono text-[10px] font-semibold tracking-[0.14em] text-muted">
+            LOKASI TOKO
+          </p>
+          <div className="overflow-hidden rounded-xl border border-line bg-light">
+            {point ? (
+              <StoreMap
+                latitude={point.latitude}
+                longitude={point.longitude}
+                onChange={(next) => {
+                  if (!saving) movePoint(next);
+                }}
+              />
+            ) : (
+              <div className={`${s.empty} min-h-64`}>
+                <MapPin size={30} />
+                <p>Cari alamat untuk menampilkan pin.</p>
+              </div>
+            )}
+          </div>
           <p className={`${s.muted} mt-3`}>
             {point
               ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)} · ${confirmed ? "dikonfirmasi mitra" : "perlu konfirmasi"}`
               : "Lokasi belum dipilih"}
           </p>
-          <div className={`${s.card} mt-6`}>
+          <div className="mt-6 rounded-xl border border-line bg-surface p-5">
             <p className="font-mono text-xs text-muted mb-4">
               PRATINJAU UNTUK PEMBELI
             </p>
@@ -613,7 +666,7 @@ export default function StoreForm({
         </aside>
       </div>
       {(dirty || !store) && (
-        <div className={s.saveBar}>
+        <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 shadow-lg tablet:bottom-20">
           <p className={s.muted}>
             {store
               ? `${Math.max(1, changed)} perubahan belum disimpan`
@@ -622,14 +675,14 @@ export default function StoreForm({
           <div className={s.actions}>
             <button
               type="button"
-              className={s.secondary}
+              className={profileSecondary}
               onClick={onCancel}
               disabled={saving}
             >
               Batalkan
             </button>
             <button
-              className={s.primary}
+              className={profilePrimary}
               disabled={saving || searching || !locationReady || !confirmed}
             >
               <Check size={16} />

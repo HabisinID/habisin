@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ArrowLeft, ArrowUpRight, MapPin } from "lucide-react";
 import StoreCatalog from "./store-catalog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -83,25 +84,57 @@ export default function StoreProfile({ id }: { id: string }) {
         </div>
       ) : (
         store && (
-          <article className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-line bg-surface p-8 mobile:p-4">
-            <p className="text-xs font-bold tracking-widest text-brand">
-              KENALAN DENGAN MITRA
-            </p>
-            <StoreDetails store={store} />
-            <StoreCatalog id={id} />
-            <StoreMap latitude={store.latitude} longitude={store.longitude} />
-            <p className="text-xs text-muted">
-              Koordinat toko: {store.latitude.toFixed(6)},{" "}
-              {store.longitude.toFixed(6)}
-            </p>
-            <a
-              className={secondaryButton}
-              href={`https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}#map=18/${store.latitude}/${store.longitude}`}
-              target="_blank"
-              rel="noreferrer"
+          <article className="mx-auto max-w-5xl">
+            <Link
+              href="/jelajahi"
+              className="mb-7 inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-muted hover:text-brand"
             >
-              Buka lokasi di OpenStreetMap
-            </a>
+              <ArrowLeft size={15} />
+              Kembali jelajah
+            </Link>
+            <div className="mb-8 border-b border-line pb-8">
+              <p className="mb-5 font-mono text-[10px] font-semibold tracking-[0.16em] text-muted">
+                DARI DAPUR TETANGGA, UNTUK KAMU
+              </p>
+              <StoreDetails store={store} />
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-10 tablet:grid-cols-1">
+              <div className="min-w-0">
+                <StoreCatalog id={id} />
+              </div>
+              <aside className="sticky top-6 min-w-0 overflow-hidden rounded-xl border border-line bg-surface tablet:static">
+                <div className="flex items-center gap-2 border-b border-line px-5 py-4">
+                  <MapPin size={16} className="text-brand" />
+                  <h2 className="text-sm font-bold">
+                    Mampir & ambil pesananmu
+                  </h2>
+                </div>
+                <StoreMap
+                  latitude={store.latitude}
+                  longitude={store.longitude}
+                />
+                <div className="space-y-4 p-5">
+                  <p className="text-sm leading-relaxed">{store.address}</p>
+                  {store.landmark && (
+                    <p className="text-xs text-muted">
+                      Patokan: {store.landmark}
+                    </p>
+                  )}
+                  <p className="font-mono text-[10px] text-muted">
+                    {store.latitude.toFixed(6)}, {store.longitude.toFixed(6)}
+                  </p>
+                  <a
+                    className={`${secondaryButton} w-full text-xs`}
+                    href={`https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}#map=18/${store.latitude}/${store.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buka lokasi di OpenStreetMap
+                    <ArrowUpRight size={15} />
+                  </a>
+                </div>
+              </aside>
+            </div>
           </article>
         )
       )}

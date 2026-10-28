@@ -75,7 +75,7 @@ test("profile tabs and account deletion checkbox preserve their layout", async (
   await dialog.getByRole("button", { name: "Hapus akun", exact: true }).click();
   await expect(
     dialog.getByRole("button", { name: "Hapus akun", exact: true }),
-  ).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  ).toHaveCSS("background-color", "rgb(225, 236, 227)");
   const checkbox = dialog.getByRole("checkbox");
   expect((await checkbox.boundingBox())!.width).toBeLessThan(30);
   await expect(checkbox.locator("..")).toHaveCSS("flex-direction", "row");
