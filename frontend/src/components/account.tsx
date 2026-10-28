@@ -87,22 +87,7 @@ export function Auth({
     }
   }
   return (
-    <Modal
-      title={
-        mode === "login" ? "Senang kamu kembali." : "Mulai langkah baikmu."
-      }
-      onClose={onClose}
-    >
-      <div className="auth-intro flex gap-3 items-center mb-[23px] [&_p]:text-[12px] [&_p]:leading-[1.8] [&_p]:text-muted">
-        <span className="round-leaf w-11 h-11 rounded-[13px] bg-surface-2 text-brand grid place-items-center shrink-0">
-          <Leaf />
-        </span>
-        <p>
-          {mode === "login"
-            ? "Masuk dan temukan makanan enak yang menunggumu."
-            : "Makan enak, lebih hemat, dan bantu bumi bersama HABISIN."}
-        </p>
-      </div>
+    <Modal title={mode === "login" ? "Login" : "Daftar Akun"} onClose={onClose}>
       <form
         onSubmit={submit}
         className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-muted [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-surface [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-surface [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
@@ -170,8 +155,8 @@ export function Auth({
           <label>
             Daftar sebagai
             <select name="role" defaultValue={initialRole}>
-              <option value="buyer">Pembeli — selamatkan makanan</option>
-              <option value="partner">Mitra — pemilik usaha makanan</option>
+              <option value="buyer">Pembeli</option>
+              <option value="partner">Mitra</option>
             </select>
           </label>
         )}
@@ -352,8 +337,8 @@ export function Profile({
               />
             </label>
             <label className="check-label [&_input]:w-auto [&_input]:accent-[var(--color-brand)]">
-              <input type="checkbox" required /> Saya ingin menghapus akun
-              secara permanen.
+              <input type="checkbox" required />
+              Saya ingin menghapus akun secara permanen.
             </label>
           </>
         )}
