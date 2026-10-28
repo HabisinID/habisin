@@ -146,13 +146,13 @@
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 <div class="shell">
   <aside class="sidebar">
-    <a class="logo" href="/" aria-label="Habisin beranda"><img src="/habisin-logo.png" alt="">habisin<span>.</span></a>
+    <a class="logo" href="/partner" aria-label="Habisin beranda"><img src="/habisin-logo.png" alt="">habisin<span>.</span></a>
     {# On mobile the sidebar is the top bar, so the theme switcher sits at its right end. #}
     {% include "main/kasir/_theme.html" %}
     <small>Mitra</small>
     <nav aria-label="Navigasi mitra">
       <a class="item" href="/api/partner/kasir" aria-current="page">Verifikasi kode</a>
-      <a class="item" href="/">Dasbor</a>
+      <a class="item" href="/partner">Dasbor</a>
       <a class="item" href="/partner/store">Profil toko</a>
     </nav>
   </aside>
