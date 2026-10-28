@@ -254,7 +254,7 @@
   }
 }
 
-/* Navbar photos fill a square control without the generic action-button padding. */
+/* Navbar photos fill a rounded square without action-button padding. */
 .header .actions button[data-navbar-avatar],
 .header .actions span[data-navbar-avatar] {
   display: grid;
@@ -266,7 +266,7 @@
   min-height: 44px;
   flex: none;
   padding: 0;
-  border-radius: 0;
+  border-radius: 10px;
   overflow: hidden;
 }
 
