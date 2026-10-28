@@ -5,21 +5,45 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import serializers
-from .models import Listing, Reservation, Store
+from .models import Listing, Reservation, Store, Profile
 from .geocoding import normalize_address, validate_location_token
 from .listing_services import ListingConflict
 from .listing_media import normalize_listing_image
 
 
+class ProfilePictureField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if data == "" or data is None:
+            return ""
+        from .profile_media import normalize_profile_picture
+        return normalize_profile_picture(data)
+
+    def to_representation(self, value):
+        return value.url if value else None
+
+
 class UserSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="first_name", max_length=150)
     role = serializers.SerializerMethodField()
+    profile_picture = ProfilePictureField(source="profile.profile_picture", required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "name", "email", "role"]
+        fields = ["id", "username", "name", "email", "role", "profile_picture"]
         read_only_fields = ["id", "username", "role"]
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+        with transaction.atomic():
+            instance = super().update(instance, validated_data)
+            if profile_data is not None:
+                profile, _ = Profile.objects.get_or_create(user=instance)
+                profile.profile_picture = profile_data["profile_picture"]
+                profile.save(update_fields=["profile_picture"])
+                instance.profile = profile
+        return instance
 
     def get_role(self, user):
         return "admin" if user.is_staff else getattr(getattr(user, "profile", None), "role", "buyer")
@@ -50,7 +74,7 @@ class RegisterSerializer(serializers.Serializer):
 class StoreSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
-        fields = ["id", "name", "address", "latitude", "longitude", "is_open"]
+        fields = ["id", "name", "address", "latitude", "longitude", "is_open", "landmark", "profile_picture"]
 
 
 class ListingSerializer(serializers.ModelSerializer):
@@ -68,7 +92,7 @@ class ListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active", "store_id", "store_summary", "image_source", "prepared_at", "packaging", "storage_notes", "allergens", "buyer_notes"]
+        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active", "store_id", "store_summary", "image_source", "prepared_at", "packaging", "storage_notes", "allergens", "buyer_notes", "moderated_at", "moderation_reason", "deleted_at"]
 
 
 class PartnerListingSerializer(ListingSerializer):
@@ -85,7 +109,7 @@ class PartnerListingSerializer(ListingSerializer):
 
     class Meta(ListingSerializer.Meta):
         fields = ListingSerializer.Meta.fields + ["image_file"]
-        read_only_fields = ["id", "store", "address", "latitude", "longitude", "store_summary"]
+        read_only_fields = ["id", "store", "address", "latitude", "longitude", "store_summary", "moderated_at", "moderation_reason", "deleted_at"]
 
     def validate_name(self, value):
         if len(value) > 60 and (self.instance is None or value != self.instance.name):
@@ -128,7 +152,7 @@ class PartnerListingSerializer(ListingSerializer):
             target = Store.objects.filter(pk=store_id, owner=self.context["request"].user).first()
             if target is None:
                 errors["store_id"] = "Toko tidak tersedia untuk akun ini. Muat ulang pilihan toko."
-            elif (instance is None or instance.store_profile_id != target.pk) and not target.is_open:
+            elif target.closed_at or ((instance is None or instance.store_profile_id != target.pk) and not target.is_open):
                 errors["store_id"] = "Toko ditutup sementara. Pilih toko yang aktif."
         else:
             target = instance.store_profile if instance and instance.store_profile_id else None
@@ -183,7 +207,27 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reservation
-        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "pay_before", "cancel_until", "paid_at", "picked_up_at"]
+        fields = ["id", "listing", "quantity", "total", "code", "note", "status", "created_at", "pay_before", "cancel_until", "paid_at", "picked_up_at", "cancellation_note", "cancelled_by", "cancelled_at"]
+
+
+class PartnerOrderSerializer(ReservationSerializer):
+    buyer_name = serializers.SerializerMethodField()
+
+    def get_buyer_name(self, item):
+        return item.user.get_full_name() or item.user.username
+
+    class Meta(ReservationSerializer.Meta):
+        fields = [field for field in ReservationSerializer.Meta.fields if field != "code"] + ["buyer_name"]
+
+
+class PartnerListingReadSerializer(ListingSerializer):
+    has_active_orders = serializers.SerializerMethodField()
+
+    def get_has_active_orders(self, item):
+        return item.reservation_set.filter(status__in=Reservation.ACTIVE_STATUSES).exists()
+
+    class Meta(ListingSerializer.Meta):
+        fields = ListingSerializer.Meta.fields + ["has_active_orders"]
 
 
 class StrictIntegerField(serializers.IntegerField):
@@ -226,6 +270,7 @@ class GeocodeSerializer(serializers.Serializer):
 
 
 class StoreSerializer(serializers.ModelSerializer):
+    profile_picture = ProfilePictureField(required=False, allow_null=True)
     address = serializers.CharField(min_length=5, max_length=250)
     latitude = serializers.FloatField(min_value=-90, max_value=90)
     longitude = serializers.FloatField(min_value=-180, max_value=180)
@@ -234,8 +279,27 @@ class StoreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ["id", "name", "description", "address", "opening_time", "closing_time", "latitude", "longitude", "is_open", "created_at", "updated_at", "geocode_token", "location_confirmed"]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = ["id", "name", "description", "address", "opening_time", "closing_time", "latitude", "longitude", "is_open", "created_at", "updated_at", "geocode_token", "location_confirmed", "category", "neighborhood", "city", "landmark", "weekly_hours", "closed_at", "profile_picture"]
+        read_only_fields = ["id", "created_at", "updated_at", "closed_at"]
+
+    def validate_name(self, value):
+        if len(value) > 60 and (self.instance is None or value != self.instance.name):
+            raise serializers.ValidationError("Nama toko maksimal 60 karakter.")
+        return value
+
+    def validate_description(self, value):
+        if len(value) > 280 and (self.instance is None or value != self.instance.description):
+            raise serializers.ValidationError("Deskripsi toko maksimal 280 karakter.")
+        return value
+
+    def validate_weekly_hours(self, value):
+        from .store_schedule import validate_weekly_hours
+        return validate_weekly_hours(value)
+
+    def validate_category(self, value):
+        if value and value not in ["Roti & kue", "Nasi & lauk", "Minuman", "Camilan", "Katering", "Lainnya"]:
+            raise serializers.ValidationError("Kategori toko tidak valid.")
+        return value
 
     def validate_address(self, value):
         return GeocodeSerializer().validate_address(value)

@@ -52,22 +52,28 @@ export function LandingHeader({
 }) {
   return (
     <SiteHeader
-      className={designFont.className}
+      className={`${designFont.className} landing-header compact-header`}
       nav={[
         { label: "Jelajahi", href: "/jelajahi" },
         { label: "Dampak", href: "/#dampak" },
         { label: "Untuk Mitra", href: "/#mitra" },
       ]}
       actions={
+        <button className="header-login-desktop" onClick={onLogin}>
+          Masuk
+        </button>
+      }
+      end={
         <>
-          <button onClick={onLogin}>Masuk</button>
-          {/* Mobile shows "Daftar" so the top bar fits on one row. */}
+          <button className="header-login-mobile" onClick={onLogin}>
+            Masuk
+          </button>
           <button
             className={s.primary}
             aria-label="Daftar gratis"
             onClick={onRegister}
           >
-            Daftar<span className="mobile:hidden"> gratis</span>
+            Daftar<span className="header-signup-long"> gratis</span>
           </button>
         </>
       }
@@ -80,9 +86,17 @@ export function LandingHeader({
           placeholder="Cari roti, nasi, atau nama toko"
         />
       </form>
-      <button className={s.location} onClick={onLocate} disabled={locating}>
+      <button
+        className={`${s.location} header-location`}
+        aria-label={locating ? "Mencari lokasi…" : `${location} · Ubah lokasi`}
+        title={location}
+        onClick={onLocate}
+        disabled={locating}
+      >
         <MapPin size={16} />
-        {locating ? "Mencari lokasi…" : `${location} · Ubah`}
+        <span className="header-location-text">
+          {locating ? "Mencari lokasi…" : location}
+        </span>
       </button>
     </SiteHeader>
   );
@@ -284,7 +298,7 @@ export default function LandingPage({
               ],
               [
                 "Tunjukkan kode saat mengambil",
-                "Datang sebelum batas ambil dan tunjukkan kode tiket kepada toko. Verifikasi kode oleh kasir sedang dikembangkan.",
+                "Datang sebelum batas ambil dan tunjukkan tiket kepada kasir. Kasir mencocokkan kode atau memindai QR tiket untuk memverifikasi pengambilan pesanan.",
               ],
             ].map(([title, body], index) => (
               <li key={title}>
@@ -327,7 +341,7 @@ export default function LandingPage({
               {
                 Icon: Ticket,
                 title: "Kode untuk setiap pesanan",
-                body: "Pembeli mendapat kode pengambilan. Fitur verifikasi kode oleh kasir akan tersedia pada pengembangan berikutnya.",
+                body: "Pembeli mendapat tiket dengan kode dan QR. Kasir mencocokkan kode atau memindai QR untuk memverifikasi pengambilan.",
               },
               {
                 Icon: Gift,
@@ -364,8 +378,7 @@ export default function LandingPage({
             <div>
               <strong>Ilustrasi alur pengambilan</strong>
               <p>
-                Verifikasi kasir dan QR segera hadir. Pembayaran saat ini masih
-                simulasi.
+                Kasir mencocokkan kode atau memindai QR tiket sebelum menyerahkan pesanan. Pembayaran saat ini masih simulasi.
               </p>
             </div>
           </div>

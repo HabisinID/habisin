@@ -14,26 +14,15 @@ async function open(page: Page, mobile = false) {
     width: mobile ? 390 : 1440,
     height: mobile ? 844 : 900,
   });
-  await page.goto("/");
+  await page.goto("/partner/listings");
   await page
-    .getByRole("button", {
-      name: "Listing",
-      exact: true,
-    })
-    .click();
-  await page
-    .getByRole("dialog")
     .getByRole("button", { name: "Tambah listing", exact: true })
     .click();
 }
 async function details(page: Page) {
-  const panel = page.locator("details").filter({
-    has: page
-      .locator("summary")
-      .filter({ hasText: "Detail toko & informasi makanan" }),
-  });
-  if (!(await panel.evaluate((el) => (el as HTMLDetailsElement).open)))
-    await panel.locator("summary").click();
+  await expect(
+    page.getByRole("heading", { name: "Detail toko & informasi makanan" }),
+  ).toBeVisible();
 }
 async function fill(page: Page, name: string) {
   await page.getByRole("radio", { name: "Gunakan URL" }).check();
@@ -81,6 +70,7 @@ test("desktop composer matches measured columns and publishes notes once", async
     expect(
       (
         await page
+          .getByRole("dialog")
           .getByRole("complementary", { name: "Navigasi mitra" })
           .boundingBox()
       )?.width,
@@ -103,7 +93,9 @@ test("desktop composer matches measured columns and publishes notes once", async
     ).toBeVisible();
     await page.screenshot({ path: "/tmp/habisin-composer-filled-desktop.png" });
     await page.getByRole("button", { name: "Tayangkan listing" }).click();
-    await expect(page.getByText("Listing berhasil ditayangkan.")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByText("Listing berhasil ditayangkan."),
+    ).toBeVisible();
     const rows = await (await page.request.get("/api/partner/listings")).json();
     expect(rows).toHaveLength(1);
     expect(rows[0].buyer_notes).toBe("Bawa wadah sendiri");
@@ -155,7 +147,9 @@ test("mobile composer validates strict prices and keeps donation prices and cont
     ).toBe(true);
     await page.screenshot({ path: "/tmp/habisin-composer-filled-mobile.png" });
     await page.getByRole("button", { name: "Tayangkan listing" }).click();
-    await expect(page.getByText("Listing berhasil ditayangkan.")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByText("Listing berhasil ditayangkan."),
+    ).toBeVisible();
     expect(
       await (await page.request.get("/api/partner/listings")).json(),
     ).toHaveLength(1);
@@ -185,7 +179,9 @@ test("cropped File draft restores after reload, publishes and copies without sta
     );
     await expect(page.getByAltText("Preview foto listing 4:3")).toBeVisible();
     await page.getByRole("button", { name: "Tayangkan listing" }).click();
-    await expect(page.getByText("Listing berhasil ditayangkan.")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByText("Listing berhasil ditayangkan."),
+    ).toBeVisible();
     const rows = await (await page.request.get("/api/partner/listings")).json();
     expect(rows).toHaveLength(1);
     expect(rows[0].image_source).toBe("upload");
@@ -296,17 +292,23 @@ test("blocked local draft storage reports failure but keeps form and allows publ
     await page
       .getByRole("button", { name: "Simpan draf", exact: true })
       .click();
-    await expect(page.getByText("Penyimpanan draf diblokir")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByText("Penyimpanan draf diblokir"),
+    ).toBeVisible();
     await expect(page.getByLabel("Nama makanan", { exact: true })).toHaveValue(
       "Roti Tanpa Draf",
     );
     await page.getByRole("button", { name: "Tayangkan listing" }).click();
-    await expect(page.getByText("Listing berhasil ditayangkan.")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByText("Listing berhasil ditayangkan."),
+    ).toBeVisible();
     expect(
       await (await page.request.get("/api/partner/listings")).json(),
     ).toHaveLength(1);
     await expect(
-      page.getByText(/Listing sudah tayang, tetapi draf lokal/),
+      page
+        .getByRole("dialog")
+        .getByText(/Listing sudah tayang, tetapi draf lokal/),
     ).toBeVisible();
   } finally {
     await cleanup(page.request);

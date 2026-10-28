@@ -28,14 +28,17 @@ async function signInAs(page: Page, role: "buyer" | "partner") {
 
 async function expectSharedHeader(page: Page) {
   const header = page.getByRole("banner");
-  const logo = header.locator('a[aria-label="Habisin beranda"] img');
+  // Partner pages keep the brand in the sidebar instead of duplicating it in TopNav.
+  const brand = page
+    .getByRole("link", { name: "Habisin beranda" })
+    .filter({ visible: true })
+    .first();
+  const logo = brand.locator("img");
   await expect(logo).toBeVisible();
   expect(
     await logo.evaluate((img: HTMLImageElement) => img.naturalWidth),
   ).toBeGreaterThan(0);
-  await expect(
-    header.getByRole("link", { name: "Habisin beranda" }),
-  ).toHaveAttribute("href", "/");
+  await expect(brand).toHaveAttribute("href", "/");
   return header;
 }
 
@@ -71,10 +74,15 @@ test("design tokens, fonts, logo and header apply across pages", async ({
   );
   await page.goto("/partner/store", { waitUntil: "domcontentloaded" });
   await expectSharedHeader(page);
-  const button = page.getByRole("button", { name: "Masuk sebagai mitra" });
+  await expect(
+    page.getByRole("heading", { name: "Masuk sebagai mitra" }),
+  ).toBeVisible();
+  const button = page
+    .getByRole("main")
+    .getByRole("button", { name: "Masuk", exact: true });
   await expect(button).toHaveCSS("background-color", primary);
-  await expect(button).toHaveCSS("border-radius", "12px");
-  await expect(button).toHaveCSS("min-height", "48px");
+  await expect(button).toHaveCSS("border-radius", "6px");
+  await expect(button).toHaveCSS("min-height", "44px");
 });
 
 test("header actions follow the signed-in role", async ({ page }) => {

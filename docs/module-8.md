@@ -6,10 +6,9 @@ itu di halaman **Verifikasi kode**, menyerahkan pesanan, lalu menandainya sudah 
 Jalankan `python manage.py migrate` dari `backend/` untuk membuat tabel
 `VerificationLog` (migrasi `0013_verification_log`).
 
-PR #12 juga menambah migrasi bernomor `0013`. Bila keduanya sudah ada di `main`,
-`migrate` berhenti karena ada dua migrasi terakhir. Yang menggabungkan belakangan
-menjalankan `python manage.py makemigrations --merge` lalu meng-commit migrasi
-penggabungnya sebelum `migrate`.
+Migrasi `0014_merge_20261028_0918` menggabungkan `0013_verification_log` dan
+`0013_partner_workspace_moderation`. Jalankan `python manage.py migrate` setelah
+memperbarui kode; kedua jalur migrasi dipertahankan.
 
 ## Alur penggunaan
 

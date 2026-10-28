@@ -81,8 +81,9 @@ export default function OrderShell({
   }, []);
 
   async function signOut() {
-    await api("auth/logout", "POST").catch(() => {});
-    router.push("/");
+    await api("auth/logout", "POST");
+    router.replace("/");
+    router.refresh();
   }
   return (
     <>

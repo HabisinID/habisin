@@ -17,11 +17,13 @@ class Book(models.Model):
 
 
 class Profile(models.Model):
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=10, choices=[("buyer", "Pembeli"), ("partner", "Mitra")], default="buyer")
 
 
 class Store(models.Model):
+    profile_picture = models.ImageField(upload_to="stores/", blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stores")
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000)
@@ -33,6 +35,13 @@ class Store(models.Model):
     is_open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    category = models.CharField(max_length=30, blank=True)
+    neighborhood = models.CharField(max_length=120, blank=True)
+    city = models.CharField(max_length=80, blank=True, default="Depok")
+    landmark = models.CharField(max_length=250, blank=True)
+    weekly_hours = models.JSONField(default=list, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -74,6 +83,11 @@ class Listing(models.Model):
     allergens = models.CharField(max_length=500, blank=True)
     active = models.BooleanField(default=True)
 
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderation_reason = models.CharField(max_length=500, blank=True)
+    moderated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="moderated_listings")
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -81,6 +95,19 @@ class Listing(models.Model):
                 name="listing_exactly_one_image_source",
             ),
         ]
+
+
+class ModerationLog(models.Model):
+    listing = models.ForeignKey(Listing, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
+    target_name = models.CharField(max_length=160)
+    store_name = models.CharField(max_length=120)
+    action = models.CharField(max_length=12, choices=[("take_down", "Turunkan"), ("restore", "Pulihkan")])
+    reason = models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
 
 
 class Reservation(models.Model):

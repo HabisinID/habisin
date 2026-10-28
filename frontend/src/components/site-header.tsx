@@ -8,26 +8,30 @@ export type NavItem = {
   onClick?: () => void;
   current?: boolean;
 };
-// Shared top bar: logo, page content (search, location), page links, the
-// page's `actions`, then the theme switcher, always the top-right item.
+// TopNav in design.pen: logo, page content (search, location), page links,
+// `actions` and `end` (sign-up or account controls), then the theme switcher.
 export default function SiteHeader({
   nav = [{ label: "Jelajahi", href: "/jelajahi" }],
   actions,
+  end,
   children,
   navLabel = "Navigasi utama",
   className = "",
+  showLogo = true,
 }: {
   nav?: NavItem[];
   actions?: React.ReactNode;
+  end?: React.ReactNode;
   children?: React.ReactNode;
   navLabel?: string;
   className?: string;
+  showLogo?: boolean;
 }) {
   return (
     <header className={`${styles.header} ${className}`}>
       <div className={styles.inner}>
-        <HabisinLogo />
-        {children && <div className={styles.content}>{children}</div>}
+        {showLogo && <HabisinLogo />}
+        {children}
         {nav.length > 0 && (
           <nav aria-label={navLabel} className={styles.nav}>
             {nav.map((item) =>
@@ -53,6 +57,7 @@ export default function SiteHeader({
         )}
         <div className={styles.actions}>
           {actions}
+          {end}
           <ThemeToggle />
         </div>
       </div>

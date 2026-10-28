@@ -18,15 +18,20 @@ class ReservationLifecycleTests(TestCase):
         self.client.force_authenticate(self.partner)
         return f'/api/partner/reservations/{self.order.pk}/cancel'
 
-    def test_partner_cancellation_is_deferred_for_every_role(self):
+    def test_partner_cancellation_is_owner_only_and_returns_stock_once(self):
         path = self.book()
-        for user in [self.partner, self.other, self.buyer, None]:
+        for user, expected in [(self.other,404),(self.buyer,403),(None,403)]:
             self.client.force_authenticate(user)
-            self.assertEqual(self.client.post(path, {'reason':'Tidak tersedia'}, format='json').status_code, 404)
+            self.assertEqual(self.client.post(path, {'reason':'Tidak tersedia'}, format='json').status_code, expected)
+        self.client.force_authenticate(self.partner)
+        for _ in range(2):
+            result=self.client.post(path, {'reason':'Tidak tersedia'}, format='json')
+            self.assertEqual(result.status_code,200,result.data)
+            self.assertNotIn('code',result.data)
         self.a.refresh_from_db()
-        self.assertEqual(self.a.stock, 3)
+        self.assertEqual(self.a.stock,4)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, 'pending')
+        self.assertEqual(self.order.cancelled_by,'partner')
 
     def test_expired_archived_unlocks_edit_and_never_revives(self):
         self.book()

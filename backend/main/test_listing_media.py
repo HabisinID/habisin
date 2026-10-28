@@ -11,7 +11,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
-from .models import Listing, Profile
+from .models import Listing, Profile, Reservation
 from .test_listing_revision import create_store, listing_payload
 
 
@@ -178,6 +178,8 @@ class ListingMediaTests(TestCase):
         reserved = self.client.post("/api/reservations", {"listing_id": item.pk, "quantity": 1}, format="json")
         self.assertEqual(reserved.status_code, 201)
         self.client.force_authenticate(self.user)
+        self.assertEqual(self.client.delete("/api/auth/me", {"password": "Photo-Secure-927!"}, format="json").status_code, 409)
+        Reservation.objects.filter(pk=reserved.data["id"]).update(status="picked_up")
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.delete("/api/auth/me", {"password": "Photo-Secure-927!"}, format="json")
         self.assertEqual(response.status_code, 204)

@@ -1,4 +1,5 @@
 export type User = {
+  profile_picture?: string | null;
   id: number;
   username: string;
   name: string;
@@ -27,10 +28,20 @@ export type Listing = {
   pickup_start: string;
   pickup_end: string;
   active: boolean;
+  moderated_at?: string | null;
+  moderation_reason?: string;
+  deleted_at?: string | null;
+  has_active_orders?: boolean;
   store_id?: number | null;
   store_summary?: Pick<
     Store,
-    "id" | "name" | "address" | "latitude" | "longitude" | "is_open"
+    | "id"
+    | "name"
+    | "address"
+    | "latitude"
+    | "longitude"
+    | "is_open"
+    | "landmark"
   > | null;
 };
 export type ListingInput = Pick<
@@ -81,6 +92,8 @@ export type Reservation = {
   /** Legacy history fields; new transaction responses do not require them. */
   can_cancel?: boolean;
   cancellation_note?: string;
+  cancelled_by?: "buyer" | "partner" | "";
+  cancelled_at?: string | null;
   cancellation_reason?: string;
 };
 
@@ -92,10 +105,35 @@ export type ReservationPolicy = {
   day: string;
 };
 
+export type StoreSession = { start: string; end: string };
+export type StoreDay = {
+  day: number;
+  enabled: boolean;
+  sessions: StoreSession[];
+};
+export type PartnerOrder = Omit<Reservation, "code"> & { buyer_name: string };
+export type ModerationEntry = {
+  id: number;
+  listing_id: number | null;
+  target_name: string;
+  store_name: string;
+  action: "take_down" | "restore";
+  reason: string;
+  created_at: string;
+  actor_name: string;
+};
+
 export type Store = {
+  profile_picture?: string | null;
   id: number;
   name: string;
   description: string;
+  category?: string;
+  neighborhood?: string;
+  city?: string;
+  landmark?: string;
+  weekly_hours?: StoreDay[];
+  closed_at?: string | null;
   address: string;
   opening_time: string;
   closing_time: string;
