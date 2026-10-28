@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError, type User } from "@/lib/api";
 import BuyerHeader from "./buyer-header";
+import { Profile } from "./account";
 import { errorClass, primaryButton } from "./store-ui";
 
 // Placeholder blocks shown while an order page loads (design: "memuat (skeleton)").
@@ -58,6 +59,7 @@ export default function OrderShell({
   );
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const router = useRouter();
   useEffect(() => {
     let active = true;
@@ -92,9 +94,25 @@ export default function OrderShell({
         user={user}
         active="orders"
         onNotice={setNotice}
+        onAccount={() => setProfileOpen(true)}
         onLogout={signOut}
         onLogin={() => router.push("/")}
       />
+      {profileOpen && user && (
+        <Profile
+          user={user}
+          onClose={() => setProfileOpen(false)}
+          onUser={(value) => {
+            setUser(value);
+            if (!value) {
+              setProfileOpen(false);
+              setState("guest");
+              router.replace("/");
+              router.refresh();
+            }
+          }}
+        />
+      )}
       {notice && (
         <p
           className="mx-auto max-w-[1440px] px-16 pt-3 text-sm text-muted tablet:px-4"

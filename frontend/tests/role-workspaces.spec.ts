@@ -85,12 +85,12 @@ test("buyer starts on map, header and pills match, card focus clears after two z
     page.getByRole("button", { name: "Daftar", exact: true }),
   ).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: "/tmp/habisin-role-buyer-list-desktop.png" });
-  // TopNav/Pembeli in design.pen: Beranda · Jelajahi · Pesanan.
+  // TopNav/Pembeli in design.pen: Jelajahi · Pesanan.
   const labels = await page
     .getByRole("navigation", { name: "Navigasi pembeli" })
     .locator("a, button")
     .allTextContents();
-  expect(labels).toEqual(["Beranda", "Jelajahi", "Pesanan"]);
+  expect(labels).toEqual(["Jelajahi", "Pesanan"]);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

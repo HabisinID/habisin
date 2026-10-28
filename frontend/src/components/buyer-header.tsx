@@ -20,7 +20,7 @@ export function initials(name: string) {
 }
 
 // TopNav/Pembeli from design.pen, shared by every buyer page: search, location
-// chip, Beranda · Jelajahi · Pesanan, then the avatar. Guests get the landing
+// chip, Jelajahi · Pesanan, then the avatar. Guests get the landing
 // page menu instead.
 // A page that filters as you type passes `query`/`onQuery`; otherwise searching
 // opens Jelajahi. A page that tracks location passes `location`/`onLocate`.
@@ -47,7 +47,7 @@ export default function BuyerHeader({
   onLocate?: () => void;
   // Where location failures are reported when the header tracks location itself.
   onNotice?: (message: string) => void;
-  onAccount?: () => void;
+  onAccount: () => void;
   onLogout: () => void | Promise<void>;
   onLogin?: () => void;
   onRegister?: () => void;
@@ -63,7 +63,6 @@ export default function BuyerHeader({
       nav={
         user
           ? [
-              { label: "Beranda", href: "/" },
               {
                 label: "Jelajahi",
                 href: "/jelajahi",
@@ -97,28 +96,19 @@ export default function BuyerHeader({
       end={
         user ? (
           <>
-            {onAccount ? (
-              <button
-                data-navbar-avatar
-                className={s.avatar}
-                aria-label={`Akun ${name}`}
-                onClick={onAccount}
-              >
-                <Avatar
-                  src={user.profile_picture}
-                  name={name}
-                  fallback={initials(name)}
-                />
-              </button>
-            ) : (
-              <span data-navbar-avatar className={s.avatar} title={name}>
-                <Avatar
-                  src={user.profile_picture}
-                  name={name}
-                  fallback={initials(name)}
-                />
-              </span>
-            )}
+            <button
+              type="button"
+              data-navbar-avatar
+              className={s.avatar}
+              aria-label={`Akun ${name}`}
+              onClick={onAccount}
+            >
+              <Avatar
+                src={user.profile_picture}
+                name={name}
+                fallback={initials(name)}
+              />
+            </button>
             <LogoutButton onLogout={onLogout} />
           </>
         ) : (
