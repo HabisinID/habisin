@@ -10,6 +10,7 @@ import {
   type StoreReviews,
 } from "@/lib/reviews";
 import { primaryButton } from "./store-ui";
+import RatingOverview, { sortReviews, type ReviewSort } from "./rating-overview";
 
 export default function ProductReviewPrompt({
   listingId,
@@ -23,6 +24,7 @@ export default function ProductReviewPrompt({
   const [eligibility, setEligibility] = useState<ReviewEligibility | null>(null);
   const [storeReviews, setStoreReviews] = useState<StoreReviews | null>(null);
   const [visibleCount, setVisibleCount] = useState(4);
+  const [sort, setSort] = useState<ReviewSort>("newest");
 
   useEffect(() => {
     let active = true;
@@ -54,23 +56,20 @@ export default function ProductReviewPrompt({
   const productReviews = storeReviews?.reviews.filter(
     (review) => review.listing_id === listingId,
   ) ?? [];
-  const productAverage = productReviews.length
-    ? productReviews.reduce((sum, review) => sum + review.rating, 0) /
-      productReviews.length
-    : null;
-
   return (
     <div className="space-y-3">
-      {productAverage !== null && (
-        <p className="flex items-center gap-1.5 text-sm text-muted">
-          <Star size={16} fill="currentColor" strokeWidth={0} className="text-yellow" />
-          <strong className="text-dark">{productAverage.toFixed(1)}</strong>
-          <span>· {productReviews.length} ulasan produk</span>
-        </p>
-      )}
       {productReviews.length ? (
-        <ul className="space-y-2">
-          {productReviews.slice(0, visibleCount).map((review) => (
+        <>
+          <RatingOverview
+            reviews={productReviews}
+            sort={sort}
+            onSortChange={(value) => {
+              setSort(value);
+              setVisibleCount(4);
+            }}
+          />
+          <ul className="space-y-2">
+          {sortReviews(productReviews, sort).slice(0, visibleCount).map((review) => (
             <li className="rounded-lg bg-surface-2 p-3 text-sm" key={review.id}>
               <div className="flex items-center justify-between gap-2">
                 <strong>{review.user_name || "Pembeli HABISIN"}</strong>
@@ -93,7 +92,8 @@ export default function ProductReviewPrompt({
               </time>
             </li>
           ))}
-        </ul>
+          </ul>
+        </>
       ) : (
         <p className="text-sm text-muted">Belum ada ulasan untuk makanan ini.</p>
       )}

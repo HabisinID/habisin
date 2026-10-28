@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import RatingOverview, { sortReviews, type ReviewSort } from "./rating-overview";
 import {
   feedbackApi,
   type StoreReviews as StoreReviewsData,
@@ -15,6 +16,7 @@ export default function StoreReviews({
   const [data, setData] = useState<StoreReviewsData | null>(null);
   const [error, setError] = useState("");
   const [visibleCount, setVisibleCount] = useState(4);
+  const [sort, setSort] = useState<ReviewSort>("newest");
 
   useEffect(() => {
     let active = true;
@@ -37,17 +39,6 @@ export default function StoreReviews({
         <h2 id="store-reviews-title" className="text-xl font-bold">
           Ulasan pembeli
         </h2>
-        {data && (
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Star size={17} fill="currentColor" strokeWidth={0} className="text-yellow" />
-            <strong className="text-dark">
-              {data.average_rating === null
-                ? "Belum ada rating"
-                : data.average_rating.toFixed(2)}
-            </strong>
-            <span>· {data.review_count} ulasan</span>
-          </p>
-        )}
       </div>
       {error ? (
         <p className="text-sm text-muted" role="status">
@@ -58,12 +49,24 @@ export default function StoreReviews({
           Memuat ulasan…
         </p>
       ) : data.reviews.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-5 text-sm text-muted">
-          Belum ada ulasan untuk toko ini.
-        </p>
+        <>
+          <RatingOverview reviews={data.reviews} sort={sort} onSortChange={setSort} />
+          <p className="rounded-xl border border-dashed border-line p-5 text-sm text-muted">
+            Belum ada ulasan untuk toko ini.
+          </p>
+        </>
       ) : (
+        <>
+        <RatingOverview
+          reviews={data.reviews}
+          sort={sort}
+          onSortChange={(value) => {
+            setSort(value);
+            setVisibleCount(4);
+          }}
+        />
         <ul className="divide-y divide-line rounded-xl border border-line">
-          {data.reviews.slice(0, visibleCount).map((review) => (
+          {sortReviews(data.reviews, sort).slice(0, visibleCount).map((review) => (
             <li className="space-y-2 p-4" key={review.id}>
               <div className="flex items-center justify-between gap-3">
                 <strong className="text-sm">
@@ -103,6 +106,7 @@ export default function StoreReviews({
             </li>
           ))}
         </ul>
+        </>
       )}
       {data && data.reviews.length > visibleCount && (
         <button
