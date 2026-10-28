@@ -211,3 +211,28 @@ test("while the account loads, the home page shows neither the landing page nor 
   ]);
   await expect(page.getByText("Memuat HABISIN…")).toHaveCount(0);
 });
+
+test("the buyer avatar is the same circle on discovery and order pages", async ({
+  page,
+}) => {
+  await signInAsBuyer(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const shapes = [];
+  for (const path of ["/jelajahi", "/pesanan"]) {
+    await page.goto(path, { waitUntil: "networkidle" });
+    const avatar = page.getByRole("banner").getByText("RA", { exact: true });
+    shapes.push(
+      await avatar.evaluate((el) => {
+        const style = getComputedStyle(el);
+        const box = el.getBoundingClientRect();
+        return {
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          radius: style.borderTopLeftRadius,
+        };
+      }),
+    );
+  }
+  expect(shapes[0]).toEqual({ width: 40, height: 40, radius: "50%" });
+  expect(shapes[1]).toEqual(shapes[0]);
+});
