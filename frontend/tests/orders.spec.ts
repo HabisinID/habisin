@@ -146,8 +146,8 @@ test("guests are asked to sign in before seeing orders", async ({ page }) => {
   await expect(page.getByText("Masuk untuk melihat pesananmu")).toBeVisible();
 });
 
-// TopNav/Pembeli in design.pen: search, location chip, Beranda · Jelajahi ·
-// Pesanan, then the avatar. The order pages share it.
+// TopNav/Pembeli in design.pen: search, location chip, Jelajahi · Pesanan,
+// then the avatar (the logo leads home). The order pages share it.
 async function expectDesignTopNav(page: Page) {
   const banner = page.getByRole("banner");
   await expect(
@@ -157,15 +157,7 @@ async function expectDesignTopNav(page: Page) {
     banner.getByRole("button", { name: /Pakai lokasiku/ }),
   ).toBeVisible();
   const nav = banner.getByRole("navigation", { name: "Navigasi pembeli" });
-  await expect(nav.getByRole("link")).toHaveText([
-    "Beranda",
-    "Jelajahi",
-    "Pesanan",
-  ]);
-  await expect(nav.getByRole("link", { name: "Beranda" })).toHaveAttribute(
-    "href",
-    "/",
-  );
+  await expect(nav.getByRole("link")).toHaveText(["Jelajahi", "Pesanan"]);
   await expect(nav.getByRole("link", { name: "Jelajahi" })).toHaveAttribute(
     "href",
     "/jelajahi",

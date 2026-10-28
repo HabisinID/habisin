@@ -2,8 +2,8 @@ import { expect, test } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { food } from "./discovery-data";
 
-// TopNav/Pembeli in design.pen: search, location chip, Beranda · Jelajahi ·
-// Pesanan, then the avatar. One BuyerHeader on discovery and order pages.
+// TopNav/Pembeli in design.pen: search, location chip, Jelajahi · Pesanan,
+// then the avatar (the logo leads home). One BuyerHeader on discovery and order pages.
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/**", (route) =>
     route.fulfill({ status: 503, json: { detail: "Offline preview" } }),
@@ -48,15 +48,7 @@ test("signed-in buyers get the design TopNav on discovery and order pages", asyn
     await page.goto(path, { waitUntil: "networkidle" });
     const banner = page.getByRole("banner");
     const nav = buyerNav(page);
-    await expect(nav.getByRole("link")).toHaveText([
-      "Beranda",
-      "Jelajahi",
-      "Pesanan",
-    ]);
-    await expect(nav.getByRole("link", { name: "Beranda" })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    await expect(nav.getByRole("link")).toHaveText(["Jelajahi", "Pesanan"]);
     await expect(nav.getByRole("link", { name: "Jelajahi" })).toHaveAttribute(
       "href",
       "/jelajahi",
@@ -101,9 +93,10 @@ test("guests on Jelajahi get the landing page menu, without Pesanan", async ({
     "href",
     "/#dampak",
   );
-  await expect(
-    nav.getByRole("link", { name: "Untuk Mitra" }),
-  ).toHaveAttribute("href", "/#mitra");
+  await expect(nav.getByRole("link", { name: "Untuk Mitra" })).toHaveAttribute(
+    "href",
+    "/#mitra",
+  );
   // Signing in stays one tap away.
   await expect(
     page.getByRole("banner").getByRole("button", { name: "Masuk" }).first(),
