@@ -140,6 +140,33 @@ class ReviewAndComplaintTests(TestCase):
         self.assertEqual(self.client.delete(f"/api/reviews/{review_id}").status_code, 204)
         self.assertFalse(Review.objects.exists())
 
+    def test_review_update_rejects_invalid_rating_and_changing_order(self):
+        order = self.make_reservation(code="H7K49")
+        other_order = self.make_reservation(listing=self.other_listing, code="H7K48")
+        self.login()
+        created = self.client.post(
+            "/api/reviews",
+            {"reservation_id": order.pk, "rating": 4, "comment": "Roti masih enak."},
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201, created.data)
+        review_id = created.data["id"]
+
+        invalid_rating = self.client.patch(
+            f"/api/reviews/{review_id}", {"rating": 6}, format="json"
+        )
+        self.assertEqual(invalid_rating.status_code, 400)
+        changed_order = self.client.patch(
+            f"/api/reviews/{review_id}",
+            {"reservation_id": other_order.pk},
+            format="json",
+        )
+        self.assertEqual(changed_order.status_code, 400)
+
+        review = Review.objects.get(pk=review_id)
+        self.assertEqual(review.rating, 4)
+        self.assertEqual(review.reservation, order)
+
     def test_store_reviews_are_public_and_return_product_details_and_average(self):
         first_order = self.make_reservation(code="H7K49")
         second_order = self.make_reservation(user=self.other_buyer, code="H7K48")
@@ -160,6 +187,14 @@ class ReviewAndComplaintTests(TestCase):
         self.assertEqual(review["listing_id"], self.listing.pk)
         self.assertEqual(review["listing_name"], self.listing.name)
         self.assertIn("created_at", review)
+
+    def test_store_without_reviews_returns_null_average(self):
+        response = APIClient().get(f"/api/stores/{self.store.pk}/reviews")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data["average_rating"])
+        self.assertEqual(response.data["review_count"], 0)
+        self.assertEqual(response.data["reviews"], [])
 
     def test_complaint_allowed_for_paid_or_picked_up_order_only_once(self):
         paid_order = self.make_reservation(status="paid", code="H7K49")
@@ -230,3 +265,83 @@ class ReviewAndComplaintTests(TestCase):
         mine = self.client.get("/api/reviews/mine")
         self.assertEqual(mine.status_code, 200)
         self.assertEqual(mine.data, {"reviews": [], "complaints": []})
+
+    def test_anonymous_users_cannot_read_or_create_private_feedback(self):
+        order = self.make_reservation(code="H7K49")
+        self.client.force_authenticate(None)
+
+        private_gets = [
+            "/api/reviews/mine",
+            f"/api/listings/{self.listing.pk}/review-eligibility",
+            f"/api/reservations/{order.pk}/feedback",
+        ]
+        for path in private_gets:
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 403)
+
+        self.assertEqual(
+            self.client.post(
+                "/api/reviews",
+                {"reservation_id": order.pk, "rating": 5, "comment": "Bagus sekali."},
+                format="json",
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/api/complaints",
+                {"reservation_id": order.pk, "reason": "other", "description": "Ada masalah dengan pesanan."},
+                format="json",
+            ).status_code,
+            403,
+        )
+
+    def test_mine_endpoint_returns_only_the_current_buyers_reviews_and_complaints(self):
+        buyer_order = self.make_reservation(code="H7K49")
+        other_order = self.make_reservation(user=self.other_buyer, code="H7K48")
+        for user, order, rating in [
+            (self.buyer, buyer_order, 5),
+            (self.other_buyer, other_order, 3),
+        ]:
+            self.login(user)
+            review_response = self.client.post(
+                "/api/reviews",
+                {"reservation_id": order.pk, "rating": rating, "comment": "Rasanya baik."},
+                format="json",
+            )
+            self.assertEqual(review_response.status_code, 201, review_response.data)
+            complaint_response = self.client.post(
+                "/api/complaints",
+                {"reservation_id": order.pk, "reason": "other", "description": "Ada catatan untuk pesanan ini."},
+                format="json",
+            )
+            self.assertEqual(complaint_response.status_code, 201, complaint_response.data)
+
+        self.login(self.buyer)
+        mine = self.client.get("/api/reviews/mine")
+        self.assertEqual(mine.status_code, 200)
+        self.assertEqual([item["id"] for item in mine.data["reviews"]], [Review.objects.get(user=self.buyer).pk])
+        self.assertEqual([item["reservation_id"] for item in mine.data["complaints"]], [buyer_order.pk])
+
+    def test_reviews_and_complaints_require_a_linked_store(self):
+        listing_without_store = self.make_listing("Produk tanpa profil toko")
+        listing_without_store.store_profile = None
+        listing_without_store.save(update_fields=["store_profile"])
+        order = self.make_reservation(listing=listing_without_store, code="H7K49")
+        self.login()
+
+        review = self.client.post(
+            "/api/reviews",
+            {"reservation_id": order.pk, "rating": 5, "comment": "Makanan masih baik."},
+            format="json",
+        )
+        complaint = self.client.post(
+            "/api/complaints",
+            {"reservation_id": order.pk, "reason": "other", "description": "Ada masalah pada makanan."},
+            format="json",
+        )
+
+        self.assertEqual(review.status_code, 400)
+        self.assertEqual(complaint.status_code, 400)
+        self.assertFalse(Review.objects.exists())
+        self.assertFalse(Complaint.objects.exists())
