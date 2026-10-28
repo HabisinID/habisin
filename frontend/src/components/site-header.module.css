@@ -50,8 +50,8 @@
   align-items: center;
   gap: 12px;
 }
-/* The theme switcher keeps its own circle from theme-toggle.tsx. */
-.actions button:not([data-theme-toggle]) {
+/* The theme switcher and the avatar keep their own circles. */
+.actions button:not([data-theme-toggle], [data-avatar]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -186,13 +186,13 @@
     gap: 4px;
     min-width: 0;
   }
-  :global(.compact-header) .actions > button,
+  :global(.compact-header) .actions > button:not([data-avatar]),
   :global(.compact-header) .actions > span > button {
     white-space: nowrap;
     min-height: 44px;
     font-size: 12px;
   }
-  :global(.compact-header) .actions > button:not([data-theme-toggle]) {
+  :global(.compact-header) .actions > button:not([data-theme-toggle], [data-avatar]) {
     padding: 0 8px;
   }
   :global(.compact-header) .actions [data-theme-toggle] {

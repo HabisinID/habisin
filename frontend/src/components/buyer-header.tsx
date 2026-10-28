@@ -106,6 +106,7 @@ export default function BuyerHeader({
             {onAccount ? (
               <button
                 className={s.avatar}
+                data-avatar
                 aria-label={`Akun ${name}`}
                 onClick={onAccount}
               >
