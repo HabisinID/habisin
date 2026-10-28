@@ -1,8 +1,15 @@
 from django.urls import path
 from . import views
-from . import store_views, commerce_views, verification
+from . import store_views, commerce_views, workspace_views, verification
 
 urlpatterns = [
+    path("partner/orders", workspace_views.partner_orders),
+    path("partner/reservations/<int:pk>/cancel", workspace_views.partner_cancel),
+    path("partner/stores/<int:pk>/close", workspace_views.close_store),
+    path("admin/summary", workspace_views.admin_summary),
+    path("admin/listings", workspace_views.admin_listings),
+    path("admin/listings/<int:pk>/moderate", workspace_views.moderate_listing),
+    path("admin/moderation-logs", workspace_views.moderation_logs),
     path("partner/dashboard", commerce_views.partner_dashboard),
     path("partner/kasir", verification.page),
     path("partner/kasir/check", verification.check),

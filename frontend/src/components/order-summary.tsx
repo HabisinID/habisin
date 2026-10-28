@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import CancellationNotice from "./cancellation-notice";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, MapPin, Minus, Plus } from "lucide-react";
@@ -147,6 +148,7 @@ export default function OrderSummary({ id }: { id: string }) {
   const pending = order.status === "pending";
   return (
     <main className="mx-auto max-w-[1440px] px-16 py-10 tablet:px-4 tablet:py-6">
+      <CancellationNotice order={order} />
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-sm font-bold text-brand"
@@ -288,6 +290,11 @@ export default function OrderSummary({ id }: { id: string }) {
               </p>
               <p className="text-sm text-muted">
                 {listing.store}, {listing.address}
+                {listing.store_summary?.landmark && (
+                  <span className="block text-muted">
+                    Patokan: {listing.store_summary.landmark}
+                  </span>
+                )}
               </p>
               <p className="text-xs text-muted">
                 Pembatalan bisa sampai {clock(order.cancel_until)} (30 menit

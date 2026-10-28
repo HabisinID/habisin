@@ -24,7 +24,7 @@ test("currency focus wraps the prefix and complete input on desktop and mobile",
 }) => {
   await register(page.request, "partner", 1);
   try {
-    await page.goto("/");
+    await page.goto("/partner/listings");
     await page
       .getByRole("button", { name: "Tambah listing", exact: true })
       .click();
@@ -125,7 +125,7 @@ test("map labels fit text and selection leaves room for photo and centered detai
   ).toBeVisible();
 });
 
-test("main navigation omits deferred cart and seller cancellation", async ({
+test("main navigation keeps orders reachable and deferred cart absent", async ({
   page,
 }) => {
   await register(page.request, "partner", 1);
@@ -133,7 +133,7 @@ test("main navigation omits deferred cart and seller cancellation", async ({
     await page.goto("/");
     await page
       .getByRole("navigation", { name: "Navigasi mitra" })
-      .getByRole("button", { name: /Pesanan/ })
+      .getByRole("link", { name: /Pesanan/ })
       .click();
     await expect(page.getByRole("button", { name: /Batalkan/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Keranjang/ })).toHaveCount(
@@ -162,28 +162,36 @@ test("partner order disappears at deadline without losing history", async ({
   await page.route("**/api/auth/me", (r) =>
     r.fulfill({ json: { ...buyer, role: "partner" } }),
   );
-  await page.route("**/api/partner/dashboard?period=*", (r) =>
-    r.fulfill({
-      json: {
-        booked_portions: 1,
-        simulated_total: 5000,
-        series: [],
-        pickups: [order],
-        orders: [order],
-        listings: [],
-        stores: [],
-      },
-    }),
+  await page.route("**/api/partner/stores", (r) =>
+    r.fulfill({ json: { stores: [] } }),
   );
+  await page.route("**/api/partner/orders?**", async (r) => {
+    const history =
+      new URL(r.request().url()).searchParams.get("status") === "history";
+    const expired = (await page.evaluate(() => Date.now())) >= time + 3000;
+    return r.fulfill({
+      json: {
+        results: history
+          ? expired
+            ? [{ ...order, status: "expired" }]
+            : []
+          : expired
+            ? []
+            : [order],
+        count: 1,
+        page: 1,
+        page_size: 25,
+        counts: {},
+      },
+    });
+  });
   await page.goto("/");
   await expect(page.getByText("Pembeli Lama", { exact: true })).toBeVisible();
   await page.clock.runFor(4000);
   await expect(page.getByText("Pembeli Lama", { exact: true })).toHaveCount(0);
-  await page
-    .getByRole("navigation", { name: "Navigasi mitra" })
-    .getByRole("button", { name: /Pesanan/ })
-    .click();
-  await expect(page.getByText("Belum ada pesanan aktif.")).toBeVisible();
+  await expect(
+    page.getByText("Belum ada pesanan pada filter ini."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Riwayat", exact: true }).click();
   await expect(page.getByText("Pembeli Lama", { exact: true })).toBeVisible();
 });

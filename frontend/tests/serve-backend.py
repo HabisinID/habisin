@@ -35,6 +35,11 @@ with TemporaryDirectory(prefix="habisin-browser-") as directory:
 
     call_command("migrate", interactive=False, verbosity=0)
     call_command("seed_demo")
+    # Optional admin exists only inside the TemporaryDirectory database above.
+    if os.environ.get("HABISIN_TEST_ADMIN_PASSWORD"):
+        from django.contrib.auth.models import User
+        User.objects.create_user(username="workspace_admin", password=os.environ["HABISIN_TEST_ADMIN_PASSWORD"], is_staff=True)
+
     for address, lat, lng in [
         ("Jalan Margonda, Beji, Depok", -6.366, 106.829),
         ("Jalan Pondok Cina 22, Depok", -6.369, 106.831),

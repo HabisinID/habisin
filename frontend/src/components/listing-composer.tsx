@@ -46,6 +46,7 @@ import {
   type ListingDraft,
   type ListingFields,
 } from "@/lib/listing-draft";
+import { pickupEndForStore, storeHoursLabel } from "@/lib/store-profile";
 import { designFont } from "@/lib/design-font";
 import { validCoordinates } from "@/lib/discovery";
 import { useObjectUrl } from "@/hooks/use-object-url";
@@ -84,19 +85,11 @@ function Field({
     </div>
   );
 }
-const extraKeys = new Set([
-  "store_id",
-  "description",
-  "prepared_at",
-  "pickup_start",
-  "packaging",
-  "storage_notes",
-  "allergens",
-]);
 export default function ListingComposer({
   item,
   items,
   initialCopyOpen = false,
+  compact = false,
   userId,
   now,
   busy,
@@ -110,6 +103,7 @@ export default function ListingComposer({
   item: Listing | null;
   items: Listing[];
   initialCopyOpen?: boolean;
+  compact?: boolean;
   userId: number;
   now: number;
   busy: boolean;
@@ -133,7 +127,6 @@ export default function ListingComposer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [attempted, setAttempted] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(initialCopyOpen);
   const [copying, setCopying] = useState<number | null>(null);
   const [copyError, setCopyError] = useState("");
@@ -152,6 +145,7 @@ export default function ListingComposer({
   const key = draftKey(userId, item?.id);
   const selectedStore = stores.find((s) => String(s.id) === fields.store_id);
   const locked = busy || !!published;
+  const ticketLocked = !!item?.has_active_orders;
   const previewFile = useObjectUrl(photo.file);
   const previewImage =
     photo.mode === "url"
@@ -189,7 +183,9 @@ export default function ListingComposer({
       : 0;
   const chosenPrice = fields.free ? 0 : Math.max(0, Number(fields.price) || 0);
   const previous = items
-    .filter((row) => row.id !== item?.id)
+    .filter(
+      (row) => row.id !== item?.id && !row.moderated_at && !row.deleted_at,
+    )
     .sort((a, b) => b.id - a.id);
   useEffect(() => {
     alive.current = true;
@@ -239,7 +235,17 @@ export default function ListingComposer({
     name: K,
     value: ListingFields[K],
   ) {
-    setFields((old) => ({ ...old, [name]: value }));
+    setFields((old) => {
+      const store =
+        name === "store_id" && !item
+          ? stores.find((s) => String(s.id) === value)
+          : undefined;
+      return {
+        ...old,
+        [name]: value,
+        ...(store ? { pickup_end: pickupEndForStore(store) } : {}),
+      };
+    });
     setErrors((old) => {
       const next = { ...old };
       delete next[name];
@@ -251,6 +257,9 @@ export default function ListingComposer({
     return {
       id: `listing-${name}`,
       name,
+      disabled:
+        ticketLocked &&
+        ["price", "store_id", "pickup_start", "pickup_end"].includes(name),
       value: fields[name],
       onChange: (
         e: React.ChangeEvent<
@@ -340,7 +349,6 @@ export default function ListingComposer({
     setErrors(e);
     setAttempted(true);
     const first = Object.keys(e)[0];
-    if (Object.keys(e).some((k) => extraKeys.has(k))) setDetailsOpen(true);
     requestAnimationFrame(() => {
       const target =
         first === "image"
@@ -436,7 +444,6 @@ export default function ListingComposer({
       setDraftMessage(
         "Listing disalin ke isian baru. Isi waktu dibuat dan periksa jam ambil hari ini.",
       );
-      setDetailsOpen(true);
     } catch (e) {
       if (!controller.signal.aborted && alive.current)
         setCopyError((e as Error).message);
@@ -619,13 +626,18 @@ export default function ListingComposer({
     </>
   );
   return (
-    <div className={`${styles.shell} ${designFont.className}`}>
+    <div
+      className={`${styles.shell} ${compact ? styles.compact : ""} ${designFont.className}`}
+    >
       <aside className={styles.sidebar} aria-label="Navigasi mitra">
         <HabisinLogo />
-        <button className={`${styles.navItem} ${styles.verify}`} disabled>
+        <a
+          className={`${styles.navItem} ${styles.verify}`}
+          href="/api/partner/kasir"
+        >
           <ShieldCheck size={20} />
-          Verifikasi kode<small>Belum tersedia</small>
-        </button>
+          Verifikasi kode
+        </a>
         <button className={styles.navItem} disabled={busy} onClick={onCancel}>
           <LayoutDashboard size={18} />
           Dasbor
@@ -856,18 +868,11 @@ export default function ListingComposer({
                           }
                         }}
                       >
-                        {[
-                          "Roti & kue",
-                          "Makanan berat",
-                          "Kue basah",
-                          "Minuman",
-                          "Sayur & buah",
-                          "Lainnya",
-                        ].map((c) => (
+                        {listingCategories.map((c) => (
                           <button
                             type="button"
                             key={c}
-                            className={`${styles.chip} ${["Kue basah", "Sayur & buah", "Lainnya"].includes(c) ? styles.desktopCategory : ""}`}
+                            className={styles.chip}
                             role="radio"
                             data-category={c}
                             aria-checked={fields.category === c}
@@ -876,43 +881,6 @@ export default function ListingComposer({
                             {c === "Makanan berat" ? "Nasi & lauk" : c}
                           </button>
                         ))}
-                        <details className={styles.moreCategories}>
-                          <summary
-                            className={styles.chip}
-                            aria-label="Kategori lainnya"
-                          >
-                            <span className={styles.desktopOnly}>
-                              +{listingCategories.length - 6}
-                            </span>
-                            <span className={styles.mobileOnly}>
-                              +{listingCategories.length - 3}
-                            </span>
-                          </summary>
-                          <div>
-                            {listingCategories
-                              .filter(
-                                (c) =>
-                                  ![
-                                    "Roti & kue",
-                                    "Makanan berat",
-                                    "Minuman",
-                                  ].includes(c),
-                              )
-                              .map((c) => (
-                                <button
-                                  type="button"
-                                  key={c}
-                                  role="radio"
-                                  aria-checked={fields.category === c}
-                                  className={`${styles.chip} ${["Kue basah", "Sayur & buah", "Lainnya"].includes(c) ? styles.mobileCategory : ""}`}
-                                  data-category={c}
-                                  onClick={() => update("category", c)}
-                                >
-                                  {c}
-                                </button>
-                              ))}
-                          </div>
-                        </details>
                       </div>
                       {errors.category && (
                         <small className={styles.error}>
@@ -932,7 +900,7 @@ export default function ListingComposer({
                         <strong>Gratis (donasi)</strong>
                         <p className={styles.hint}>
                           Pembeli klaim tanpa bayar. Maks. 2 porsi per orang per
-                          toko per hari WIB.
+                          hari WIB di seluruh toko.
                         </p>
                       </div>
                       <label className={styles.switch}>
@@ -940,6 +908,7 @@ export default function ListingComposer({
                           type="checkbox"
                           aria-label="Gratis (donasi)"
                           checked={fields.free}
+                          disabled={ticketLocked}
                           onChange={(e) => update("free", e.target.checked)}
                         />
                         <span />
@@ -950,8 +919,8 @@ export default function ListingComposer({
                 {fields.free && (
                   <p className={styles.freeNotice}>
                     <ShieldCheck size={18} />
-                    Kami hanya tampilkan stok dan batas ambil. Aturan gratis dan
-                    satu tiket gratis aktif tetap berlaku.
+                    Kami hanya tampilkan stok dan batas ambil. Kuota gratis
+                    maksimal 2 porsi per hari WIB di seluruh toko tetap berlaku.
                   </p>
                 )}
                 <div className={styles.pricesAndStock}>
@@ -1033,6 +1002,7 @@ export default function ListingComposer({
                             } catch {}
                           }}
                           aria-label="Jam ambil sebelum (WIB)"
+                          disabled={ticketLocked}
                           value={fields.pickup_end.slice(11)}
                           aria-invalid={!!errors.pickup_end}
                           aria-describedby={
@@ -1054,6 +1024,7 @@ export default function ListingComposer({
                             type="button"
                             className={styles.chip}
                             key={t}
+                            disabled={ticketLocked}
                             aria-pressed={fields.pickup_end.slice(11) === t}
                             onClick={() =>
                               update(
@@ -1078,7 +1049,7 @@ export default function ListingComposer({
                       <small className={styles.hint}>
                         {fields.pickup_end.slice(0, 10)} WIB
                         {selectedStore
-                          ? ` · toko tutup ${selectedStore.closing_time.slice(0, 5)}${selectedStore.closing_time < selectedStore.opening_time ? " (hari berikutnya)" : ""}`
+                          ? ` · ${storeHoursLabel(selectedStore)}`
                           : " · pilih toko penjual"}
                       </small>
                     )}
@@ -1096,19 +1067,20 @@ export default function ListingComposer({
                     />
                   </Field>
                 </div>
-                <details
+                <section
                   className={styles.details}
-                  open={detailsOpen}
-                  onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+                  aria-label="Detail toko dan informasi makanan"
                 >
-                  <summary>
-                    Detail toko &amp; informasi makanan{" "}
-                    <span className={styles.hint}>
-                      {selectedStore && fields.prepared_at && fields.description
-                        ? "Terisi"
-                        : "Perlu dilengkapi"}
-                    </span>
-                  </summary>
+                  <h2 className={styles.detailHeading}>
+                    Detail toko &amp; informasi makanan
+                  </h2>
+                  {ticketLocked && (
+                    <p role="status" className={styles.hint}>
+                      Ada pesanan aktif. Harga, toko, dan waktu pengambilan
+                      dikunci untuk melindungi tiket. Stok tetap berarti porsi
+                      tersisa.
+                    </p>
+                  )}
                   <div className={styles.detailFields}>
                     <div className={styles.span}>
                       <Field
@@ -1118,7 +1090,12 @@ export default function ListingComposer({
                       >
                         <select
                           {...input("store_id")}
-                          disabled={locked || storesLoading || !!storesError}
+                          disabled={
+                            locked ||
+                            ticketLocked ||
+                            storesLoading ||
+                            !!storesError
+                          }
                         >
                           <option value="">Pilih toko penjual</option>
                           {stores.map((store) => (
@@ -1126,11 +1103,16 @@ export default function ListingComposer({
                               key={store.id}
                               value={store.id}
                               disabled={
-                                !store.is_open && item?.store_id !== store.id
+                                !!store.closed_at ||
+                                (!store.is_open && item?.store_id !== store.id)
                               }
                             >
                               {store.name} · {store.address} · #{store.id}
-                              {!store.is_open ? " (ditutup sementara)" : ""}
+                              {store.closed_at
+                                ? " (ditutup permanen)"
+                                : !store.is_open
+                                  ? " (ditutup sementara)"
+                                  : ""}
                             </option>
                           ))}
                         </select>
@@ -1251,7 +1233,7 @@ export default function ListingComposer({
                       lokal di browser akun ini.
                     </p>
                   </div>
-                </details>
+                </section>
               </fieldset>
             </div>
             <footer className={styles.actions}>

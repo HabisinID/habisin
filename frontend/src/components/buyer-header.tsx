@@ -1,9 +1,10 @@
 "use client";
-import { MapPin, LogOut, Search } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import type { User } from "@/lib/api";
 import { designFont } from "@/lib/design-font";
 import { useBrowserLocation } from "@/hooks/use-browser-location";
 import SiteHeader from "./site-header";
+import LogoutButton from "./logout-button";
 import s from "./workspace.module.css";
 
 // Initials of the first two words, as on the design's avatar ("Rani Ayu" → RA).
@@ -45,7 +46,7 @@ export default function BuyerHeader({
   // Where location failures are reported when the header tracks location itself.
   onNotice?: (message: string) => void;
   onAccount?: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   onLogin?: () => void;
   onRegister?: () => void;
 }) {
@@ -55,7 +56,7 @@ export default function BuyerHeader({
   const name = user ? user.name || user.username : "";
   return (
     <SiteHeader
-      className={designFont.className}
+      className={`${designFont.className} compact-header`}
       navLabel="Navigasi pembeli"
       nav={[
         { label: "Beranda", href: "/" },
@@ -66,6 +67,14 @@ export default function BuyerHeader({
           : { label: "Pesanan", onClick: onLogin },
       ]}
       actions={
+        // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
+        !user && (
+          <button className="header-login-desktop" onClick={onLogin}>
+            Masuk
+          </button>
+        )
+      }
+      end={
         user ? (
           <>
             {onAccount ? (
@@ -81,20 +90,19 @@ export default function BuyerHeader({
                 {initials(name)}
               </span>
             )}
-            <button aria-label="Keluar" onClick={onLogout}>
-              <LogOut size={18} />
-            </button>
+            <LogoutButton onLogout={onLogout} />
           </>
         ) : (
           <>
-            <button onClick={onLogin}>Masuk</button>
-            {/* Mobile shows "Daftar" so the top bar fits on one row. */}
+            <button className="header-login-mobile" onClick={onLogin}>
+              Masuk
+            </button>
             <button
               className={s.primary}
               aria-label="Daftar gratis"
               onClick={onRegister}
             >
-              Daftar<span className="mobile:hidden"> gratis</span>
+              Daftar<span className="header-signup-long"> gratis</span>
             </button>
           </>
         )
@@ -130,12 +138,16 @@ export default function BuyerHeader({
         </form>
       )}
       <button
-        className={s.location}
+        className={`${s.location} header-location`}
+        aria-label={finding ? "Mencari lokasi…" : `${place} · Pakai lokasiku`}
+        title={place}
         onClick={onLocate ?? own.locate}
         disabled={finding}
       >
         <MapPin size={16} />
-        {finding ? "Mencari lokasi…" : `${place} · Pakai lokasiku`}
+        <span className="header-location-text">
+          {finding ? "Mencari lokasi…" : place}
+        </span>
       </button>
     </SiteHeader>
   );

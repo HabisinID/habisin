@@ -769,3 +769,25 @@
     gap: 8px;
   }
 }
+
+@media (max-width: 600px) {
+  .how {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .how > div,
+  .steps li > div {
+    min-width: 0;
+  }
+  .exampleTicket {
+    width: 100%;
+    min-width: 0;
+    transform: none;
+  }
+  .exampleCode {
+    gap: 12px;
+  }
+  .exampleCode strong {
+    font-size: 28px;
+    letter-spacing: 2px;
+  }
+}

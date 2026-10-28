@@ -873,9 +873,8 @@
   .workspace {
     height: 100dvh;
   }
-  /* Two rows: logo and theme switcher, then back · title · Simpan draf. */
   .mobileHeader {
-    height: auto;
+    height: 56px;
     min-height: 56px;
     display: flex;
     align-items: center;
@@ -1165,8 +1164,7 @@
   max-width: none;
   padding: 0;
 }
-/* SiteHeader wraps page content in a display:contents box; grow the title block inside it. */
-.desktopHeader > div > div:first-of-type > div:first-of-type {
+.desktopHeader > div > div:first-of-type {
   flex: 1;
   min-width: 0;
 }
@@ -1181,4 +1179,91 @@
     padding: 8px 0;
     gap: 4px;
   }
+  .mobileHeader a[aria-label="Habisin beranda"] {
+    flex-basis: 100%;
+  }
+}
+
+/* Categories remain in the form flow; all pills are keyboard reachable. */
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  gap: 8px;
+  padding: 4px 3px 10px;
+  scrollbar-width: thin;
+}
+.chips > button {
+  flex: none;
+  white-space: nowrap;
+}
+.detailHeading {
+  font-size: 16px;
+  font-weight: 800;
+  padding: 18px 0;
+}
+.compact {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.compact .sidebar,
+.compact .preview,
+.compact .mobileHeader,
+.compact .desktopHeader {
+  display: none;
+}
+.compact .workspace {
+  height: auto;
+  min-height: 100%;
+}
+.compact .body {
+  display: block;
+}
+.compact .scroll {
+  padding: 20px;
+  overflow: visible;
+}
+.compact .form {
+  height: auto;
+  overflow: visible;
+}
+.compact .actions {
+  position: sticky;
+  bottom: 0;
+  padding: 16px;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+}
+.compact .photo {
+  max-width: 100%;
+}
+.compact .detailFields {
+  grid-template-columns: 1fr;
+}
+.compact .span {
+  grid-column: auto;
+}
+
+.compact .identity {
+  grid-template-columns: 1fr;
+}
+.compact .pricesAndStock {
+  grid-template-columns: 1fr;
+}
+.compact .timingAndNotes {
+  grid-template-columns: 1fr;
+}
+.compact .scroll {
+  min-width: 0;
+}
+.compact .fields {
+  min-width: 0;
+}
+.compact .identityFields {
+  min-width: 0;
+}
+.compact .photoField {
+  max-width: 100%;
 }

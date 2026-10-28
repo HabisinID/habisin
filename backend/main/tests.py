@@ -539,7 +539,9 @@ class PartnerListingTests(TestCase):
         order.status = "cancelled"
         order.save()
         self.assertEqual(self.client.patch(self.path, {"price": 5000}, format="json").status_code, 200)
-        self.assertEqual(self.client.delete(self.path).status_code, 409)
+        self.assertEqual(self.client.delete(self.path).status_code, 204)
+        self.item.refresh_from_db()
+        self.assertIsNotNone(self.item.deleted_at)
         self.assertTrue(Reservation.objects.filter(pk=order.pk).exists())
 
     def test_inventory_includes_inactive_expired_and_sold_out_listings(self):
@@ -570,6 +572,8 @@ class PartnerListingTests(TestCase):
 
     def test_deleting_partner_account_deactivates_listings_and_keeps_buyer_history(self):
         order = self.reserve()
+        self.assertEqual(self.client.delete("/api/auth/me", {"password": "Secure-Meal-927!"}, format="json").status_code, 409)
+        Reservation.objects.filter(pk=order.pk).update(status="picked_up")
         self.assertEqual(self.client.delete("/api/auth/me", {"password": "Secure-Meal-927!"}, format="json").status_code, 204)
         self.item.refresh_from_db()
         self.assertIsNone(self.item.owner)

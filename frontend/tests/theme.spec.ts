@@ -107,7 +107,7 @@ const switcherLayout = (page: Page) =>
         gapToRightEdge: Math.round(window.innerWidth - t.right),
         offLogoRow: logo
           ? Math.round(Math.abs(middle(t) - middle(box(logo))))
-          : -1,
+          : Math.round(Math.abs(middle(t) - middle(box(header)))),
         onItsRight: others
           .filter((el) => sameRow(box(el)) && box(el).left >= t.right - 1)
           .map(label),
@@ -156,7 +156,7 @@ for (const [who, paths] of [
   });
 }
 
-test("the theme switcher is a bordered circle, 44px on desktop and 40px on mobile", async ({
+test("the theme switcher is a bordered circle, 44px on desktop and mobile", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -172,7 +172,7 @@ test("the theme switcher is a bordered circle, 44px on desktop and 40px on mobil
   );
   expect(radius).toBeGreaterThanOrEqual(22);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(await toggle.boundingBox()).toMatchObject({ width: 40, height: 40 });
+  expect(await toggle.boundingBox()).toMatchObject({ width: 44, height: 44 });
 });
 
 for (const mode of ["light", "dark"] as const) {

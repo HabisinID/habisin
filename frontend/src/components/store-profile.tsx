@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import StoreCatalog from "./store-catalog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, ApiError, type Store } from "@/lib/api";
+import { api, ApiError, type Store, type User } from "@/lib/api";
 import {
   errorClass,
   secondaryButton,
@@ -22,6 +22,16 @@ const StoreMap = dynamic(() => import("./store-map"), {
 });
 
 export default function StoreProfile({ id }: { id: string }) {
+  const [user, setUser] = useState<User | null>(null);
+  useEffect(() => {
+    const c = new AbortController();
+    api<User>("auth/me", "GET", undefined, c.signal)
+      .then((value) => {
+        if (!c.signal.aborted) setUser(value);
+      })
+      .catch(() => {});
+    return () => c.abort();
+  }, []);
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,7 +56,7 @@ export default function StoreProfile({ id }: { id: string }) {
     };
   }, [id]);
   return (
-    <StoreShell>
+    <StoreShell user={user}>
       {loading ? (
         <p role="status">Memuat profil toko…</p>
       ) : missing ? (
