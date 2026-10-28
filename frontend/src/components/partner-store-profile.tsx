@@ -154,7 +154,7 @@ function StoreProfileContent() {
     }
   }
   return (
-    <section aria-label="Profil toko mitra">
+    <section aria-label="Profil toko mitra" className="mx-auto max-w-6xl">
       <div className={`${s.toolbar} ${s.storeToolbar}`}>
         <label className={s.label}>
           Toko yang dikelola
@@ -208,7 +208,7 @@ function StoreProfileContent() {
       ) : store || creating ? (
         <>
           {store && (
-            <div className={`${s.rowBetween} mb-6`}>
+            <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface p-4">
               <span className={s.badge}>
                 {store.is_open ? "Toko aktif" : "Tutup sementara"} · lokasi
                 dikonfirmasi mitra
@@ -239,7 +239,10 @@ function StoreProfileContent() {
             }}
           />
           {store && !creating && (
-            <section className={s.close} aria-label="Tutup toko">
+            <section
+              className="mt-10 border-t border-line pt-6"
+              aria-label="Tutup toko"
+            >
               <h2 className={s.title}>Tutup toko</h2>
               <p className={`${s.muted} my-3`}>
                 Semua penawaran cabang ini berhenti tampil. Akun dan cabang lain

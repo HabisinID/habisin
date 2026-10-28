@@ -2,11 +2,15 @@
 import { useEffect, useState, type ComponentProps } from "react";
 import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import ProfilePictureInput, {
-  Avatar,
   pictureFormData,
   pictureRequestBody,
 } from "./profile-picture";
 import Modal from "./modal";
+import {
+  ProfileIdentity,
+  ProfileSectionHeading,
+  profilePrimary,
+} from "./profile-ui";
 import { api, type User } from "@/lib/api";
 
 export function PasswordInput(props: Omit<ComponentProps<"input">, "type">) {
@@ -248,146 +252,172 @@ export function Profile({
     }
   }
   return (
-    <Modal title="Akun kamu" onClose={onClose}>
-      <div className="profile-identity flex items-center gap-[13px] mt-[10px] mr-0 mb-[25px] ml-0 [&_p]:text-[11px] [&_p]:text-muted [&_p]:mt-[5px]">
-        <span className="avatar w-[45px] h-[45px] rounded-[50%] bg-light text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
-          <Avatar
-            src={user.profile_picture}
-            name={user.name || user.username}
-          />
-        </span>
-        <div>
-          <strong>{user.name}</strong>
-          <p>
-            @{user.username} ·{" "}
-            {user.role === "buyer"
-              ? "Pembeli"
-              : user.role === "partner"
-                ? "Mitra"
-                : "Admin"}
-          </p>
-        </div>
-      </div>
-      <div className="tabs flex bg-surface-2 p-1 rounded-[7px] mb-[22px] [&_button]:[flex:1] [&_button]:text-[11px] [&_button]:p-[10px] [&_button]:rounded-[5px] [&_.active]:bg-surface [&_.active]:text-brand [&_.active]:shadow-[0_1px_5px_#0001]">
-        {[
-          ["profile", "Profil"],
-          ["password", "Password"],
-          ["delete", "Hapus akun"],
-        ].map(([key, label]) => (
-          <button
-            className={tab === key ? "active" : ""}
-            key={key}
-            onClick={() => {
-              setTab(key);
-              setError("");
-              setMessage("");
-            }}
+    <Modal title="Akun kamu" onClose={onClose} wide>
+      <div className="grid grid-cols-[230px_minmax(0,1fr)] gap-8 tablet:grid-cols-1 tablet:gap-6">
+        <aside className="min-w-0 space-y-5">
+          <ProfileIdentity user={user} />
+          <nav
+            aria-label="Pengaturan akun"
+            className="flex flex-col gap-1 tablet:grid tablet:grid-cols-3"
           >
-            {label}
-          </button>
-        ))}
-      </div>
-      <form
-        className="form flex flex-col gap-[15px] [&_>_label]:flex [&_>_label]:flex-col [&_>_label]:gap-[7px] [&_>_label]:font-semibold [&_>_label]:text-[11px] [&_>_label]:text-muted [&_input:not([type=checkbox])]:w-full [&_input]:[border:1px_solid_var(--color-line)] [&_input]:rounded-[7px] [&_input]:p-3 [&_input]:bg-surface [&_input]:text-dark [&_input]:text-[13px] [&_input]:font-normal [&_select]:w-full [&_select]:[border:1px_solid_var(--color-line)] [&_select]:rounded-[7px] [&_select]:p-3 [&_select]:bg-surface [&_select]:text-dark [&_select]:text-[13px] [&_select]:font-normal [&_small]:text-[10px] [&_small]:min-h-3 [&_small]:font-normal [&_.check-label]:flex-row [&_.check-label]:items-center [&_.check-label]:leading-[1.7]"
-        key={tab}
-        onSubmit={submit}
-      >
-        {tab === "profile" && (
-          <>
-            <ProfilePictureInput
-              key={user.profile_picture}
-              current={user.profile_picture}
-              disabled={busy}
-            />
-            <label>
-              Nama lengkap
-              <input
-                name="name"
-                defaultValue={user.name}
-                required
-                maxLength={150}
-              />
-            </label>
-            <label>
-              Email
-              <input
-                name="email"
-                type="email"
-                defaultValue={user.email}
-                required
-              />
-            </label>
-          </>
-        )}
-        {tab === "password" && (
-          <>
-            <label>
-              Password lama
-              <PasswordInput
-                name="old_password"
-                required
-                autoComplete="current-password"
-              />
-            </label>
-            <label>
-              Password baru
-              <PasswordInput
-                name="new_password"
-                required
-                minLength={8}
-                maxLength={128}
-                autoComplete="new-password"
-              />
-            </label>
-          </>
-        )}
-        {tab === "delete" && (
-          <>
-            <p className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error">
-              Akun dan riwayat pesanan akan dihapus permanen. Pesanan aktif
-              dibatalkan dan stok dikembalikan.
-            </p>
-            <label>
-              Konfirmasi password
-              <PasswordInput
-                name="password"
-                required
-                autoComplete="current-password"
-              />
-            </label>
-            <label className="check-label [&_input]:w-auto [&_input]:accent-[var(--color-brand)]">
-              <input type="checkbox" required />
-              Saya ingin menghapus akun secara permanen.
-            </label>
-          </>
-        )}
-        {error && (
-          <p
-            className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error"
-            role="alert"
-          >
-            {error}
+            {[
+              ["profile", "Profil", "01"],
+              ["password", "Password", "02"],
+              ["delete", "Hapus akun", "03"],
+            ].map(([key, label, number]) => (
+              <button
+                type="button"
+                key={key}
+                aria-pressed={tab === key}
+                onClick={() => {
+                  setTab(key);
+                  setError("");
+                  setMessage("");
+                }}
+                className={`flex min-h-11 items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors tablet:justify-center tablet:px-2 tablet:text-xs ${tab === key ? "bg-light text-brand" : "text-muted hover:bg-surface-2"}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="font-mono text-[10px] opacity-70 tablet:hidden"
+                >
+                  {number}
+                </span>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <p className="flex items-start gap-2 px-2 text-xs leading-relaxed text-muted tablet:hidden">
+            <ShieldCheck size={15} />
+            Tempat untuk mengelola identitas dan keamanan akunmu.
           </p>
-        )}
-        {message && (
-          <p
-            className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-surface-2 text-success"
-            role="status"
-          >
-            {message}
-          </p>
-        )}
-        <button
-          className={`button full inline-flex items-center justify-center gap-3 rounded-2 py-[13px] px-5 text-[12px] font-semibold min-h-11 [transition:background_0.2s,_transform_0.2s] w-full mt-[5px] ${tab === "delete" ? "danger bg-error text-on-error" : "primary bg-brand text-on-brand hover:bg-brand-hover hover:[transform:translateY(-1px)]"}`}
-          disabled={busy}
+        </aside>
+        <form
+          className="flex min-w-0 flex-col gap-5 [&_label:not(.check-label)]:flex [&_label:not(.check-label)]:flex-col [&_label:not(.check-label)]:gap-2 [&_label]:text-sm [&_label]:font-semibold [&_input:not([type=checkbox]):not([type=file])]:min-h-11 [&_input:not([type=checkbox]):not([type=file])]:w-full [&_input:not([type=checkbox]):not([type=file])]:rounded-lg [&_input:not([type=checkbox]):not([type=file])]:border [&_input:not([type=checkbox]):not([type=file])]:border-border [&_input:not([type=checkbox]):not([type=file])]:bg-surface [&_input:not([type=checkbox]):not([type=file])]:px-3.5 [&_input:not([type=checkbox]):not([type=file])]:py-3 [&_input]:text-sm"
+          key={tab}
+          onSubmit={submit}
         >
-          {busy
-            ? "Menyimpan…"
-            : tab === "delete"
-              ? "Hapus akun permanen"
-              : "Simpan perubahan"}
-        </button>
-      </form>
+          <ProfileSectionHeading
+            letter={tab === "profile" ? "A" : tab === "password" ? "B" : "C"}
+            description={
+              tab === "profile"
+                ? "Biar kami dan mitra lebih mudah mengenalmu."
+                : tab === "password"
+                  ? "Jaga akunmu tetap aman dengan kata sandi yang kuat."
+                  : "Pastikan semua pesananmu sudah selesai sebelum melanjutkan."
+            }
+          >
+            {tab === "profile"
+              ? "Profil kamu"
+              : tab === "password"
+                ? "Keamanan akun"
+                : "Privasi & akun"}
+          </ProfileSectionHeading>
+          {tab === "profile" && (
+            <>
+              <ProfilePictureInput
+                key={user.profile_picture}
+                current={user.profile_picture}
+                disabled={busy}
+              />
+              <label>
+                Nama lengkap
+                <input
+                  name="name"
+                  defaultValue={user.name}
+                  required
+                  maxLength={150}
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={user.email}
+                  required
+                />
+              </label>
+            </>
+          )}
+          {tab === "password" && (
+            <>
+              <label>
+                Password lama
+                <PasswordInput
+                  name="old_password"
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
+              <label>
+                Password baru
+                <PasswordInput
+                  name="new_password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
+                />
+              </label>
+            </>
+          )}
+          {tab === "delete" && (
+            <>
+              <p className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error">
+                Akun dan riwayat pesanan akan dihapus permanen. Pesanan aktif
+                dibatalkan dan stok dikembalikan.
+              </p>
+              <label>
+                Konfirmasi password
+                <PasswordInput
+                  name="password"
+                  required
+                  autoComplete="current-password"
+                />
+              </label>
+              <label className="check-label flex flex-row items-start gap-3 text-xs leading-relaxed [&_input]:mt-1 [&_input]:size-4 [&_input]:shrink-0 [&_input]:accent-brand">
+                <input type="checkbox" required />
+                Saya ingin menghapus akun secara permanen.
+              </label>
+            </>
+          )}
+          {error && (
+            <p
+              className="error p-3 text-[12px] leading-[1.7] rounded-[7px] bg-error-tint text-error"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+          {message && (
+            <p
+              className="success p-3 text-[12px] leading-[1.7] rounded-[7px] bg-surface-2 text-success"
+              role="status"
+            >
+              {message}
+            </p>
+          )}
+          <button
+            className={
+              tab === "delete"
+                ? "mt-2 min-h-11 rounded-lg bg-error px-5 py-3 text-sm font-bold text-on-error"
+                : `${profilePrimary} mt-2 w-full`
+            }
+            disabled={busy}
+          >
+            {busy
+              ? "Menyimpan…"
+              : tab === "delete"
+                ? "Hapus akun permanen"
+                : "Simpan perubahan"}
+          </button>
+          {tab !== "delete" && (
+            <p className="text-xs leading-relaxed text-muted">
+              Perubahan disimpan ke akunmu dan bisa diubah kembali kapan saja.
+            </p>
+          )}
+        </form>
+      </div>
     </Modal>
   );
 }
