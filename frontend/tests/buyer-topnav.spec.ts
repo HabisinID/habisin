@@ -157,3 +157,29 @@ test("buyer photos appear on discovery and order pages", async ({ page }) => {
     page.getByRole("banner").getByText("RA", { exact: true }),
   ).toBeVisible();
 });
+
+test("while the account loads, order pages show no guest menu or sign-in buttons", async ({
+  page,
+}) => {
+  let answer = () => {};
+  await page.route("**/api/auth/me", async (route) => {
+    // Hold the answer until the loading state has been checked.
+    await new Promise<void>((resolve) => (answer = resolve));
+    await route.fulfill({
+      json: { id: 1, username: "rani", name: "Rani Ayu", role: "buyer" },
+    });
+  });
+  await page.goto("/pesanan");
+  const banner = page.getByRole("banner");
+  await expect(page.getByText("Memuat pesanan…")).toBeAttached();
+  await expect(banner.getByRole("link", { name: "Dampak" })).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: "Masuk" })).toHaveCount(0);
+  await expect(
+    banner.getByRole("button", { name: "Daftar gratis" }),
+  ).toHaveCount(0);
+  answer();
+  await expect(buyerNav(page).getByRole("link")).toHaveText([
+    "Jelajahi",
+    "Pesanan",
+  ]);
+});
