@@ -93,6 +93,7 @@ export default function OrderShell({
       <BuyerHeader
         user={user}
         active="orders"
+        loading={state === "loading"}
         onNotice={setNotice}
         onAccount={() => setProfileOpen(true)}
         onLogout={signOut}
