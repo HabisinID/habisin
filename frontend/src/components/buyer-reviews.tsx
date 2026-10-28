@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Pencil, Star, Trash2, X } from "lucide-react";
-import { feedbackApi, type Review } from "@/lib/reviews";
+import { feedbackApi, type Complaint, type Review } from "@/lib/reviews";
 import { ProfileSectionHeading, profileField, profilePrimary, profileSecondary } from "./profile-ui";
 
 function reviewDate(value: string) {
@@ -12,8 +12,22 @@ function reviewDate(value: string) {
   });
 }
 
+const complaintReasons: Record<Complaint["reason"], string> = {
+  hygiene: "Masalah kebersihan",
+  freshness: "Makanan basi atau tidak segar",
+  mismatch: "Makanan tidak sesuai pesanan",
+  other: "Masalah lainnya",
+};
+
+const complaintStatuses: Record<Complaint["status"], { label: string; className: string }> = {
+  open: { label: "Menunggu ditinjau", className: "bg-urgency-tint text-urgency-text" },
+  reviewed: { label: "Sedang ditinjau", className: "bg-light text-brand" },
+  resolved: { label: "Selesai", className: "bg-surface-2 text-success" },
+};
+
 export default function BuyerReviewsSection() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -22,14 +36,15 @@ export default function BuyerReviewsSection() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  async function loadReviews() {
+  async function loadFeedback() {
     setLoading(true);
     setError("");
     try {
       const result = await feedbackApi.mine();
       setReviews(result.reviews);
+      setComplaints(result.complaints);
     } catch (reason) {
-      setError((reason as Error).message || "Ulasan belum dapat dimuat.");
+      setError((reason as Error).message || "Ulasan dan komplain belum dapat dimuat.");
     } finally {
       setLoading(false);
     }
@@ -40,10 +55,13 @@ export default function BuyerReviewsSection() {
     feedbackApi
       .mine()
       .then((result) => {
-        if (active) setReviews(result.reviews);
+        if (active) {
+          setReviews(result.reviews);
+          setComplaints(result.complaints);
+        }
       })
       .catch((reason) => {
-        if (active) setError((reason as Error).message || "Ulasan belum dapat dimuat.");
+        if (active) setError((reason as Error).message || "Ulasan dan komplain belum dapat dimuat.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -217,9 +235,48 @@ export default function BuyerReviewsSection() {
         </ul>
       )}
       {!loading && error && (
-        <button type="button" className={profileSecondary} onClick={() => void loadReviews()}>
+        <button type="button" className={profileSecondary} onClick={() => void loadFeedback()}>
           Coba lagi
         </button>
+      )}
+
+      <div className="mt-5 border-t border-line pt-6">
+        <h2 className="text-lg font-extrabold tracking-tight">Komplain saya</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          Laporan masalah makanan dan perkembangan penanganannya.
+        </p>
+      </div>
+      {loading ? (
+        <p className="text-sm text-muted" role="status">Memuat komplain…</p>
+      ) : complaints.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-line p-5 text-sm text-muted">
+          Kamu belum mengirim komplain.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {complaints.map((complaint) => {
+            const status = complaintStatuses[complaint.status];
+            return (
+              <li key={complaint.id} className="space-y-3 rounded-xl border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold">{complaintReasons[complaint.reason]}</h3>
+                    <p className="text-sm text-muted">{complaint.store_name}</p>
+                    <time className="mt-1 block text-xs text-muted" dateTime={complaint.created_at}>
+                      {reviewDate(complaint.created_at)} · Pesanan #{complaint.reservation_id}
+                    </time>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${status.className}`}>
+                    {status.label}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">
+                  {complaint.description}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );
