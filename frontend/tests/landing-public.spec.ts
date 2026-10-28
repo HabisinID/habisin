@@ -198,12 +198,6 @@ test("public explore uses buyer map and list, gates favorites and paid/free orde
   await expect(
     page.getByRole("button", { name: "Peta", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  const nav = page.getByRole("navigation", { name: "Navigasi pembeli" });
-  for (const name of ["Pesanan"]) {
-    await nav.getByRole("button", { name, exact: true }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-  }
   await page
     .getByRole("button", { name: "Simpan Roti Aktif ke favorit", exact: true })
     .click();

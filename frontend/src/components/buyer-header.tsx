@@ -20,7 +20,8 @@ export function initials(name: string) {
 }
 
 // TopNav/Pembeli from design.pen, shared by every buyer page: search, location
-// chip, Beranda · Jelajahi · Pesanan, then the avatar.
+// chip, Beranda · Jelajahi · Pesanan, then the avatar. Guests get the landing
+// page menu instead.
 // A page that filters as you type passes `query`/`onQuery`; otherwise searching
 // opens Jelajahi. A page that tracks location passes `location`/`onLocate`.
 export default function BuyerHeader({
@@ -59,14 +60,32 @@ export default function BuyerHeader({
     <SiteHeader
       className={`${designFont.className} compact-header`}
       navLabel="Navigasi pembeli"
-      nav={[
-        { label: "Beranda", href: "/" },
-        { label: "Jelajahi", href: "/jelajahi", current: active === "explore" },
-        // Guests get the sign-in gate first.
+      nav={
         user
-          ? { label: "Pesanan", href: "/pesanan", current: active === "orders" }
-          : { label: "Pesanan", onClick: onLogin },
-      ]}
+          ? [
+              { label: "Beranda", href: "/" },
+              {
+                label: "Jelajahi",
+                href: "/jelajahi",
+                current: active === "explore",
+              },
+              {
+                label: "Pesanan",
+                href: "/pesanan",
+                current: active === "orders",
+              },
+            ]
+          : // Guests have no orders yet: the same menu as the landing page.
+            [
+              {
+                label: "Jelajahi",
+                href: "/jelajahi",
+                current: active === "explore",
+              },
+              { label: "Dampak", href: "/#dampak" },
+              { label: "Untuk Mitra", href: "/#mitra" },
+            ]
+      }
       actions={
         // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
         !user && (
