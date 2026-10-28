@@ -164,6 +164,7 @@ export default function RoleWorkspace({
             user ? (
               <>
                 <span
+                  data-navbar-avatar
                   className={s.avatar}
                   aria-label={`Akun ${user.name || user.username}`}
                 >
