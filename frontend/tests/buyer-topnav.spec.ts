@@ -251,3 +251,29 @@ test("while the account loads, order pages show no guest menu or sign-in buttons
     "Pesanan",
   ]);
 });
+
+test("while the account loads, the home page shows neither the landing page nor its menu", async ({
+  page,
+}) => {
+  // Hold every answer (React may ask twice in development).
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
+  await page.route("**/api/auth/me", async (route) => {
+    await held;
+    await route.fulfill({
+      json: { id: 1, username: "rani", name: "Rani Ayu", role: "buyer" },
+    });
+  });
+  await page.goto("/");
+  const banner = page.getByRole("banner");
+  await expect(page.getByText("Memuat HABISIN…")).toBeAttached();
+  await expect(banner.getByRole("link", { name: "Dampak" })).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: "Masuk" })).toHaveCount(0);
+  await expect(page.locator("#dampak")).toHaveCount(0);
+  answer();
+  await expect(buyerNav(page).getByRole("link")).toHaveText([
+    "Jelajahi",
+    "Pesanan",
+  ]);
+  await expect(page.getByText("Memuat HABISIN…")).toHaveCount(0);
+});
