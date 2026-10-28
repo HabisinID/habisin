@@ -20,8 +20,8 @@ export function initials(name: string) {
 }
 
 // TopNav/Pembeli from design.pen, shared by every buyer page: search, location
-// chip, Beranda · Jelajahi · Pesanan, then the avatar. Guests get the landing
-// page menu instead.
+// chip, Jelajahi · Pesanan, then the avatar. Guests get the landing page menu
+// instead.
 // A page that filters as you type passes `query`/`onQuery`; otherwise searching
 // opens Jelajahi. A page that tracks location passes `location`/`onLocate`.
 export default function BuyerHeader({
@@ -62,8 +62,8 @@ export default function BuyerHeader({
       navLabel="Navigasi pembeli"
       nav={
         user
-          ? [
-              { label: "Beranda", href: "/" },
+          ? // Signed in, "/" is the catalog (same as Jelajahi); the logo leads home.
+            [
               {
                 label: "Jelajahi",
                 href: "/jelajahi",
