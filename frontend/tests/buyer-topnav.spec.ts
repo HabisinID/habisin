@@ -80,7 +80,7 @@ test("signed-in buyers get the design TopNav on discovery and order pages", asyn
   }
 });
 
-test("guests see the same links, and Pesanan asks them to sign in first", async ({
+test("guests on Jelajahi get the landing page menu, without Pesanan", async ({
   page,
 }) => {
   await page.route("**/api/auth/me", (route) =>
@@ -89,12 +89,25 @@ test("guests see the same links, and Pesanan asks them to sign in first", async 
   await page.goto("/jelajahi", { waitUntil: "networkidle" });
   const nav = buyerNav(page);
   await expect(nav.locator("a, button")).toHaveText([
-    "Beranda",
     "Jelajahi",
-    "Pesanan",
+    "Dampak",
+    "Untuk Mitra",
   ]);
-  await nav.getByRole("button", { name: "Pesanan", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Jelajahi" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(nav.getByRole("link", { name: "Dampak" })).toHaveAttribute(
+    "href",
+    "/#dampak",
+  );
+  await expect(
+    nav.getByRole("link", { name: "Untuk Mitra" }),
+  ).toHaveAttribute("href", "/#mitra");
+  // Signing in stays one tap away.
+  await expect(
+    page.getByRole("banner").getByRole("button", { name: "Masuk" }).first(),
+  ).toBeVisible();
 });
 
 test("buyers filter favourites with the Favorit saya chip on Jelajahi", async ({
