@@ -1,3 +1,4 @@
+import { Avatar } from "./profile-picture";
 import { Clock3, MapPin } from "lucide-react";
 import SiteHeader from "./site-header";
 import LogoutButton from "./logout-button";
@@ -45,6 +46,9 @@ export function StoreDetails({ store }: { store: Store }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
+        <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-light text-brand">
+          <Avatar src={store.profile_picture} name={store.name} />
+        </span>
         <h1 className="text-3xl font-bold tracking-tight mobile:text-2xl">
           {store.name}
         </h1>

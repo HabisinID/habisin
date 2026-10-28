@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState, type ComponentProps } from "react";
-import { ArrowRight, Eye, EyeOff, Leaf, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import ProfilePictureInput, {
+  Avatar,
+  pictureFormData,
+  pictureRequestBody,
+} from "./profile-picture";
 import Modal from "./modal";
 import { api, type User } from "@/lib/api";
 
@@ -217,7 +222,13 @@ export function Profile({
     const data = Object.fromEntries(new FormData(form));
     try {
       if (tab === "profile") {
-        onUser(await api<User>("auth/me", "PATCH", data));
+        onUser(
+          await api<User>(
+            "auth/me",
+            "PATCH",
+            pictureRequestBody(pictureFormData(form)),
+          ),
+        );
         setMessage("Profil berhasil disimpan.");
       }
       if (tab === "password") {
@@ -240,7 +251,10 @@ export function Profile({
     <Modal title="Akun kamu" onClose={onClose}>
       <div className="profile-identity flex items-center gap-[13px] mt-[10px] mr-0 mb-[25px] ml-0 [&_p]:text-[11px] [&_p]:text-muted [&_p]:mt-[5px]">
         <span className="avatar w-[45px] h-[45px] rounded-[50%] bg-light text-brand grid place-items-center font-bold text-[20px] [&.small]:w-[30px] [&.small]:h-[30px] [&.small]:text-[12px]">
-          {(user.name || user.username)[0].toUpperCase()}
+          <Avatar
+            src={user.profile_picture}
+            name={user.name || user.username}
+          />
         </span>
         <div>
           <strong>{user.name}</strong>
@@ -280,6 +294,11 @@ export function Profile({
       >
         {tab === "profile" && (
           <>
+            <ProfilePictureInput
+              key={user.profile_picture}
+              current={user.profile_picture}
+              disabled={busy}
+            />
             <label>
               Nama lengkap
               <input

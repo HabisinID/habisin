@@ -1,4 +1,8 @@
 "use client";
+import ProfilePictureInput, {
+  pictureFormData,
+  pictureRequestBody,
+} from "./profile-picture";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type User } from "@/lib/api";
@@ -75,7 +79,7 @@ function Account({
           "Kata sandi berhasil diganti. Perangkat lain perlu masuk ulang.",
         );
       } else {
-        const data = Object.fromEntries(new FormData(e.currentTarget));
+        const data = pictureRequestBody(pictureFormData(e.currentTarget));
         onUser(await api<User>("auth/me", "PATCH", data));
         setNotice("Data login berhasil disimpan.");
       }
@@ -232,6 +236,10 @@ function Account({
                 Username
                 <input className={s.field} value={user.username} disabled />
               </label>
+              <ProfilePictureInput
+                current={user.profile_picture}
+                disabled={busy}
+              />
               <label className={s.label}>
                 Nama lengkap
                 <input

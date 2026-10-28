@@ -118,3 +118,36 @@ test("buyers filter favourites with the Favorit saya chip on Jelajahi", async ({
   await expect(chip).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".food-card")).toHaveCount(1);
 });
+
+test("buyer photos appear on discovery and order pages", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: 1,
+        username: "rani",
+        name: "Rani Ayu",
+        role: "buyer",
+        profile_picture: "/media/profiles/rani.svg",
+      },
+    }),
+  );
+  await page.route("**/media/profiles/rani.svg", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>',
+    }),
+  );
+  for (const path of ["/jelajahi", "/pesanan"]) {
+    await page.goto(path, { waitUntil: "networkidle" });
+    const photo = page
+      .getByRole("banner")
+      .getByRole("img", { name: "Foto Rani Ayu" });
+    await expect(photo).toBeVisible();
+    await expect(photo).toHaveJSProperty("naturalWidth", 20);
+  }
+  await page.route("**/media/profiles/rani.svg", (route) => route.abort());
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(
+    page.getByRole("banner").getByText("RA", { exact: true }),
+  ).toBeVisible();
+});
