@@ -161,10 +161,12 @@ test("buyer photos appear on discovery and order pages", async ({ page }) => {
 test("while the account loads, order pages show no guest menu or sign-in buttons", async ({
   page,
 }) => {
+  // Hold every answer (React may ask twice in development) until the loading
+  // state has been checked.
   let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
   await page.route("**/api/auth/me", async (route) => {
-    // Hold the answer until the loading state has been checked.
-    await new Promise<void>((resolve) => (answer = resolve));
+    await held;
     await route.fulfill({
       json: { id: 1, username: "rani", name: "Rani Ayu", role: "buyer" },
     });

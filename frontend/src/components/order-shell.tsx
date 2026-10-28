@@ -91,6 +91,7 @@ export default function OrderShell({
       <BuyerHeader
         user={user}
         active="orders"
+        loading={state === "loading"}
         onNotice={setNotice}
         onLogout={signOut}
         onLogin={() => router.push("/")}

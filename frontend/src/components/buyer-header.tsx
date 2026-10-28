@@ -37,8 +37,11 @@ export default function BuyerHeader({
   onLogout,
   onLogin,
   onRegister,
+  loading = false,
 }: {
   user: User | null;
+  // The account is still being checked: show neither the guest nor the buyer menu.
+  loading?: boolean;
   active: "explore" | "orders";
   query?: string;
   onQuery?: (value: string) => void;
@@ -56,6 +59,7 @@ export default function BuyerHeader({
   const place = location ?? own.location;
   const finding = locating ?? own.locating;
   const name = user ? user.name || user.username : "";
+  const guest = !user && !loading;
   return (
     <SiteHeader
       className={`${designFont.className} compact-header`}
@@ -75,20 +79,22 @@ export default function BuyerHeader({
                 current: active === "orders",
               },
             ]
-          : // Guests have no orders yet: the same menu as the landing page.
-            [
-              {
-                label: "Jelajahi",
-                href: "/jelajahi",
-                current: active === "explore",
-              },
-              { label: "Dampak", href: "/#dampak" },
-              { label: "Untuk Mitra", href: "/#mitra" },
-            ]
+          : guest
+            ? // Guests have no orders yet: the same menu as the landing page.
+              [
+                {
+                  label: "Jelajahi",
+                  href: "/jelajahi",
+                  current: active === "explore",
+                },
+                { label: "Dampak", href: "/#dampak" },
+                { label: "Untuk Mitra", href: "/#mitra" },
+              ]
+            : []
       }
       actions={
         // Desktop: Masuk, then the theme switcher; mobile moves Masuk after it (see `end`).
-        !user && (
+        guest && (
           <button className="header-login-desktop" onClick={onLogin}>
             Masuk
           </button>
@@ -121,18 +127,20 @@ export default function BuyerHeader({
             <LogoutButton onLogout={onLogout} />
           </>
         ) : (
-          <>
-            <button className="header-login-mobile" onClick={onLogin}>
-              Masuk
-            </button>
-            <button
-              className={s.primary}
-              aria-label="Daftar gratis"
-              onClick={onRegister}
-            >
-              Daftar<span className="header-signup-long"> gratis</span>
-            </button>
-          </>
+          guest && (
+            <>
+              <button className="header-login-mobile" onClick={onLogin}>
+                Masuk
+              </button>
+              <button
+                className={s.primary}
+                aria-label="Daftar gratis"
+                onClick={onRegister}
+              >
+                Daftar<span className="header-signup-long"> gratis</span>
+              </button>
+            </>
+          )
         )
       }
     >
