@@ -99,6 +99,7 @@ export default function BuyerHeader({
           <>
             {onAccount ? (
               <button
+                data-navbar-avatar
                 className={s.avatar}
                 aria-label={`Akun ${name}`}
                 onClick={onAccount}
@@ -110,7 +111,7 @@ export default function BuyerHeader({
                 />
               </button>
             ) : (
-              <span className={s.avatar} title={name}>
+              <span data-navbar-avatar className={s.avatar} title={name}>
                 <Avatar
                   src={user.profile_picture}
                   name={name}
