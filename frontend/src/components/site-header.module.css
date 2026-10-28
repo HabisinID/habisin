@@ -1,5 +1,7 @@
+/* Stays at the top of the screen while the page scrolls. */
 .header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 900;
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface);
