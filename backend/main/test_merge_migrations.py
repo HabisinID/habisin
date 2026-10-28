@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0015_merge_profile_pictures_and_workspace')]
+    final = [('main', '0016_repair_profile_picture_columns')]
 
     def upgrade_from(self, origin, status):
         executor = MigrationExecutor(connection)
@@ -78,3 +78,51 @@ class MergeMigrationTests(TransactionTestCase):
                 self.assertIn('moderated_at', [f.name for f in apps.get_model('main', 'Listing')._meta.fields])
                 if origin == '0013_verification_log':
                     self.assertTrue(apps.get_model('main', 'VerificationLog').objects.filter(partner_id=user.pk, code='ABCDE').exists())
+
+
+class PictureColumnRepairTests(TransactionTestCase):
+    before = [("main", "0015_merge_profile_pictures_and_workspace")]
+    final = [("main", "0016_repair_profile_picture_columns")]
+
+    def check_repair(self, missing):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.before)
+        apps = executor.loader.project_state(self.before).apps
+        User = apps.get_model("auth", "User")
+        Profile = apps.get_model("main", "Profile")
+        Store = apps.get_model("main", "Store")
+        user = User.objects.create(username="repair-owner")
+        profile = Profile.objects.create(user_id=user.pk, profile_picture="profiles/kept.jpg")
+        store = Store.objects.create(
+            owner_id=user.pk, name="Preserved store", description="Food",
+            address="Depok", opening_time="08:00", closing_time="20:00",
+            latitude=-6.36, longitude=106.83, landmark="Park",
+            weekly_hours=[{"day": 0, "enabled": False, "sessions": []}],
+            profile_picture="" if missing else "stores/kept.jpg",
+        )
+        try:
+            if missing:
+                with connection.schema_editor() as editor:
+                    editor.remove_field(Store, Store._meta.get_field("profile_picture"))
+                with connection.cursor() as cursor:
+                    self.assertNotIn("profile_picture", [c.name for c in connection.introspection.get_table_description(cursor, "main_store")])
+            executor = MigrationExecutor(connection)
+            executor.migrate(self.final)
+            store.refresh_from_db()
+            profile.refresh_from_db()
+            self.assertEqual(store.name, "Preserved store")
+            self.assertEqual(store.landmark, "Park")
+            self.assertEqual(store.weekly_hours, [{"day": 0, "enabled": False, "sessions": []}])
+            self.assertEqual(profile.profile_picture.name, "profiles/kept.jpg")
+            self.assertEqual(store.profile_picture.name, "" if missing else "stores/kept.jpg")
+            MigrationExecutor(connection).migrate(self.before)
+            MigrationExecutor(connection).migrate(self.final)
+            store.refresh_from_db()
+        finally:
+            MigrationExecutor(connection).migrate(self.final)
+
+    def test_repairs_missing_store_column_without_losing_data(self):
+        self.check_repair(missing=True)
+
+    def test_preserves_existing_picture_columns_and_values(self):
+        self.check_repair(missing=False)
