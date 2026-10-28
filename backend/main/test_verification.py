@@ -52,6 +52,13 @@ class VerificationTests(TestCase):
     def test_page_offers_qr_scanning(self):
         self.assertContains(self.client.get(PAGE), "Pindai QR")
 
+    def test_dashboard_links_go_straight_to_the_partner_dashboard(self):
+        # "/" would show the landing page for a moment before redirecting partners.
+        page = self.client.get(PAGE)
+        self.assertContains(page, '<a class="item" href="/partner">Dasbor</a>', html=True)
+        self.assertContains(page, 'class="logo" href="/partner"')
+        self.assertNotContains(page, 'href="/"')
+
     def test_page_counts_orders_waiting_for_pickup(self):
         self.order("H7K49")
         self.order("AAAAA", status="pending")
