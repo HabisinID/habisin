@@ -225,9 +225,13 @@ export function ReviewFormPage({ listingId }: { listingId: string }) {
                       aria-label={`${value} bintang`}
                       aria-pressed={rating === value}
                       onClick={() => setRating(value)}
-                      className="rounded-lg p-2 text-warning hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+                      className="rounded-lg p-2 text-yellow hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
                     >
-                      <Star size={30} fill={value <= rating ? "currentColor" : "none"} />
+                      <Star
+                        size={30}
+                        fill={value <= rating ? "currentColor" : "var(--color-surface-2)"}
+                        strokeWidth={0}
+                      />
                     </button>
                   ))}
                 </div>

@@ -63,7 +63,7 @@ export default function ProductReviewPrompt({
     <div className="space-y-3">
       {productAverage !== null && (
         <p className="flex items-center gap-1.5 text-sm text-muted">
-          <Star size={16} fill="currentColor" className="text-warning" />
+          <Star size={16} fill="currentColor" strokeWidth={0} className="text-yellow" />
           <strong className="text-dark">{productAverage.toFixed(1)}</strong>
           <span>· {productReviews.length} ulasan produk</span>
         </p>
@@ -75,7 +75,7 @@ export default function ProductReviewPrompt({
               <div className="flex items-center justify-between gap-2">
                 <strong>{review.user_name || "Pembeli HABISIN"}</strong>
                 <span className="flex items-center gap-1">
-                  <Star size={13} fill="currentColor" className="text-warning" />
+                  <Star size={13} fill="currentColor" strokeWidth={0} className="text-yellow" />
                   {review.rating}/5
                 </span>
               </div>

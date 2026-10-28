@@ -39,7 +39,7 @@ export default function StoreReviews({
         </h2>
         {data && (
           <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Star size={17} fill="currentColor" className="text-warning" />
+            <Star size={17} fill="currentColor" strokeWidth={0} className="text-yellow" />
             <strong className="text-dark">
               {data.average_rating === null
                 ? "Belum ada rating"
@@ -76,7 +76,8 @@ export default function StoreReviews({
                   <Star
                     size={15}
                     fill="currentColor"
-                    className="text-warning"
+                    strokeWidth={0}
+                    className="text-yellow"
                   />
                   {review.rating}/5
                 </span>
