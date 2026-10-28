@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from . import store_views, commerce_views, workspace_views
+from . import store_views, commerce_views, workspace_views, verification
 
 urlpatterns = [
     path("partner/orders", workspace_views.partner_orders),
@@ -11,6 +11,11 @@ urlpatterns = [
     path("admin/listings/<int:pk>/moderate", workspace_views.moderate_listing),
     path("admin/moderation-logs", workspace_views.moderation_logs),
     path("partner/dashboard", commerce_views.partner_dashboard),
+    path("partner/kasir", verification.page),
+    path("partner/kasir/check", verification.check),
+    path("partner/kasir/recent", verification.recent),
+    path("partner/kasir/<int:pk>/pickup", verification.pickup),
+    path("partner/kasir/<int:pk>/undo", verification.undo),
     path("partner/listings/<int:pk>/sold-out", commerce_views.sold_out),
     path("partner/listings/<int:pk>/undo-sold-out", commerce_views.undo_sold_out),
     path("auth/csrf", views.csrf),

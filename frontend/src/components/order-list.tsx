@@ -96,6 +96,12 @@ function ActiveCard({
               >
                 {formatCode(order.code)}
               </p>
+              <Link
+                href={`/pesanan/${order.id}/tiket`}
+                className="mt-2 inline-flex min-h-11 items-center rounded-control bg-yellow px-4 font-bold text-on-sticker"
+              >
+                Lihat tiket
+              </Link>
             </>
           ) : (
             <>
@@ -188,13 +194,23 @@ function HistoryCard({
         </p>
         <CancellationNotice order={order} />
       </div>
-      <button
-        className="text-sm font-semibold text-muted hover:text-dark"
-        disabled={busy}
-        onClick={onRemove}
-      >
-        Hapus dari riwayat
-      </button>
+      <div className="flex items-center gap-4">
+        {order.status === "picked_up" && (
+          <Link
+            href={`/pesanan/${order.id}/tiket`}
+            className="text-sm font-bold text-brand"
+          >
+            Lihat tiket
+          </Link>
+        )}
+        <button
+          className="text-sm font-semibold text-muted hover:text-dark"
+          disabled={busy}
+          onClick={onRemove}
+        >
+          Hapus dari riwayat
+        </button>
+      </div>
     </li>
   );
 }

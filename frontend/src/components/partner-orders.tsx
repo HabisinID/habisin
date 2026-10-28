@@ -377,14 +377,10 @@ function OrdersContent() {
                 </div>
                 <div className={s.actions}>
                   {order.status === "paid" && active && (
-                    <button
-                      className={s.secondary}
-                      disabled
-                      title="Verifikasi kode belum tersedia"
-                    >
+                    <a className={s.secondary} href="/api/partner/kasir">
                       <ShieldCheck size={14} />
                       Verifikasi
-                    </button>
+                    </a>
                   )}
                   {active ? (
                     <button

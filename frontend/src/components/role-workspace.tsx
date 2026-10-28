@@ -135,13 +135,13 @@ export default function RoleWorkspace({
           Menu {role === "partner" ? "mitra" : "admin"}
         </button>
         {role === "partner" && (
-          <button
+          <a
             className={`${s.verify} ${menu ? s.verifyOpen : ""}`}
-            disabled
+            href="/api/partner/kasir"
           >
             <ShieldCheck size={18} />
-            Verifikasi kode<small>Belum tersedia</small>
-          </button>
+            Verifikasi kode
+          </a>
         )}
         <nav
           aria-label={`Navigasi ${role === "partner" ? "mitra" : "admin"}`}
@@ -229,7 +229,10 @@ export default function RoleWorkspace({
             {navigation}
           </nav>
           {role === "partner" && (
-            <p className={`${s.muted} mt-6`}>Verifikasi kode belum tersedia.</p>
+            <a className={s.verify} href="/api/partner/kasir">
+              <ShieldCheck size={18} />
+              Verifikasi kode
+            </a>
           )}
           {user && (
             <LogoutButton

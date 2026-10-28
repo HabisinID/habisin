@@ -1,0 +1,19 @@
+{% load kasir %}<ol>
+  {% for log in logs %}
+    <li>
+      <span class="mono">{{ log.created_at|time:"H.i" }}</span>
+      <span>
+        {% if log.reservation %}
+          <span class="who">{{ log.reservation.user|buyer_short }}</span>
+          <span class="what">{% if log.outcome != "picked_up" %}{{ log.get_outcome_display }} · {% endif %}{{ log.reservation.listing.name }} × {{ log.reservation.quantity }}</span>
+        {% else %}
+          <span class="who mono">{{ log.code|pickup_code }}</span>
+          <span class="what">{{ log.get_outcome_display }}</span>
+        {% endif %}
+      </span>
+      {% if log.outcome == "picked_up" %}<span class="badge">Diambil</span>{% else %}<span class="badge no" title="{{ log.get_outcome_display }}">Ditolak</span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="empty">Belum ada verifikasi.</li>
+  {% endfor %}
+</ol>

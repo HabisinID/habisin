@@ -341,7 +341,7 @@ export default function LandingPage({
               {
                 Icon: Ticket,
                 title: "Kode untuk setiap pesanan",
-                body: "Pembeli mendapat kode pengambilan. Fitur verifikasi kode oleh kasir akan tersedia pada pengembangan berikutnya.",
+                body: "Pembeli mendapat tiket dengan kode dan QR. Kasir mencocokkan kode atau memindai QR untuk memverifikasi pengambilan.",
               },
               {
                 Icon: Gift,
@@ -378,8 +378,7 @@ export default function LandingPage({
             <div>
               <strong>Ilustrasi alur pengambilan</strong>
               <p>
-                Verifikasi kasir dan QR segera hadir. Pembayaran saat ini masih
-                simulasi.
+                Kasir mencocokkan kode atau memindai QR tiket sebelum menyerahkan pesanan. Pembayaran saat ini masih simulasi.
               </p>
             </div>
           </div>

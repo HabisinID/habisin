@@ -1,0 +1,446 @@
+{% load kasir %}<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verifikasi kode · HABISIN Mitra</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  {# Same key and script as frontend/src/lib/theme.ts, so the choice carries over from the Next pages. #}
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem("habisin-theme");
+        const dark = saved === "dark" || (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
+  {# 4xx results (rejected, rate limited) still carry HTML for the result panel. #}
+  <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[234]..","swap":true},{"code":"...","swap":false,"error":true}]}'>
+  {# htmx 2.0.4 (0BSD) from frontend/public/vendor, so the page works without a CDN; only an eslint-disable line was added. #}
+  <script src="/vendor/htmx.min.js" integrity="sha384-N54l2pKTNFctjXuxsKOzVhpD3oDiQPMmrmGT6UzlWqDvIwzRmG3jJ/QvRkVfl8Ew"></script>
+  <style>
+    /* Tokens copied from frontend/src/app/globals.css (design.pen "Fondasi"). */
+    :root {
+      color-scheme: light;
+      --brand: #1f4d33; --brand-hover: #173c27; --dark: #14301f; --muted: #4d6455;
+      --cream: #f6f8f3; --line: #dfe6df; --surface: #ffffff; --surface-2: #e8efe7; --border: #7a8f80;
+      --success: #1d6b47; --warning: #8a5a00; --error: #b3261e; --error-tint: #fbe9e7; --warning-tint: #fff1dd;
+      --inverse: #14301f; --on-inverse: #eef3ec; --inverse-accent: #f4d56a; --on-brand: #ffffff;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --brand: #9fd3ae; --brand-hover: #b8e0c3; --dark: #eef3ec; --muted: #a9c0af;
+      --cream: #10261a; --line: #24402f; --surface: #163021; --surface-2: #1d3a29; --border: #5f7d68;
+      --success: #7fd1a3; --warning: #f2c14e; --error: #ff8a80; --error-tint: #3a1a17; --warning-tint: #3a2a12;
+      --inverse: #eef3ec; --on-inverse: #14301f; --inverse-accent: #1f4d33; --on-brand: #10261a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cream); color: var(--dark); font: 14px/1.5 "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    button { font: inherit; cursor: pointer; }
+    :focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+    .shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+    .sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+    .logo { display: flex; align-items: center; font-size: 28px; font-weight: 800; letter-spacing: -1.6px; text-decoration: none; }
+    .logo img { margin-right: 8px; width: 30px; height: 31px; object-fit: contain; }
+    .logo span { color: var(--brand); }
+    .sidebar small { color: var(--muted); font-weight: 700; margin: 0 0 16px 38px; }
+    .sidebar a.item { display: block; padding: 10px 12px; border-radius: 12px; font-weight: 600; text-decoration: none; }
+    .sidebar a.item:hover { background: var(--surface-2); }
+    .sidebar a[aria-current="page"] { background: var(--brand); color: var(--on-brand); }
+
+    .main { min-width: 0; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 40px; border-bottom: 1px solid var(--line); }
+    .topbar h1 { margin: 0; font-size: 28px; letter-spacing: -0.6px; }
+    .topbar p { margin: 2px 0 0; color: var(--muted); }
+    .theme { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: none; color: var(--dark); display: grid; place-items: center; transition: transform .12s; }
+    .theme:hover { background: var(--surface-2); }
+    .theme:active { transform: scale(.9); }
+
+    .content { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; padding: 32px 40px; }
+    .card { background: var(--inverse); color: var(--on-inverse); border-radius: 20px; padding: 32px; }
+    .card h2 { margin: 0; font-size: 20px; }
+    .card .help { margin: 4px 0 24px; opacity: .8; }
+    .boxes { display: flex; align-items: center; gap: 12px; }
+    .boxes input { width: 80px; height: 96px; border-radius: 14px; border: 2px solid transparent; background: var(--surface); color: var(--dark); text-align: center; font: 700 40px "JetBrains Mono", ui-monospace, monospace; text-transform: uppercase; caret-color: var(--brand); transition: border-color .15s, transform .15s; }
+    .boxes input:focus { outline: none; box-shadow: 0 0 0 3px var(--inverse-accent); }
+    .boxes input:not(:placeholder-shown) { transform: translateY(-2px); }
+    .boxes .dot { font-size: 32px; font-weight: 800; opacity: .6; }
+    .boxes[data-tone="red"] input { border-color: var(--error); }
+    .boxes[data-tone="brown"] input { border-color: var(--warning); }
+    .keys { margin-top: 16px; font-size: 12px; opacity: .75; }
+
+    #result { margin-top: 24px; }
+    .panel { border-radius: 16px; padding: 24px; background: var(--surface); border: 1px solid var(--line); animation: rise .18s ease-out; }
+    .panel.wait { color: var(--muted); border-style: dashed; }
+    .panel.ok { border: 2px solid var(--success); }
+    .panel.red { border: 2px solid var(--error); background: var(--error-tint); }
+    .panel.brown { border: 2px solid var(--warning); background: var(--warning-tint); }
+    .panel h3 { margin: 0; font-size: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .panel h3 .mono { font-size: 18px; }
+    .panel.red h3 { color: var(--error); }
+    .panel.brown h3 { color: var(--warning); }
+    .panel p { margin: 6px 0 0; }
+    .details { display: grid; grid-template-columns: max-content 1fr; gap: 6px 24px; margin: 16px 0 0; }
+    .details dt { color: var(--muted); }
+    .details dd { margin: 0; font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; align-items: center; }
+    .primary, .secondary { min-height: 44px; padding: 0 20px; border-radius: 12px; font-weight: 700; border: 1px solid var(--brand); transition: transform .12s, background .12s; }
+    .primary { background: var(--brand); color: var(--on-brand); }
+    .primary:hover { background: var(--brand-hover); }
+    .secondary { background: none; color: var(--brand); }
+    .primary:active, .secondary:active { transform: scale(.97); }
+    .hint { color: var(--muted); font-size: 12px; }
+    .scan { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid color-mix(in srgb, var(--on-inverse) 20%, transparent); }
+    .scan button { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--on-inverse); background: none; color: var(--on-inverse); font-weight: 700; transition: transform .12s; }
+    .scan button:active { transform: scale(.97); }
+    .scan span { font-size: 12px; opacity: .8; }
+    dialog { width: min(480px, calc(100vw - 32px)); border: 0; border-radius: 20px; padding: 24px; background: var(--surface); color: var(--dark); }
+    dialog::backdrop { background: rgb(0 0 0 / .55); }
+    dialog h2 { margin: 0 0 12px; font-size: 20px; }
+    dialog video { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: #000; }
+    dialog p { margin: 12px 0 16px; }
+
+    .recent h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; color: var(--muted); }
+    .recent ol { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+    .recent li { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); }
+    .recent li:first-child { border-top: 0; }
+    .recent .who { display: block; font-weight: 700; }
+    .recent .what { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--surface-2); color: var(--success); }
+    .badge.no { color: var(--error); background: var(--error-tint); }
+    .recent .empty { display: block; color: var(--muted); }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    @media (max-width: 1050px) {
+      .content { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .sidebar small { display: none; }
+      /* The menu takes its own row, so the theme switcher stays top-right. */
+      .sidebar nav { display: flex; gap: 4px; flex-wrap: wrap; flex-basis: 100%; }
+      .sidebar .theme { margin-left: auto; }
+      .topbar { padding: 16px; }
+      .topbar .theme { display: none; }
+      .topbar h1 { font-size: 22px; }
+      .content { padding: 16px; gap: 24px; }
+      .card { padding: 20px; }
+      .boxes { gap: 6px; }
+      .boxes input { width: 100%; min-width: 0; height: 72px; font-size: 30px; }
+      .boxes .dot { font-size: 22px; }
+      .keys, .hint { display: none; }
+    }
+    @media (min-width: 761px) { .sidebar .theme { display: none; } }
+  </style>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="logo" href="/" aria-label="Habisin beranda"><img src="/habisin-logo.png" alt="">habisin<span>.</span></a>
+    {# On mobile the sidebar is the top bar, so the theme switcher sits at its right end. #}
+    {% include "main/kasir/_theme.html" %}
+    <small>Mitra</small>
+    <nav aria-label="Navigasi mitra">
+      <a class="item" href="/api/partner/kasir" aria-current="page">Verifikasi kode</a>
+      <a class="item" href="/">Dasbor</a>
+      <a class="item" href="/partner/store">Profil toko</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1>Verifikasi kode</h1>
+        <p>{{ store }} · {{ day }} · {{ now|time:"H.i" }} WIB · <span id="waiting">{{ waiting }} pesanan belum diambil</span></p>
+      </div>
+      {% include "main/kasir/_theme.html" %}
+    </header>
+    <main class="content">
+      <section aria-labelledby="code-title">
+        <div class="card">
+          <h2 id="code-title">Kode ambil dari pembeli</h2>
+          <p class="help" id="code-help">5 karakter. Huruf otomatis kapital dan langsung dicek setelah karakter ke-5.</p>
+          <form id="code-form" hx-post="/api/partner/kasir/check" hx-target="#result" hx-swap="innerHTML" autocomplete="off">
+            <input type="hidden" name="code" id="code">
+            <div class="boxes" id="boxes" role="group" aria-labelledby="code-title" aria-describedby="code-help">
+              {% for n in "12345" %}
+                <input class="box" inputmode="text" maxlength="1" placeholder=" " aria-label="Karakter {{ n }}" autocapitalize="characters" spellcheck="false">
+                {% if n == "3" %}<span class="dot" aria-hidden="true">·</span>{% endif %}
+              {% endfor %}
+            </div>
+          </form>
+          <p class="keys">F2 = isi kode · Enter = tandai sudah diambil · Esc = kode lain</p>
+          <div class="scan">
+            <button type="button" id="scan-open">Pindai QR</button>
+            <span>Kamera laptop membaca QR di tiket pembeli.</span>
+          </div>
+        </div>
+        <div id="result" aria-live="polite">
+          {% include "main/kasir/_waiting.html" %}
+        </div>
+      </section>
+      <aside class="recent" aria-labelledby="recent-title">
+        <h2 id="recent-title">VERIFIKASI TERAKHIR</h2>
+        <div hx-get="/api/partner/kasir/recent" hx-trigger="verified from:body">
+          {% include "main/kasir/_recent.html" %}
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+<dialog id="scanner" aria-labelledby="scan-title">
+  <h2 id="scan-title">Pindai QR tiket</h2>
+  <video id="scan-video" playsinline muted></video>
+  <p id="scan-status" role="status"></p>
+  <button class="secondary" type="button" id="scan-close">Tutup</button>
+</dialog>
+<template id="waiting-template">{% include "main/kasir/_waiting.html" %}</template>
+<script>
+  const ALPHABET = "{{ alphabet }}";
+  const boxes = [...document.querySelectorAll(".box")];
+  const form = document.getElementById("code-form");
+  const group = document.getElementById("boxes");
+  const result = document.getElementById("result");
+
+  function code() { return boxes.map((box) => box.value).join(""); }
+  function showWaiting() {
+    result.replaceChildren(document.getElementById("waiting-template").content.cloneNode(true));
+    delete group.dataset.tone;
+  }
+  function clearCode() {
+    boxes.forEach((box) => (box.value = ""));
+    showWaiting();
+    boxes[0].focus();
+  }
+  function fill(from, text) {
+    // Keep only characters that can appear in a code, so look-alikes never reach the server.
+    const chars = [...text.toUpperCase()].filter((c) => ALPHABET.includes(c));
+    let i = from;
+    for (const c of chars) {
+      if (i >= boxes.length) break;
+      boxes[i++].value = c;
+    }
+    if (chars.length) showWaiting();
+    boxes[Math.min(i, boxes.length - 1)].focus();
+    if (code().length === boxes.length) {
+      document.getElementById("code").value = code();
+      htmx.trigger(form, "submit");
+    }
+  }
+  boxes.forEach((box, i) => {
+    box.addEventListener("beforeinput", (e) => {
+      if (e.inputType.startsWith("insert") && e.data != null) {
+        e.preventDefault();
+        fill(i, e.data);
+      }
+    });
+    box.addEventListener("paste", (e) => {
+      e.preventDefault();
+      fill(i, e.clipboardData.getData("text"));
+    });
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !box.value && i > 0) {
+        boxes[i - 1].value = "";
+        boxes[i - 1].focus();
+        showWaiting();
+        e.preventDefault();
+      } else if (e.key === "Backspace") {
+        showWaiting();
+      } else if (e.key === "ArrowLeft" && i > 0) boxes[i - 1].focus();
+      else if (e.key === "ArrowRight" && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    // Inside the scanner, Esc closes the dialog (native) and nothing else applies.
+    if (scanner.open) return;
+    if (e.key === "F2") {
+      e.preventDefault();
+      boxes[Math.max(0, code().length - (code().length === boxes.length ? 1 : 0))].focus();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      clearCode();
+    } else if (e.key === "Enter") {
+      // A focused button (such as "Kode lain") keeps its own Enter.
+      const mark = document.querySelector("[data-pickup]");
+      if (mark && !e.target.closest("button, a")) {
+        e.preventDefault();
+        mark.click();
+      }
+    }
+  });
+  document.body.addEventListener("click", (e) => {
+    if (e.target.closest("[data-other-code]")) clearCode();
+  });
+
+  // Pindai QR: the browser's own BarcodeDetector where it exists (Android,
+  // macOS); otherwise jsQR from /vendor, loaded on first use (Chrome for Windows has none).
+  const scanner = document.getElementById("scanner");
+  const video = document.getElementById("scan-video");
+  const scanStatus = document.getElementById("scan-status");
+  const TICKET_CODE = new RegExp(`^[${ALPHABET}]{5}$`);
+  let stream = null;
+  let scanning = false;
+  // Each opening of the dialog is a session; closing it ends the session, so a
+  // camera that arrives late (permission prompt, jsQR loading) is turned off.
+  let session = 0;
+
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      // jsQR 1.4.0 (Apache-2.0), kept in frontend/public/vendor so scanning works offline; only an eslint-disable line was added.
+      script.src = "/vendor/jsQR.js";
+      script.integrity = "sha384-VSTuqEyM8ULRrCWdwYxMuNwMvOCArPxEXFl0BSI0Y56gbByvyirIQ8jsnyBYypE9";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.append(script);
+    });
+  }
+  async function qrReader() {
+    if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      return async () => (await detector.detect(video))[0]?.rawValue;
+    }
+    await loadJsQR();
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    return () => {
+      if (!video.videoWidth) return null;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+      const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+      return jsQR(frame.data, frame.width, frame.height)?.data;
+    };
+  }
+  function stopCamera() {
+    scanning = false;
+    stream?.getTracks().forEach((track) => track.stop());
+    stream = null;
+    video.srcObject = null;
+  }
+  async function startScan() {
+    const mine = ++session;
+    scanStatus.textContent = "Membuka kamera…";
+    scanner.showModal();
+    try {
+      const camera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      if (mine !== session) {
+        camera.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = camera;
+      video.srcObject = stream;
+      await video.play();
+      const read = await qrReader();
+      // Closed meanwhile: the close handler already stopped this camera.
+      if (mine !== session) return;
+      scanStatus.textContent = "Arahkan QR di tiket pembeli ke kamera.";
+      scanning = true;
+      const tick = async () => {
+        if (!scanning || mine !== session) return;
+        const text = (await read())?.trim().toUpperCase();
+        // A read can finish after this session closed, even if a new one has opened.
+        if (mine !== session) return;
+        if (text && TICKET_CODE.test(text)) {
+          scanner.close();
+          boxes.forEach((box) => (box.value = ""));
+          fill(0, text);
+          return;
+        }
+        if (text) scanStatus.textContent = "QR ini bukan tiket HABISIN. Arahkan QR di tiket pembeli.";
+        requestAnimationFrame(tick);
+      };
+      tick();
+    } catch (error) {
+      if (mine !== session) return;
+      console.warn("Pindai QR:", error);
+      stopCamera();
+      scanStatus.textContent = "Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau ketik kodenya di kotak.";
+    }
+  }
+  document.getElementById("scan-open").addEventListener("click", startScan);
+  document.getElementById("scan-close").addEventListener("click", () => scanner.close());
+  scanner.addEventListener("close", () => {
+    session++;
+    stopCamera();
+    if (code().length < boxes.length) boxes[0].focus();
+  });
+
+  // Theme switcher, as in frontend/src/components/theme-toggle.tsx: Sistem → Terang → Gelap.
+  const THEMES = {
+    system: ["Sistem", "light", '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'],
+    light: ["Terang", "dark", '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
+    dark: ["Gelap", "system", '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9"/>'],
+  };
+  function preference() {
+    try {
+      const saved = localStorage.getItem("habisin-theme");
+      return saved === "light" || saved === "dark" ? saved : "system";
+    } catch {
+      return "system";
+    }
+  }
+  function applyTheme() {
+    const pref = preference();
+    const dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+      button.setAttribute("aria-label", `Tema tampilan: ${THEMES[pref][0]}`);
+      button.title = `Tema: ${THEMES[pref][0]} (klik untuk ganti)`;
+      button.querySelector("svg").innerHTML = THEMES[pref][2];
+    });
+  }
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) =>
+    button.addEventListener("click", () => {
+      try {
+        localStorage.setItem("habisin-theme", THEMES[preference()][1]);
+      } catch {}
+      applyTheme();
+    }),
+  );
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+  addEventListener("storage", applyTheme);
+  applyTheme();
+
+  // After each answer: color the boxes by status, empty them once handed over, and run the undo countdown.
+  let countdown;
+  document.body.addEventListener("htmx:afterSwap", (e) => {
+    if (e.detail.target !== result) return;
+    const panel = result.querySelector("[data-outcome]");
+    if (!panel) return;
+    const tone = panel.dataset.tone;
+    if (tone) group.dataset.tone = tone; else delete group.dataset.tone;
+    if (panel.dataset.waiting) document.getElementById("waiting").textContent = panel.dataset.waiting + " pesanan belum diambil";
+    clearInterval(countdown);
+    const undo = panel.querySelector("[data-undo]");
+    if (panel.dataset.outcome === "handed_over") {
+      boxes.forEach((box) => (box.value = ""));
+      boxes[0].focus();
+    }
+    if (undo) {
+      let left = 60;
+      const label = undo.querySelector("span");
+      countdown = setInterval(() => {
+        left -= 1;
+        label.textContent = left;
+        if (left <= 0) {
+          clearInterval(countdown);
+          undo.disabled = true;
+        }
+      }, 1000);
+    }
+  });
+</script>
+</body>
+</html>

@@ -146,7 +146,7 @@ export default function OrderPayment({ id }: { id: string }) {
                   ` · dari harga normal ${rupiah(listing.original_price)}`}
               </p>
             </div>
-            <p className="font-mono text-lg font-bold">
+            <p className="font-mono text-lg font-bold whitespace-nowrap">
               {order.quantity} porsi
             </p>
           </div>

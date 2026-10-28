@@ -151,6 +151,9 @@ test("partner opens the full orders dashboard, keeps codes private and reaches i
   await page.getByLabel("Tanggal akhir pesanan").fill("");
   await expect(page.getByText("Bawa wadah", { exact: false })).toBeVisible();
   await expect(page.getByText(order.code, { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /Verifikasi kode/ }),
+  ).toHaveAttribute("href", "/api/partner/kasir");
   await page.getByRole("link", { name: "Listing", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Kelola listing mitra" }),

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0013_partner_workspace_moderation')]
+    final = [('main', '0014_merge_20261028_0918')]
 
     def upgrade_from(self, origin, status):
         executor = MigrationExecutor(connection)
@@ -59,3 +59,22 @@ class MergeMigrationTests(TransactionTestCase):
 
     def test_upgrade_main_preserves_paid_order_and_account(self):
         self.upgrade_from('0006_reservation_expired_status','paid')
+
+    def test_both_0013_branches_upgrade_without_losing_data(self):
+        for origin in ['0013_partner_workspace_moderation', '0013_verification_log']:
+            with self.subTest(origin=origin):
+                executor = MigrationExecutor(connection)
+                executor.migrate([('main', None)])
+                executor = MigrationExecutor(connection)
+                executor.migrate([('main', origin)])
+                apps = executor.loader.project_state([('main', origin)]).apps
+                user = apps.get_model('auth', 'User').objects.create(username='merge-' + origin)
+                if origin == '0013_verification_log':
+                    apps.get_model('main', 'VerificationLog').objects.create(partner_id=user.pk, code='ABCDE', outcome='not_found')
+                executor = MigrationExecutor(connection)
+                executor.migrate(self.final)
+                apps = executor.loader.project_state(self.final).apps
+                self.assertTrue(apps.get_model('auth', 'User').objects.filter(pk=user.pk).exists())
+                self.assertIn('moderated_at', [f.name for f in apps.get_model('main', 'Listing')._meta.fields])
+                if origin == '0013_verification_log':
+                    self.assertTrue(apps.get_model('main', 'VerificationLog').objects.filter(partner_id=user.pk, code='ABCDE').exists())

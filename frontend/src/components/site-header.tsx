@@ -9,7 +9,7 @@ export type NavItem = {
   current?: boolean;
 };
 // TopNav in design.pen: logo, page content (search, location), page links,
-// `actions`, the theme switcher, then `end`, the last item (Daftar gratis or the avatar).
+// `actions` and `end` (sign-up or account controls), then the theme switcher.
 export default function SiteHeader({
   nav = [{ label: "Jelajahi", href: "/jelajahi" }],
   actions,
@@ -57,8 +57,8 @@ export default function SiteHeader({
         )}
         <div className={styles.actions}>
           {actions}
-          <ThemeToggle />
           {end}
+          <ThemeToggle />
         </div>
       </div>
     </header>

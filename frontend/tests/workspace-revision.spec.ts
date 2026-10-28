@@ -47,8 +47,8 @@ test("real seller notes, private claim code, cancel once and buyer receives reas
   await expect(row).toContainText("Tanpa sendok, bawa wadah");
   await expect(row).not.toContainText(order.code);
   await expect(
-    row.getByRole("button", { name: "Verifikasi", exact: true }),
-  ).toBeDisabled();
+    row.getByRole("link", { name: "Verifikasi", exact: true }),
+  ).toHaveAttribute("href", "/api/partner/kasir");
   await row.getByRole("button", { name: "Batalkan Pesanan" }).click();
   const dialog = page.getByRole("dialog");
   await expect(

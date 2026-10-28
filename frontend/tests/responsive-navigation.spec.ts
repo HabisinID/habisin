@@ -254,7 +254,7 @@ for (const theme of ["light", "dark"]) {
           if (width <= 760) {
             expect((await row.boundingBox())!.y).toBeLessThan(300);
             const verify = await row
-              .getByRole("button", { name: "Verifikasi", exact: true })
+              .getByRole("link", { name: "Verifikasi", exact: true })
               .boundingBox();
             const cancel = await row
               .getByRole("button", { name: "Batalkan Pesanan" })
