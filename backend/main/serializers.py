@@ -7,8 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.db import transaction
 from rest_framework import serializers
-from .models import Listing, Reservation, Store, PartnerApproval, ModerationLog
-from .models import Listing, Reservation, Store, Profile
+from .models import Listing, Reservation, Store, Profile, PartnerApproval, AdminModerationLog
 from .geocoding import normalize_address, validate_location_token
 from .listing_services import ListingConflict
 from .listing_media import normalize_listing_image
@@ -341,7 +340,7 @@ class ModerationLogSerializer(serializers.ModelSerializer):
     admin_username = serializers.ReadOnlyField(source="admin_user.username")
 
     class Meta:
-        model = ModerationLog
+        model = AdminModerationLog
         fields = ["id", "admin_user", "admin_username", "action_type", "target_name", "reason", "created_at"]
         read_only_fields = ["id", "admin_user", "created_at"]
 

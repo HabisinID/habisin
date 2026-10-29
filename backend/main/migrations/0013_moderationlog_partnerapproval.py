@@ -4,6 +4,8 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+from ._moderation_merge import CreateModerationLog
+
 
 class Migration(migrations.Migration):
 
@@ -13,15 +15,15 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='ModerationLog',
+        CreateModerationLog(
+            name='AdminModerationLog',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('action_type', models.CharField(max_length=50)),
                 ('target_name', models.CharField(max_length=255)),
                 ('reason', models.TextField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('admin_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='moderation_logs', to=settings.AUTH_USER_MODEL)),
+                ('admin_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='admin_moderation_logs', to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(

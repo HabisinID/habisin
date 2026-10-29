@@ -231,8 +231,8 @@ class PartnerApproval(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.status}"
 
-class ModerationLog(models.Model):
-    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="moderation_logs")
+class AdminModerationLog(models.Model):
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="admin_moderation_logs")
     action_type = models.CharField(max_length=50)
     target_name = models.CharField(max_length=255)
     reason = models.TextField()
