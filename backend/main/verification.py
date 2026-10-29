@@ -21,6 +21,7 @@ CODE_PATTERN = re.compile(f"[{Reservation.CODE_ALPHABET}]{{5}}")
 # The order's status decides what the cashier sees after a code is found.
 STATUS_OUTCOME = {"paid": "match", "picked_up": "used", "cancelled": "cancelled", "expired": "expired", "pending": "unpaid"}
 DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
 
 class VerifyThrottle(UserRateThrottle):
@@ -81,7 +82,7 @@ def page(request):
     now = timezone.localtime()
     return render(request, "main/kasir/page.html", {
         "store": stores[0] if len(stores) == 1 else f"{len(stores)} toko" if stores else "Belum ada toko",
-        "day": DAYS[now.weekday()],
+        "day": f"{DAYS[now.weekday()]} {now.day} {MONTHS[now.month - 1]}",
         "now": now,
         "waiting": waiting_count(request.user),
         "alphabet": Reservation.CODE_ALPHABET,

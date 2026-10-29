@@ -91,6 +91,7 @@
     .boxes input:focus { outline: none; box-shadow: 0 0 0 3px var(--inverse-accent); }
     .boxes input:not(:placeholder-shown) { transform: translateY(-2px); }
     .boxes .dot { font-size: 32px; font-weight: 800; opacity: .6; }
+    .boxes[data-tone="green"] input { border-color: var(--success); }
     .boxes[data-tone="red"] input { border-color: var(--error); }
     .boxes[data-tone="brown"] input { border-color: var(--warning); }
     .keys { margin-top: 16px; font-size: 12px; opacity: .75; }
@@ -101,7 +102,26 @@
     .panel.ok { border: 2px solid var(--success); }
     .panel.red { border: 2px solid var(--error); background: var(--error-tint); }
     .panel.brown { border: 2px solid var(--warning); background: var(--warning-tint); }
-    .panel h3 { margin: 0; font-size: 22px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .panel h3 { margin: 0; font-size: 22px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .panel.ok h3 { color: var(--success); }
+    .icon { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .actions .icon { width: 18px; height: 18px; }
+    .rows { margin-top: 16px; display: grid; gap: 6px; }
+    .rows p { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 14px; }
+    .rows .label { flex: none; }
+    .rows .dots { flex: 1; min-width: 16px; border-bottom: 2px dotted color-mix(in srgb, currentColor 30%, transparent); }
+    .rows .value { flex: none; font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; }
+    .panel .next { display: inline-flex; gap: 6px; margin-top: 16px; font-weight: 700; text-decoration: none; color: inherit; }
+    .panel .next:hover { text-decoration: underline; }
+    .panel.handed { border: 2px solid var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
+    .handed-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+    .handed-head > .icon { color: var(--success); margin-top: 3px; }
+    .handed-head .code { margin-top: 2px; font-weight: 700; }
+    .undo { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); }
+    .countdown { height: 3px; margin-top: 16px; border-radius: 999px; background: var(--line); overflow: hidden; }
+    .countdown span { display: block; height: 100%; width: 100%; background: var(--success); transition: width 1s linear; }
+    .link { min-height: 44px; padding: 0 8px; border: 0; background: none; color: inherit; font-weight: 700; }
+    .link:hover { text-decoration: underline; }
     .panel h3 .mono { font-size: 18px; }
     .panel.red h3 { color: var(--error); }
     .panel.brown h3 { color: var(--warning); }
@@ -110,7 +130,7 @@
     .details dt { color: var(--muted); }
     .details dd { margin: 0; font-weight: 600; }
     .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; align-items: center; }
-    .primary, .secondary { min-height: 44px; padding: 0 20px; border-radius: 12px; font-weight: 700; border: 1px solid var(--brand); transition: transform .12s, background .12s; }
+    .primary, .secondary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border-radius: 12px; font-weight: 700; border: 1px solid var(--brand); transition: transform .12s, background .12s; }
     .primary { background: var(--brand); color: var(--on-brand); }
     .primary:hover { background: var(--brand-hover); }
     .secondary { background: none; color: var(--brand); }
@@ -126,14 +146,16 @@
     dialog video { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: #000; }
     dialog p { margin: 12px 0 16px; }
 
-    .recent h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; color: var(--muted); }
-    .recent ol { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-    .recent li { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); }
-    .recent li:first-child { border-top: 0; }
+    .recent { align-self: start; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 20px; }
+    .recent h2 { margin: 0 0 8px; font: 500 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: 1.5px; color: var(--muted); }
+    .recent ol { list-style: none; margin: 0; padding: 0; }
+    .recent li { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .recent .status { font-size: 12px; font-weight: 700; color: var(--success); }
+    .recent .status.no { color: var(--error); }
+    .recent .all { display: inline-flex; gap: 6px; margin-top: 16px; font-size: 13px; font-weight: 700; text-decoration: none; color: inherit; }
+    .recent .all:hover { text-decoration: underline; }
     .recent .who { display: block; font-weight: 700; }
     .recent .what { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
-    .badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--surface-2); color: var(--success); }
-    .badge.no { color: var(--error); background: var(--error-tint); }
     .recent .empty { display: block; color: var(--muted); }
 
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
@@ -215,6 +237,7 @@
         <div hx-get="/api/partner/kasir/recent" hx-trigger="verified from:body">
           {% include "main/kasir/_recent.html" %}
         </div>
+        <a class="all" href="/partner/orders">Semua pesanan hari ini <span aria-hidden="true">→</span></a>
       </aside>
     </main>
   </div>
@@ -333,6 +356,7 @@
   });
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-other-code]")) clearCode();
+    if (e.target.closest("[data-scan]")) startScan();
   });
 
   // Pindai QR: the browser's own BarcodeDetector where it exists (Android,
@@ -483,10 +507,13 @@
     }
     if (undo) {
       let left = 60;
-      const label = undo.querySelector("span");
+      const label = undo.querySelector("[data-left]");
+      const bar = panel.querySelector(".countdown");
       countdown = setInterval(() => {
         left -= 1;
         label.textContent = left;
+        bar.setAttribute("aria-valuenow", left);
+        bar.firstElementChild.style.width = (left / 60) * 100 + "%";
         if (left <= 0) {
           clearInterval(countdown);
           undo.disabled = true;
