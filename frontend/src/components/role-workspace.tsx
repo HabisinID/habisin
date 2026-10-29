@@ -101,12 +101,7 @@ export default function RoleWorkspace({
     <>
       {links.map(({ href, label, Icon }) =>
         href.startsWith("/api/") ? (
-          <a
-            href={href}
-            key={href}
-            className={s.verify}
-            onClick={() => setMenu(false)}
-          >
+          <a href={href} key={href} onClick={() => setMenu(false)}>
             <Icon size={18} />
             {label}
           </a>

@@ -192,7 +192,7 @@ export default function PartnerDashboard({
             Pesanan <b>{activeOrders.length}</b>
           </button>
           {/* Django renders the cashier, so use a full-page link. */}
-          <a className={s.verify} href="/api/partner/kasir">
+          <a href="/api/partner/kasir">
             <ShieldCheck size={18} />
             Verifikasi kode
           </a>

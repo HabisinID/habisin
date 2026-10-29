@@ -13,7 +13,7 @@
   gap: 24px;
   min-width: 0;
 }
-.sidebar > a:not(.verify) {
+.sidebar > a {
   padding: 0 8px;
   font-size: 25px;
 }
@@ -43,51 +43,7 @@
 .nav button:disabled {
   opacity: 0.7;
 }
-.verify,
-.nav .verify,
-.drawerNav .verify {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  min-width: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--color-brand);
-  border-radius: 12px;
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.4;
-  text-align: left;
-  text-decoration: none;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
-}
-.verify > svg {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  padding: 7px;
-  border-radius: 9px;
-  background: color-mix(in srgb, currentColor 14%, transparent);
-}
-.verify:hover {
-  background: var(--color-brand-hover);
-  border-color: var(--color-brand-hover);
-}
-.verify:active {
-  background: var(--color-brand-pressed);
-  border-color: var(--color-brand-pressed);
-}
-.verify:focus-visible {
-  outline: 3px solid var(--color-brand);
-  outline-offset: 3px;
-}
-.verify small {
-  font-size: 10px;
-}
+
 .logout {
   margin-top: auto;
 }
@@ -557,7 +513,7 @@
     align-items: center;
     gap: 8px;
   }
-  .sidebar > a:not(.verify) {
+  .sidebar > a {
     font-size: 24px;
     padding: 0;
   }
@@ -570,7 +526,6 @@
     padding: 0 8px;
   }
   .sidebar .nav,
-  .sidebar .verify,
   .sidebar .logout {
     display: none;
   }
