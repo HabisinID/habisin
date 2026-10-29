@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.db import transaction
 from rest_framework import serializers
+from .models import Listing, Reservation, Store, PartnerApproval, ModerationLog
 from .models import Listing, Reservation, Store, Profile
 from .geocoding import normalize_address, validate_location_token
 from .listing_services import ListingConflict
@@ -182,6 +183,8 @@ class PartnerListingSerializer(ListingSerializer):
             for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
                 if field in attrs and attrs[field] != getattr(self.instance, field):
                     errors[field] = "Tidak dapat diubah selama ada pesanan aktif."
+        if attrs.get("active") is True and self.instance and self.instance.taken_down:
+            errors["active"] = "Listing ini diturunkan admin dan tidak dapat diaktifkan."
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
@@ -324,3 +327,27 @@ class StoreSerializer(serializers.ModelSerializer):
         if (address_changed or coordinates_changed) and not confirmed:
             raise serializers.ValidationError({"location_confirmed": "Konfirmasi posisi pin toko sebelum menyimpan."})
         return attrs
+
+class PartnerApprovalSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source="user.username")
+
+    class Meta:
+        model = PartnerApproval
+        fields = ["id", "user", "username", "status", "requested_at", "reviewed_at"]
+        read_only_fields = ["id", "user", "requested_at"]
+
+
+class ModerationLogSerializer(serializers.ModelSerializer):
+    admin_username = serializers.ReadOnlyField(source="admin_user.username")
+
+    class Meta:
+        model = ModerationLog
+        fields = ["id", "admin_user", "admin_username", "action_type", "target_name", "reason", "created_at"]
+        read_only_fields = ["id", "admin_user", "created_at"]
+
+class AdminListingSerializer(ListingSerializer):
+    owner_username = serializers.ReadOnlyField(source="owner.username")
+
+    class Meta(ListingSerializer.Meta):
+        fields = ListingSerializer.Meta.fields + ["taken_down", "takedown_reason", "owner_username"]
+        read_only_fields = ["taken_down", "takedown_reason"]

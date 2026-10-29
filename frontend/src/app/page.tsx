@@ -130,10 +130,13 @@ export default function Home() {
     message: string;
   } | null>(null);
   const [dashboardError, setDashboardError] = useState("");
+  // Until auth/me answers, "/" could be the landing page or the catalog.
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
     api<User>("auth/me")
       .then(setUser)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
   }, []);
   useEffect(() => {
     if (!notice) return;
@@ -281,10 +284,13 @@ export default function Home() {
         : remaining;
     });
   }
+  // On "/", wait for the account instead of flashing the landing page at a buyer.
+  const checking = !authChecked && !guestExplore && !selected;
   const buyerHeader =
     user?.role === "buyer" || !user ? (
       <BuyerHeader
         user={user}
+        loading={!authChecked}
         query={buyerQuery}
         onQuery={(value) => {
           setBuyerQuery(value);
@@ -326,7 +332,9 @@ export default function Home() {
           Yuk, mulai dari piringmu <ArrowUpRight size={13} />
         </span>
       </div> */}
-      {user?.role === "buyer" || (!user && (guestExplore || !!selected)) ? (
+      {checking ||
+      user?.role === "buyer" ||
+      (!user && (guestExplore || !!selected)) ? (
         buyerHeader
       ) : user?.role === "partner" ? null : !user ? (
         <LandingHeader
@@ -355,7 +363,11 @@ export default function Home() {
       )}
 
       <main>
-        {user?.role === "partner" && !guestExplore && !selected ? (
+        {checking ? (
+          <p role="status" className="sr-only">
+            Memuat HABISIN…
+          </p>
+        ) : user?.role === "partner" && !guestExplore && !selected ? (
           <p role="status" className="p-6">
             Membuka ruang kerja mitra…
           </p>

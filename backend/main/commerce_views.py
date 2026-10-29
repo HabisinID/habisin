@@ -7,6 +7,9 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.response import Response
+from .models import Listing, ListingStockAction, Reservation, Store, PartnerApproval
+from .serializers import ListingSerializer, ReservationSerializer, UserSerializer
+from .listing_services import ListingConflict, lock_listing
 from .models import Listing, ListingStockAction, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, UserSerializer
 from .listing_services import ListingConflict, lock_listing, ensure_partner_listing_mutable
@@ -15,6 +18,8 @@ from .listing_services import ListingConflict, lock_listing, ensure_partner_list
 def require_role(request, role):
     if UserSerializer(request.user).data["role"] != role:
         raise PermissionDenied("Akses tidak sesuai peran akun.")
+    if role == "partner" and not PartnerApproval.objects.filter(user=request.user, status="approved").exists():
+        raise PermissionDenied("Akun mitra belum disetujui admin.")
 
 
 

@@ -39,7 +39,8 @@ test("the theme switcher cycles Sistem, Terang, Gelap and remembers the choice",
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // The header settles once the account check answers.
+  await page.goto("/", { waitUntil: "networkidle" });
   const toggle = page
     .getByRole("banner")
     .getByRole("button", { name: /^Tema tampilan/ });
@@ -160,7 +161,8 @@ test("the theme switcher is a bordered circle, 44px on desktop and mobile", asyn
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // The header settles once the account check answers.
+  await page.goto("/", { waitUntil: "networkidle" });
   const toggle = page
     .getByRole("banner")
     .getByRole("button", { name: /^Tema tampilan/ });

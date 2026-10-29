@@ -91,6 +91,13 @@ class VerificationTests(TestCase):
         self.assertContains(page, "Semua pesanan hari ini")
         self.assertContains(page, 'href="/partner/orders"')
 
+    def test_dashboard_links_go_straight_to_the_partner_dashboard(self):
+        # "/" would show the landing page for a moment before redirecting partners.
+        page = self.client.get(PAGE)
+        self.assertContains(page, '<a class="item" href="/partner">')
+        self.assertContains(page, 'class="logo" href="/partner"')
+        self.assertNotContains(page, 'href="/"')
+
     def test_page_counts_orders_waiting_for_pickup(self):
         self.order("H7K49")
         self.order("AAAAA", status="pending")
