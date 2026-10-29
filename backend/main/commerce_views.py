@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -44,11 +45,46 @@ def partner_dashboard(request):
     for row in paid:
         day = row.created_at.astimezone(wib).date().isoformat()
         series[day] = series.get(day, 0) + row.quantity
+    completed = owned.filter(
+        status="picked_up", picked_up_at__gte=start, picked_up_at__lt=end
+    )
+    completed_sales = completed.filter(total__gt=0)
+    completed_totals = completed_sales.aggregate(
+        portions=Sum("quantity"), amount=Sum("total")
+    )
+    free_portions = completed.filter(total=0).aggregate(
+        portions=Sum("quantity")
+    )["portions"] or 0
+    week_start = datetime.combine(today - timedelta(days=6), time.min, tzinfo=wib)
+    completed_week = owned.filter(
+        status="picked_up",
+        total__gt=0,
+        picked_up_at__gte=week_start,
+        picked_up_at__lt=end,
+    ).values_list("quantity", "picked_up_at")
+    picked_up_by_day = {}
+    for quantity, picked_up_at in completed_week:
+        day = picked_up_at.astimezone(wib).date().isoformat()
+        picked_up_by_day[day] = picked_up_by_day.get(day, 0) + quantity
     pickups = owned.filter(pickup_deadline__gt=now, pickup_deadline__lt=end, status="paid").order_by("pickup_deadline", "pk")
     stores = Store.objects.filter(owner=request.user).order_by("pk")
     return Response({
         "period": period, "booked_portions": sum(row.quantity for row in paid), "simulated_total": sum(row.total for row in paid),
         "series": [{"day": (start.date()+timedelta(days=i)).isoformat(), "portions": series.get((start.date()+timedelta(days=i)).isoformat(),0)} for i in range(days)],
+        "sales": {
+            "sold_portions": completed_totals["portions"] or 0,
+            "simulated_total": completed_totals["amount"] or 0,
+            "free_portions": free_portions,
+            "picked_up_series": [
+                {
+                    "day": (today - timedelta(days=6 - i)).isoformat(),
+                    "portions": picked_up_by_day.get(
+                        (today - timedelta(days=6 - i)).isoformat(), 0
+                    ),
+                }
+                for i in range(7)
+            ],
+        },
         "pickups": [{**PartnerOrderSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in pickups],
         "orders": [{**PartnerOrderSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in owned.order_by("-created_at")[:100]],
         "listings": ListingSerializer(Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-pk"),many=True).data,
