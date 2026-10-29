@@ -8,7 +8,7 @@ class ListingAdmin(admin.ModelAdmin):
     search_fields = ["name", "store", "owner__username"]
 
 
-admin.site.register([Profile, Reservation, PartnerApproval, ModerationLog, Listing])
+admin.site.register([Profile, Reservation, PartnerApproval, ModerationLog])
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
