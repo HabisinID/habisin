@@ -1,16 +1,17 @@
 {% load kasir %}{% with code_text=code|pickup_code %}
+{# Icons are Lucide outlines, inline so the page needs no icon font. #}
 {% if outcome == "match" %}
-  <div class="panel ok" data-outcome="match" data-waiting="{{ waiting }}">
-    <h3>Kode cocok <span class="mono">{{ code_text }}</span></h3>
+  <div class="panel ok" data-outcome="match" data-tone="green" data-waiting="{{ waiting }}">
+    <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Kode cocok <span class="mono">{{ code_text }}</span></h3>
     <p>Serahkan isi pesanan ini, lalu tandai sudah diambil.</p>
-    <dl class="details">
-      <dt>Pesanan</dt><dd>{{ order.listing.name }} × {{ order.quantity }}</dd>
-      <dt>Pembeli</dt><dd>{{ order.user|buyer_short }}</dd>
-      <dt>Jendela ambil</dt><dd class="mono">{{ order.listing.pickup_start|time:"H.i" }}–{{ order.deadline|time:"H.i" }}</dd>
-      <dt>Dibayar (simulasi)</dt><dd>{{ order.total|rupiah }}{% if order.paid_at %} · {{ order.paid_at|time:"H.i" }}{% endif %}</dd>
-      {% if order.note %}<dt>Catatan</dt><dd>{{ order.note }}</dd>{% endif %}
-      <dt>No. pesanan</dt><dd class="mono">HBS-{{ order.pk }}</dd>
-    </dl>
+    <div class="rows">
+      <p><span class="label">{{ order.listing.name }}</span><span class="dots"></span><span class="value">{{ order.quantity }} porsi</span></p>
+      <p><span class="label">Pembeli</span><span class="dots"></span><span class="value">{{ order.user|buyer_short }}</span></p>
+      <p><span class="label">Jendela ambil</span><span class="dots"></span><span class="value">{{ order.listing.pickup_start|time:"H.i" }} – {{ order.deadline|time:"H.i" }}</span></p>
+      <p><span class="label">Dibayar (simulasi)</span><span class="dots"></span><span class="value">{{ order.total|rupiah }}</span></p>
+      {% if order.note %}<p><span class="label">Catatan</span><span class="dots"></span><span class="value">{{ order.note }}</span></p>{% endif %}
+      <p><span class="label">No. pesanan</span><span class="dots"></span><span class="value">HBS-{{ order.pk }}</span></p>
+    </div>
     <div class="actions">
       <button class="primary" type="button" data-pickup hx-post="/api/partner/kasir/{{ order.pk }}/pickup" hx-target="#result">Tandai sudah diambil</button>
       <button class="secondary" type="button" data-other-code>Kode lain</button>
@@ -18,12 +19,17 @@
     </div>
   </div>
 {% elif outcome == "handed_over" %}
-  <div class="panel ok" data-outcome="handed_over" data-waiting="{{ waiting }}">
-    <h3>Diserahkan pukul {{ order.picked_up_at|time:"H.i" }} <span class="mono">{{ code_text }}</span></h3>
-    <p>{{ order.listing.name }} × {{ order.quantity }} untuk {{ order.user|buyer_short }}</p>
-    <div class="actions">
-      <button class="secondary" type="button" data-undo hx-post="/api/partner/kasir/{{ order.pk }}/undo" hx-target="#result">Urungkan · <span>60</span> dtk</button>
+  <div class="panel handed" data-outcome="handed_over" data-waiting="{{ waiting }}">
+    <div class="handed-head">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      <div>
+        <h3>Diserahkan pukul {{ order.picked_up_at|time:"H.i" }}</h3>
+        <p class="mono code">{{ code_text }}</p>
+        <p>{{ order.listing.name }} × {{ order.quantity }} untuk {{ order.user|buyer_short }}</p>
+      </div>
+      <button class="secondary undo" type="button" data-undo hx-post="/api/partner/kasir/{{ order.pk }}/undo" hx-target="#result"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Urungkan · <span data-left>60</span> dtk</span></button>
     </div>
+    <div class="countdown" role="progressbar" aria-label="Sisa waktu urungkan" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60"><span></span></div>
     <p class="hint">Salah tandai? Urungkan dalam 60 detik. Kotak sudah kosong untuk kode berikutnya.</p>
   </div>
 {% else %}
@@ -31,25 +37,42 @@
   <div class="panel {% if outcome == 'not_found' or outcome == 'other_store' %}red{% else %}brown{% endif %}" role="alert"
        data-outcome="{{ outcome }}" data-tone="{% if outcome == 'not_found' or outcome == 'other_store' %}red{% else %}brown{% endif %}">
     {% if outcome == "not_found" %}
-      <h3>Tidak ditemukan <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Tidak ditemukan <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan dulu. Cocokkan lagi dengan tiket pembeli; mungkin dua karakter terakhir tertukar. Atau pindai QR-nya.</p>
     {% elif outcome == "other_store" %}
-      <h3>Milik toko lain <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/><path d="M2 7h20l-2-4H4z"/></svg>Milik toko lain <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan. Tiket ini bukan untuk tokomu. Minta pembeli membuka tiketnya dan cek nama toko di bagian atas struk.</p>
     {% elif outcome == "used" %}
-      <h3>Sudah dipakai pukul {{ order.picked_up_at|time:"H.i" }} <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>Sudah dipakai pukul {{ order.picked_up_at|time:"H.i" }} <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan lagi. Pesanan ini sudah diambil dan ditandai oleh kasir.</p>
+      <div class="rows">
+        <p><span class="label">{{ order.listing.name }}</span><span class="dots"></span><span class="value">{{ order.quantity }} porsi</span></p>
+        <p><span class="label">Diserahkan</span><span class="dots"></span><span class="value">{{ order.picked_up_at|time:"H.i" }} · {{ order.user|buyer_short }}</span></p>
+      </div>
+      <a class="next" href="/partner/orders">Lihat pesanan HBS-{{ order.pk }} <span aria-hidden="true">→</span></a>
     {% elif outcome == "cancelled" %}
-      <h3>Pesanan sudah dibatalkan <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>Pesanan sudah dibatalkan <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan. {% if order.cancelled_by == "partner" %}Mitra{% else %}Pembeli{% endif %} membatalkan{% if order.cancelled_at %} pukul {{ order.cancelled_at|time:"H.i" }}{% endif %} dan {{ order.quantity }} porsi {{ order.listing.name }} sudah kembali ke stok listing.</p>
+      <div class="rows">
+        <p><span class="label">Dibatalkan</span><span class="dots"></span><span class="value">{% if order.cancelled_at %}{{ order.cancelled_at|time:"H.i" }} · {% endif %}oleh {% if order.cancelled_by == "partner" %}mitra{% else %}pembeli{% endif %}</span></p>
+        <p><span class="label">Stok listing sekarang</span><span class="dots"></span><span class="value">{{ order.listing.stock }} porsi</span></p>
+      </div>
+      <a class="next" href="/partner/listings">Buka listing {{ order.listing.name }} <span aria-hidden="true">→</span></a>
     {% elif outcome == "expired" %}
-      <h3>Kode kedaluwarsa <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4M4.6 11a8 8 0 0 0 1.7 8.7 8 8 0 0 0 8.7 1.7M7.4 7.4a8 8 0 0 1 10.3 1 8 8 0 0 1 .9 10.2M2 2l20 20M12 12v-2"/></svg>Kode kedaluwarsa <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan lewat HABISIN. Batas ambil {{ order.deadline|time:"H.i" }} sudah lewat dan porsinya sudah kembali ke stok toko.</p>
+      <div class="rows">
+        <p><span class="label">Jendela ambil</span><span class="dots"></span><span class="value">{{ order.listing.pickup_start|time:"H.i" }} – {{ order.deadline|time:"H.i" }}</span></p>
+        <p><span class="label">{{ order.listing.name }}</span><span class="dots"></span><span class="value">{{ order.quantity }} porsi</span></p>
+      </div>
     {% elif outcome == "unpaid" %}
-      <h3>Belum dibayar <span class="mono">{{ code_text }}</span></h3>
+      <h3><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Belum dibayar <span class="mono">{{ code_text }}</span></h3>
       <p>Jangan serahkan dulu. Minta pembeli menyelesaikan pembayaran di HABISIN, lalu cek kodenya lagi.</p>
     {% endif %}
-    <div class="actions"><button class="secondary" type="button" data-other-code>Kode lain</button></div>
+    <div class="actions">
+      {% if outcome == "not_found" %}<button class="secondary" type="button" data-scan><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>Pindai QR</button>{% endif %}
+      <button class="link" type="button" data-other-code>Kosongkan kotak</button>
+    </div>
   </div>
 {% endif %}
 {% endwith %}
