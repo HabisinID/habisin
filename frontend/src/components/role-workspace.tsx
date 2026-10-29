@@ -83,6 +83,11 @@ export default function RoleWorkspace({
           { href: "/partner", label: "Dasbor", Icon: LayoutDashboard },
           { href: "/partner/listings", label: "Listing", Icon: List },
           { href: "/partner/orders", label: "Pesanan", Icon: ShoppingBag },
+          {
+            href: "/api/partner/kasir",
+            label: "Verifikasi kode",
+            Icon: ShieldCheck,
+          },
           { href: "/partner/store", label: "Profil toko", Icon: Store },
           { href: "/partner/account", label: "Akun", Icon: UserRound },
         ]
@@ -94,17 +99,24 @@ export default function RoleWorkspace({
         ];
   const navigation = (
     <>
-      {links.map(({ href, label, Icon }) => (
-        <Link
-          href={href}
-          key={href}
-          aria-current={path === href ? "page" : undefined}
-          onClick={() => setMenu(false)}
-        >
-          <Icon size={18} />
-          {label}
-        </Link>
-      ))}
+      {links.map(({ href, label, Icon }) =>
+        href.startsWith("/api/") ? (
+          <a href={href} key={href} onClick={() => setMenu(false)}>
+            <Icon size={18} />
+            {label}
+          </a>
+        ) : (
+          <Link
+            href={href}
+            key={href}
+            aria-current={path === href ? "page" : undefined}
+            onClick={() => setMenu(false)}
+          >
+            <Icon size={18} />
+            {label}
+          </Link>
+        ),
+      )}
       {role === "admin" && (
         <>
           <button disabled title="Belum diimplementasikan">
@@ -135,15 +147,6 @@ export default function RoleWorkspace({
           <Menu size={20} />
           Menu {role === "partner" ? "mitra" : "admin"}
         </button>
-        {role === "partner" && (
-          <a
-            className={`${s.verify} ${menu ? s.verifyOpen : ""}`}
-            href="/api/partner/kasir"
-          >
-            <ShieldCheck size={18} />
-            Verifikasi kode
-          </a>
-        )}
         <nav
           aria-label={`Navigasi ${role === "partner" ? "mitra" : "admin"}`}
           className={s.nav}
@@ -234,12 +237,6 @@ export default function RoleWorkspace({
           >
             {navigation}
           </nav>
-          {role === "partner" && (
-            <a className={s.verify} href="/api/partner/kasir">
-              <ShieldCheck size={18} />
-              Verifikasi kode
-            </a>
-          )}
           {user && (
             <LogoutButton
               className={s.drawerLogout}

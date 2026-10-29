@@ -28,14 +28,14 @@
     :root {
       color-scheme: light;
       --brand: #1f4d33; --brand-hover: #173c27; --dark: #14301f; --muted: #4d6455;
-      --cream: #f6f8f3; --line: #dfe6df; --surface: #ffffff; --surface-2: #e8efe7; --border: #7a8f80;
+      --light: #e1ece3; --cream: #f6f8f3; --line: #dfe6df; --surface: #ffffff; --surface-2: #e8efe7; --border: #7a8f80;
       --success: #1d6b47; --warning: #8a5a00; --error: #b3261e; --error-tint: #fbe9e7; --warning-tint: #fff1dd;
       --inverse: #14301f; --on-inverse: #eef3ec; --inverse-accent: #f4d56a; --on-brand: #ffffff;
     }
     :root[data-theme="dark"] {
       color-scheme: dark;
       --brand: #9fd3ae; --brand-hover: #b8e0c3; --dark: #eef3ec; --muted: #a9c0af;
-      --cream: #10261a; --line: #24402f; --surface: #163021; --surface-2: #1d3a29; --border: #5f7d68;
+      --light: #1e3f2b; --cream: #10261a; --line: #24402f; --surface: #163021; --surface-2: #1d3a29; --border: #5f7d68;
       --success: #7fd1a3; --warning: #f2c14e; --error: #ff8a80; --error-tint: #3a1a17; --warning-tint: #3a2a12;
       --inverse: #eef3ec; --on-inverse: #14301f; --inverse-accent: #1f4d33; --on-brand: #10261a;
     }
@@ -47,24 +47,42 @@
     .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
     .shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
-    .sidebar { border-right: 1px solid var(--line); background: var(--surface); padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
-    .logo { display: flex; align-items: center; font-size: 28px; font-weight: 800; letter-spacing: -1.6px; text-decoration: none; }
-    .logo img { margin-right: 8px; width: 30px; height: 31px; object-fit: contain; }
+    .sidebar { position: sticky; top: 0; align-self: start; height: 100dvh; overflow-y: auto; border-right: 1px solid var(--line); background: var(--cream); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; }
+    .logo { display: flex; align-items: center; padding: 0 8px; font-size: 31px; font-weight: 800; letter-spacing: -1.8px; text-decoration: none; }
+    .logo img { margin-right: 8px; width: 35px; height: 36px; object-fit: contain; }
     .logo span { color: var(--brand); }
-    .sidebar small { color: var(--muted); font-weight: 700; margin: 0 0 16px 38px; }
-    .sidebar a.item { display: block; padding: 10px 12px; border-radius: 12px; font-weight: 600; text-decoration: none; }
-    .sidebar a.item:hover { background: var(--surface-2); }
-    .sidebar a[aria-current="page"] { background: var(--brand); color: var(--on-brand); }
+    .partner-nav { display: flex; flex-direction: column; gap: 5px; }
+    .partner-nav .item, .logout { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 14px; border-radius: 6px; font-size: 14px; color: var(--muted); text-decoration: none; }
+    .partner-nav .item:hover { background: var(--surface-2); }
+    .partner-nav .item svg { flex: none; }
+    .partner-nav .item[aria-current="page"] { background: var(--light); color: var(--brand); font-weight: 700; }
+    .logout { margin-top: auto; width: 100%; border: 0; background: none; text-align: left; }
+    .logout:hover { background: var(--surface-2); }
+    .menu-toggle { display: none; }
+    .header-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+    .avatar { display: grid; place-items: center; width: 44px; height: 44px; overflow: hidden; border-radius: 10px; background: var(--surface-2); color: var(--brand); font-size: 12px; font-weight: 700; text-decoration: none; }
+    .avatar img { width: 44px; height: 44px; object-fit: cover; }
+    #partner-menu { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(480px, 100vw); max-width: none; height: 100dvh; max-height: none; padding: 20px; border: 0; border-left: 1px solid var(--line); background: var(--surface); color: var(--dark); }
+    #partner-menu::backdrop, #logout-confirm::backdrop { background: #0006; }
+    .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .dialog-heading h2 { margin: 0; font-size: 23px; }
+    .dialog-close { min-width: 44px; min-height: 44px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 24px; }
+    #partner-menu .logout { margin-top: 24px; }
+    #logout-confirm { width: min(440px, calc(100% - 32px)); border: 1px solid var(--line); border-radius: 16px; padding: 24px; background: var(--cream); color: var(--dark); }
+    #logout-confirm h2 { margin-top: 0; }
+    .logout-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .logout-actions button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--dark); }
+    .logout-actions button[type="submit"] { border-color: var(--brand); background: var(--brand); color: var(--on-brand); }
 
     .main { min-width: 0; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 40px; border-bottom: 1px solid var(--line); }
-    .topbar h1 { margin: 0; font-size: 28px; letter-spacing: -0.6px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 32px; border-bottom: 1px solid var(--line); }
+    .topbar h1 { margin: 0; font-size: 24px; letter-spacing: -0.6px; }
     .topbar p { margin: 2px 0 0; color: var(--muted); }
     .theme { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: none; color: var(--dark); display: grid; place-items: center; transition: transform .12s; }
     .theme:hover { background: var(--surface-2); }
     .theme:active { transform: scale(.9); }
 
-    .content { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; padding: 32px 40px; }
+    .content { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; padding: 24px 32px; }
     .card { background: var(--inverse); color: var(--on-inverse); border-radius: 20px; padding: 32px; }
     .card h2 { margin: 0; font-size: 20px; }
     .card .help { margin: 4px 0 24px; opacity: .8; }
@@ -120,16 +138,21 @@
 
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-    @media (max-width: 1050px) {
-      .content { grid-template-columns: 1fr; }
+    @media (max-width: 1200px) { .content { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 1024px) {
+      .shell { display: block; }
+      .sidebar { position: relative; height: 64px; overflow: visible; flex-direction: row; align-items: center; gap: 8px; padding: 8px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .sidebar > .partner-nav, .sidebar > .logout { display: none; }
+      .menu-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-left: auto; min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--dark); }
+      .logo { padding: 0; font-size: 28px; }
+      .topbar { padding: 16px 20px; }
     }
     @media (max-width: 760px) {
       .shell { grid-template-columns: 1fr; }
-      .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
-      .sidebar small { display: none; }
-      /* The menu takes its own row, so the theme switcher stays top-right. */
-      .sidebar nav { display: flex; gap: 4px; flex-wrap: wrap; flex-basis: 100%; }
-      .sidebar .theme { margin-left: auto; }
+      .sidebar { padding: 8px 16px; }
+      .sidebar .theme { margin-left: 0; }
+      .logo img { width: 30px; height: 32px; }
+      .avatar { display: none; }
       .topbar { padding: 16px; }
       .topbar .theme { display: none; }
       .topbar h1 { font-size: 22px; }
@@ -145,16 +168,12 @@
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 <div class="shell">
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Navigasi mitra">
     <a class="logo" href="/" aria-label="Habisin beranda"><img src="/habisin-logo.png" alt="">habisin<span>.</span></a>
-    {# On mobile the sidebar is the top bar, so the theme switcher sits at its right end. #}
+    <button class="menu-toggle" id="menu-open" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="partner-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu mitra</button>
     {% include "main/kasir/_theme.html" %}
-    <small>Mitra</small>
-    <nav aria-label="Navigasi mitra">
-      <a class="item" href="/api/partner/kasir" aria-current="page">Verifikasi kode</a>
-      <a class="item" href="/">Dasbor</a>
-      <a class="item" href="/partner/store">Profil toko</a>
-    </nav>
+    <nav class="partner-nav" aria-label="Navigasi mitra">{% include "main/kasir/_navigation.html" %}</nav>
+    {% include "main/kasir/_logout.html" %}
   </aside>
   <div class="main">
     <header class="topbar">
@@ -162,7 +181,10 @@
         <h1>Verifikasi kode</h1>
         <p>{{ store }} · {{ day }} · {{ now|time:"H.i" }} WIB · <span id="waiting">{{ waiting }} pesanan belum diambil</span></p>
       </div>
-      {% include "main/kasir/_theme.html" %}
+      <div class="header-actions">
+        <a class="avatar" href="/partner/account" aria-label="Akun {{ request.user.first_name|default:request.user.username }}">{% if request.user.profile.profile_picture %}<img src="{{ request.user.profile.profile_picture.url }}" alt="Foto {{ request.user.first_name|default:request.user.username }}">{% else %}{{ request.user.first_name|default:request.user.username|slice:":2"|upper }}{% endif %}</a>
+        {% include "main/kasir/_theme.html" %}
+      </div>
     </header>
     <main class="content">
       <section aria-labelledby="code-title">
@@ -197,6 +219,14 @@
     </main>
   </div>
 </div>
+<dialog id="partner-menu" aria-labelledby="menu-title">
+  <div class="dialog-heading"><h2 id="menu-title">Menu mitra</h2><button class="dialog-close" id="menu-close" type="button" aria-label="Tutup">×</button></div>
+  <nav class="partner-nav" aria-label="Menu mitra">{% include "main/kasir/_navigation.html" %}</nav>
+  {% include "main/kasir/_logout.html" %}
+</dialog>
+<dialog id="logout-confirm" aria-labelledby="logout-title">
+  <form id="logout-form"><h2 id="logout-title">Keluar dari akun?</h2><p>Kamu bisa masuk kembali kapan saja.</p><p id="logout-error" role="alert" hidden></p><div class="logout-actions"><button id="logout-cancel" type="button">Batal</button><button type="submit">Ya, keluar</button></div></form>
+</dialog>
 <dialog id="scanner" aria-labelledby="scan-title">
   <h2 id="scan-title">Pindai QR tiket</h2>
   <video id="scan-video" playsinline muted></video>
@@ -205,6 +235,29 @@
 </dialog>
 <template id="waiting-template">{% include "main/kasir/_waiting.html" %}</template>
 <script>
+  const partnerMenu = document.getElementById("partner-menu");
+  const menuOpen = document.getElementById("menu-open");
+  menuOpen.addEventListener("click", () => { partnerMenu.showModal(); menuOpen.setAttribute("aria-expanded", "true"); });
+  document.getElementById("menu-close").addEventListener("click", () => partnerMenu.close());
+  partnerMenu.addEventListener("close", () => { menuOpen.setAttribute("aria-expanded", "false"); menuOpen.focus(); });
+  partnerMenu.addEventListener("click", e => { if (e.target === partnerMenu) { const r = partnerMenu.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) partnerMenu.close(); } });
+  matchMedia("(min-width: 1025px)").addEventListener("change", e => { if (e.matches && partnerMenu.open) partnerMenu.close(); });
+  const logoutDialog = document.getElementById("logout-confirm");
+  document.querySelectorAll("[data-logout]").forEach(button => button.addEventListener("click", () => logoutDialog.showModal()));
+  document.getElementById("logout-cancel").addEventListener("click", () => logoutDialog.close());
+  document.getElementById("logout-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const button = e.currentTarget.querySelector('[type="submit"]');
+    const error = document.getElementById("logout-error");
+    if (button.disabled) return;
+    button.disabled = true; error.hidden = true;
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" }, credentials: "same-origin" });
+      if (!response.ok) throw new Error("Gagal keluar. Coba lagi.");
+      location.replace("/");
+    } catch (e) { error.textContent = e.message; error.hidden = false; button.disabled = false; }
+  });
+
   const ALPHABET = "{{ alphabet }}";
   const boxes = [...document.querySelectorAll(".box")];
   const form = document.getElementById("code-form");
@@ -262,7 +315,7 @@
 
   document.addEventListener("keydown", (e) => {
     // Inside the scanner, Esc closes the dialog (native) and nothing else applies.
-    if (scanner.open) return;
+    if (document.querySelector("dialog[open]")) return;
     if (e.key === "F2") {
       e.preventDefault();
       boxes[Math.max(0, code().length - (code().length === boxes.length ? 1 : 0))].focus();

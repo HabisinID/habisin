@@ -24,7 +24,6 @@
 }
 .nav a,
 .nav button,
-.verify,
 .logout {
   display: flex;
   align-items: center;
@@ -44,14 +43,7 @@
 .nav button:disabled {
   opacity: 0.7;
 }
-.verify {
-  border: 1px solid var(--color-border);
-  font-size: 12px;
-  flex-wrap: wrap;
-}
-.verify small {
-  font-size: 10px;
-}
+
 .logout {
   margin-top: auto;
 }
@@ -534,7 +526,6 @@
     padding: 0 8px;
   }
   .sidebar .nav,
-  .sidebar .verify,
   .sidebar .logout {
     display: none;
   }
