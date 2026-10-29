@@ -1,15 +1,24 @@
 "use client";
 
+import ProfilePictureInput, {
+  pictureFormData,
+  pictureRequestBody,
+} from "./profile-picture";
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
-import { Check, MapPin, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, MapPin, Search, Plus, Trash2 } from "lucide-react";
 import { api, type GeocodeResult, type Store } from "@/lib/api";
+
+import { storeSchedule, weekdays } from "@/lib/store-profile";
+import s from "./role-workspace.module.css";
 import {
-  errorClass,
-  fieldClass,
-  primaryButton,
-  secondaryButton,
-} from "./store-ui";
+  ProfileSectionHeading,
+  profileField,
+  profileLabel,
+  profileSection,
+  profilePrimary,
+  profileSecondary,
+} from "./profile-ui";
 
 const StoreMap = dynamic(() => import("./store-map"), {
   ssr: false,
@@ -30,10 +39,12 @@ export default function StoreForm({
   store,
   onSaved,
   onCancel,
+  onDirtyChange,
 }: {
   store: Store | null;
   onSaved: (store: Store) => void;
   onCancel: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [address, setAddress] = useState(store?.address ?? "");
   const [point, setPoint] = useState<Location | null>(
@@ -46,7 +57,7 @@ export default function StoreForm({
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [geocodedAddress, setGeocodedAddress] = useState(store?.address ?? "");
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(!!store);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,6 +68,48 @@ export default function StoreForm({
     point && normalize(address) === normalize(geocodedAddress),
   );
 
+  const [fields, setFields] = useState(() => ({
+    name: store?.name || "",
+    description: store?.description || "",
+    category: store?.category || "",
+    neighborhood: store?.neighborhood || "",
+    city: store?.city ?? "Depok",
+    landmark: store?.landmark || "",
+    opening_time: store?.opening_time.slice(0, 5) || "08:00",
+    closing_time: store?.closing_time.slice(0, 5) || "21:00",
+  }));
+  const [pictureDirty, setPictureDirty] = useState(false);
+  const [hours, setHours] = useState(() => storeSchedule(store));
+  const initial = useRef(JSON.stringify({ fields, address, point, hours }));
+  const dirty =
+    pictureDirty ||
+    JSON.stringify({ fields, address, point, hours }) !== initial.current;
+  const initialFields = useRef(fields);
+  const changed =
+    Object.entries(fields).filter(
+      ([key, value]) =>
+        value !== initialFields.current[key as keyof typeof fields],
+    ).length +
+    Number(address !== (store?.address || "")) +
+    Number(JSON.stringify(hours) !== JSON.stringify(storeSchedule(store))) +
+    Number(
+      point?.latitude !== store?.latitude ||
+        point?.longitude !== store?.longitude,
+    );
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  function update<K extends keyof typeof fields>(key: K, value: string) {
+    setFields((current) => ({ ...current, [key]: value }));
+  }
   function changeAddress(value: string) {
     revision.current += 1;
     setAddress(value);
@@ -124,23 +177,22 @@ export default function StoreForm({
       setError("Cari alamat dan konfirmasi posisi pin toko terlebih dahulu.");
       return;
     }
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+
+    const body = pictureFormData(event.currentTarget);
     setSaving(true);
     setError("");
     try {
       const saved = await api<Store>(
         store ? `partner/stores/${store.id}` : "partner/stores",
         store ? "PATCH" : "POST",
-        {
-          name: data.name,
-          description: data.description,
+        pictureRequestBody(body, {
+          ...fields,
+          weekly_hours: hours,
           address: normalize(address),
-          opening_time: data.opening_time,
-          closing_time: data.closing_time,
           ...point,
           location_confirmed: confirmed,
           ...(token ? { geocode_token: token } : {}),
-        },
+        }),
       );
       onSaved(saved);
     } catch (e) {
@@ -151,228 +203,498 @@ export default function StoreForm({
   }
 
   return (
-    <form onSubmit={save} className="space-y-7">
-      <div>
-        <p className="mb-2 text-xs font-bold tracking-widest text-brand">
-          MITRA HABISIN
+    <form
+      onSubmit={save}
+      className="flex min-w-0 flex-col gap-8"
+      aria-label={store ? "Ubah profil toko" : "Daftarkan toko"}
+    >
+      {error && (
+        <p role="alert" className={s.error}>
+          {error}
         </p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {store ? "Edit data toko" : "Kenalkan toko kamu."}
-        </h1>
-        <p className="mt-3 leading-relaxed text-muted">
-          Bantu tetangga menemukan tokomu. Isi profil, cari alamat, lalu
-          pastikan posisi pin sudah tepat.
-        </p>
-      </div>
-      <fieldset disabled={saving} className="space-y-5 disabled:opacity-70">
-        <label className="block space-y-2 font-semibold">
-          Nama toko
-          <input
-            className={fieldClass}
-            name="name"
-            defaultValue={store?.name}
-            required
-            maxLength={120}
-            autoComplete="organization"
-          />
-        </label>
-        <label className="block space-y-2 font-semibold">
-          Deskripsi toko
-          <textarea
-            className={`${fieldClass} min-h-28 resize-y font-normal`}
-            name="description"
-            defaultValue={store?.description}
-            required
-            maxLength={2000}
-            placeholder="Ceritakan makanan dan hal istimewa dari tokomu."
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-4 mobile:grid-cols-1">
-          <label className="block space-y-2 font-semibold">
-            Jam buka (WIB)
-            <input
-              className={fieldClass}
-              type="time"
-              name="opening_time"
-              defaultValue={store?.opening_time.slice(0, 5) ?? "08:00"}
-              required
-            />
-          </label>
-          <label className="block space-y-2 font-semibold">
-            Jam tutup (WIB)
-            <input
-              className={fieldClass}
-              type="time"
-              name="closing_time"
-              defaultValue={store?.closing_time.slice(0, 5) ?? "21:00"}
-              required
-            />
-          </label>
-        </div>
-        <p className="text-xs leading-relaxed text-muted">
-          Berlaku setiap hari. Jam tutup yang lebih awal dari jam buka berarti
-          tutup pada hari berikutnya.
-        </p>
-        <div className="rounded-xl border border-line bg-cream p-5 mobile:p-4">
-          <label htmlFor="store-address" className="mb-2 block font-semibold">
-            Alamat toko
-          </label>
-          <textarea
-            id="store-address"
-            className={`${fieldClass} min-h-24 resize-y`}
-            value={address}
-            onChange={(e) => changeAddress(e.target.value)}
-            required
-            minLength={5}
-            maxLength={250}
-            autoComplete="street-address"
-            placeholder="Jalan, nomor, kelurahan, kota, dan kode pos"
-          />
-          <p className="my-3 text-xs leading-relaxed text-muted">
-            Gunakan alamat usaha yang dapat dilihat publik. Saat kamu mencari,
-            alamat dikirim ke Nominatim (OpenStreetMap).
-          </p>
-          <button
-            className={secondaryButton}
-            type="button"
-            onClick={search}
-            disabled={searching || normalize(address).length < 5}
+      )}
+      <nav
+        className="flex flex-wrap gap-2 border-b border-line pb-5 text-xs font-semibold [&_a]:min-h-11 [&_a]:rounded-lg [&_a]:border [&_a]:border-line [&_a]:bg-surface [&_a]:px-4 [&_a]:py-3 [&_a:hover]:bg-light"
+        aria-label="Bagian profil toko"
+      >
+        <a href="#store-identity">Identitas</a>
+        <a href="#store-location">Lokasi</a>
+        <a href="#store-hours">Jam buka</a>
+      </nav>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(260px,0.65fr)] gap-10 compact:grid-cols-1">
+        <fieldset disabled={saving} className="flex min-w-0 flex-col gap-8">
+          <section
+            id="store-identity"
+            aria-label="Identitas toko"
+            className={profileSection}
           >
-            <Search size={16} />
-            {searching ? "Mencari alamat…" : "Cari alamat di peta"}
-          </button>
-          {searchError && (
-            <p role="alert" className={`${errorClass} mt-3`}>
-              {searchError}
-            </p>
-          )}
-          {searched && results.length === 0 && (
-            <p role="status" className="mt-3 text-sm text-muted">
-              Alamat belum ditemukan. Tambahkan nama jalan, kota, atau kode pos
-              lalu cari lagi.
-            </p>
-          )}
-          {results.length > 0 && (
-            <fieldset className="mt-4 space-y-2">
-              <legend className="mb-2 font-semibold">
-                Pilih hasil yang sesuai
-              </legend>
-              {results.map((result, index) => (
-                <label
-                  key={`${result.latitude}-${result.longitude}-${index}`}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-white p-3 text-sm leading-relaxed"
-                >
-                  <input
-                    className="mt-1 shrink-0 accent-brand"
-                    type="radio"
-                    name="geocode_result"
-                    checked={
-                      point?.latitude === result.latitude &&
-                      point?.longitude === result.longitude
-                    }
-                    onChange={() => movePoint(result)}
-                  />
-                  <span>{result.display_name}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-          <p className="mt-3 text-xs text-muted">
-            Pencarian alamat ©{" "}
-            <a
-              href="https://www.openstreetmap.org/copyright"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
+            <ProfileSectionHeading
+              numbered
+              letter="A"
+              description="Cerita singkat yang membuat pembeli mengenal tokomu."
             >
-              OpenStreetMap contributors
-            </a>
-          </p>
-        </div>
-        {point && locationReady && (
-          <section className="space-y-4" aria-label="Konfirmasi lokasi">
-            <h2 className="flex items-center gap-2 text-lg font-bold">
-              <MapPin size={20} className="text-brand" />
-              Pastikan pin tepat di tokomu
-            </h2>
-            <p className="text-sm leading-relaxed text-muted">
-              Geser pin atau klik peta untuk menyesuaikan posisi. Kamu juga
-              dapat mengisi koordinat di bawah ini.
-            </p>
-            <StoreMap
-              latitude={point.latitude}
-              longitude={point.longitude}
-              onChange={(next) => {
-                if (!saving) movePoint(next);
-              }}
+              Identitas toko
+            </ProfileSectionHeading>
+            <ProfilePictureInput
+              current={store?.profile_picture}
+              disabled={saving}
+              onDirtyChange={setPictureDirty}
             />
-            <div className="grid grid-cols-2 gap-4 mobile:grid-cols-1">
-              <label className="block space-y-2 text-sm font-semibold">
-                Latitude
+            <label className={profileLabel}>
+              Nama toko
+              <input
+                aria-label="Nama toko"
+                className={profileField}
+                value={fields.name}
+                onChange={(e) => update("name", e.target.value)}
+                required
+                maxLength={Math.max(60, store?.name.length || 0)}
+                autoComplete="organization"
+              />
+              <small>
+                Tampil di peta dan tiket pembeli · {fields.name.length}/60
+              </small>
+            </label>
+            <label className={profileLabel}>
+              Deskripsi toko
+              <textarea
+                className={profileField}
+                value={fields.description}
+                onChange={(e) => update("description", e.target.value)}
+                required
+                maxLength={Math.max(280, store?.description.length || 0)}
+                rows={4}
+              />
+              <small>
+                Dibaca pembeli sebelum memesan · {fields.description.length}/280
+              </small>
+            </label>
+            <fieldset className="min-w-0">
+              <legend className="mb-2 font-semibold text-sm">
+                Kategori toko
+              </legend>
+              <div className="flex min-w-0 flex-wrap gap-2">
+                {[
+                  "Roti & kue",
+                  "Nasi & lauk",
+                  "Minuman",
+                  "Camilan",
+                  "Katering",
+                  "Lainnya",
+                ].map((category) => (
+                  <label
+                    key={category}
+                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${fields.category === category ? "border-yellow bg-yellow text-on-sticker" : "border-border bg-surface hover:bg-light"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="store_category"
+                      className="mr-2 accent-brand"
+                      value={category}
+                      checked={fields.category === category}
+                      onChange={() => update("category", category)}
+                      required
+                    />
+                    {category}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </section>
+          <section
+            id="store-location"
+            aria-label="Alamat dan lokasi toko"
+            className={profileSection}
+          >
+            <ProfileSectionHeading numbered letter="B">
+              Alamat &amp; lokasi
+            </ProfileSectionHeading>
+            <p className={s.muted}>
+              Alamat dipakai pembeli untuk rute; pin peta dipakai untuk jarak
+              pencarian. Perubahan lokasi langsung berlaku setelah geocoding dan
+              konfirmasi, selama tidak dikunci pesanan aktif.
+            </p>
+            <label className={profileLabel} htmlFor="store-address">
+              Alamat lengkap
+              <textarea
+                aria-label="Alamat lengkap"
+                id="store-address"
+                className={profileField}
+                value={address}
+                onChange={(e) => changeAddress(e.target.value)}
+                required
+                minLength={5}
+                maxLength={250}
+                autoComplete="street-address"
+                rows={3}
+              />
+            </label>
+            <div className={s.two}>
+              <label className={profileLabel}>
+                Kelurahan
                 <input
-                  className={fieldClass}
-                  type="number"
-                  min={-90}
-                  max={90}
-                  step="any"
-                  required
-                  value={coordinates.latitude}
-                  onChange={(e) => editCoordinate("latitude", e.target.value)}
+                  className={profileField}
+                  value={fields.neighborhood}
+                  onChange={(e) => update("neighborhood", e.target.value)}
+                  maxLength={120}
                 />
               </label>
-              <label className="block space-y-2 text-sm font-semibold">
-                Longitude
+              <label className={profileLabel}>
+                Kota
                 <input
-                  className={fieldClass}
-                  type="number"
-                  min={-180}
-                  max={180}
-                  step="any"
-                  required
-                  value={coordinates.longitude}
-                  onChange={(e) => editCoordinate("longitude", e.target.value)}
+                  className={profileField}
+                  value={fields.city}
+                  onChange={(e) => update("city", e.target.value)}
+                  maxLength={80}
                 />
               </label>
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-light p-4 text-sm leading-relaxed">
+            <label className={profileLabel}>
+              Patokan (opsional)
               <input
-                type="checkbox"
-                className="mt-1 shrink-0 accent-brand"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-                required
+                className={profileField}
+                value={fields.landmark}
+                onChange={(e) => update("landmark", e.target.value)}
+                maxLength={250}
               />
-              Saya sudah memastikan pin berada di lokasi toko yang benar.
+              <small>
+                Tampil di profil dan tiket pembeli; tidak menggantikan alamat
+                untuk geocoding.
+              </small>
             </label>
+            <button
+              className={profileSecondary}
+              type="button"
+              onClick={search}
+              disabled={searching || normalize(address).length < 5}
+            >
+              <Search size={16} />
+              {searching ? "Mencari alamat…" : "Cari lokasi toko"}
+            </button>
+            <p className={s.muted}>
+              Alamat pencarian dikirim ke Nominatim (OpenStreetMap).
+            </p>
+            {searchError && (
+              <p role="alert" className={s.error}>
+                {searchError}
+              </p>
+            )}
+            {searched && results.length === 0 && (
+              <p role="status">
+                Alamat belum ditemukan. Tambahkan nama jalan, kota, atau kode
+                pos.
+              </p>
+            )}
+            {results.length > 0 && (
+              <fieldset className="min-w-0">
+                <legend className="mb-3 font-semibold">
+                  Pilih hasil yang sesuai
+                </legend>
+                {results.map((result, index) => (
+                  <label
+                    key={`${result.latitude}-${result.longitude}-${index}`}
+                    className={`${s.row} mb-3`}
+                  >
+                    <input
+                      type="radio"
+                      name="geocode_result"
+                      checked={
+                        point?.latitude === result.latitude &&
+                        point?.longitude === result.longitude
+                      }
+                      onChange={() => movePoint(result)}
+                    />
+                    {result.display_name}
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            {point && locationReady && (
+              <div
+                className="flex min-w-0 flex-col gap-8"
+                aria-label="Konfirmasi lokasi"
+              >
+                <h3 className={s.title}>
+                  <MapPin size={18} className="inline" /> Pastikan pin tepat di
+                  tokomu
+                </h3>
+                <div className={s.two}>
+                  {(["latitude", "longitude"] as const).map((key) => (
+                    <label key={key} className={profileLabel}>
+                      {key === "latitude" ? "Latitude" : "Longitude"}
+                      <input
+                        className={profileField}
+                        type="number"
+                        step="any"
+                        value={coordinates[key]}
+                        onChange={(e) => editCoordinate(key, e.target.value)}
+                        min={key === "latitude" ? -90 : -180}
+                        max={key === "latitude" ? 90 : 180}
+                        required
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className={s.row}>
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                    required
+                  />
+                  Saya sudah memastikan pin berada di lokasi toko yang benar.
+                </label>
+                <p className={s.muted}>
+                  Konfirmasi lokasi oleh mitra; peninjauan admin belum tersedia.
+                </p>
+              </div>
+            )}
           </section>
-        )}
-        {error && (
-          <p className={errorClass} role="alert">
-            {error}
+          <section
+            id="store-hours"
+            aria-label="Jam buka toko"
+            className={profileSection}
+          >
+            <ProfileSectionHeading numbered letter="C">
+              Jam buka per hari
+            </ProfileSectionHeading>
+            <p className={s.muted}>
+              Waktu WIB. Jam tutup lebih awal berarti hari berikutnya. Maksimal
+              tiga sesi per hari.
+            </p>
+            {hours.map((day, index) => (
+              <div
+                key={day.day}
+                className="grid grid-cols-[90px_minmax(0,1fr)] items-start gap-3 border-b border-line py-4 last:border-0 mobile:grid-cols-1"
+              >
+                <label className="font-semibold">
+                  <input
+                    type="checkbox"
+                    className="mr-2 accent-brand"
+                    checked={day.enabled}
+                    aria-label={`Buka pada ${weekdays[day.day]}`}
+                    onChange={(e) =>
+                      setHours((current) =>
+                        current.map((row) =>
+                          row.day === day.day
+                            ? {
+                                ...row,
+                                enabled: e.target.checked,
+                                sessions: row.sessions.length
+                                  ? row.sessions
+                                  : [{ start: "08:00", end: "21:00" }],
+                              }
+                            : row,
+                        ),
+                      )
+                    }
+                  />
+                  {weekdays[day.day]}
+                </label>
+                <div className="space-y-2">
+                  {day.enabled ? (
+                    day.sessions.map((session, n) => (
+                      <div
+                        className="flex flex-wrap items-center gap-2 [&_input]:w-[112px] [&_input]:max-w-full"
+                        key={n}
+                      >
+                        <input
+                          type="time"
+                          className={profileField}
+                          value={session.start}
+                          aria-label={`Jam buka ${weekdays[day.day]} sesi ${n + 1}`}
+                          onChange={(e) =>
+                            setHours((current) =>
+                              current.map((row) =>
+                                row.day === day.day
+                                  ? {
+                                      ...row,
+                                      sessions: row.sessions.map((v, j) =>
+                                        j === n
+                                          ? { ...v, start: e.target.value }
+                                          : v,
+                                      ),
+                                    }
+                                  : row,
+                              ),
+                            )
+                          }
+                          required
+                        />
+                        <span>–</span>
+                        <input
+                          type="time"
+                          className={profileField}
+                          value={session.end}
+                          aria-label={`Jam tutup ${weekdays[day.day]} sesi ${n + 1}`}
+                          onChange={(e) =>
+                            setHours((current) =>
+                              current.map((row) =>
+                                row.day === day.day
+                                  ? {
+                                      ...row,
+                                      sessions: row.sessions.map((v, j) =>
+                                        j === n
+                                          ? { ...v, end: e.target.value }
+                                          : v,
+                                      ),
+                                    }
+                                  : row,
+                              ),
+                            )
+                          }
+                          required
+                        />
+                        {day.sessions.length > 1 && (
+                          <button
+                            type="button"
+                            className={s.danger}
+                            aria-label={`Hapus sesi ${n + 1} ${weekdays[day.day]}`}
+                            onClick={() =>
+                              setHours((current) =>
+                                current.map((row) =>
+                                  row.day === day.day
+                                    ? {
+                                        ...row,
+                                        sessions: row.sessions.filter(
+                                          (_, j) => j !== n,
+                                        ),
+                                      }
+                                    : row,
+                                ),
+                              )
+                            }
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <span className={s.muted}>Tutup</span>
+                  )}
+                  {day.enabled && (
+                    <button
+                      className="text-xs font-semibold text-brand py-2"
+                      type="button"
+                      disabled={day.sessions.length >= 3}
+                      onClick={() =>
+                        setHours((current) =>
+                          current.map((row) =>
+                            row.day === day.day
+                              ? {
+                                  ...row,
+                                  sessions: [
+                                    ...row.sessions,
+                                    { start: "13:00", end: "21:00" },
+                                  ],
+                                }
+                              : row,
+                          ),
+                        )
+                      }
+                    >
+                      <Plus size={13} className="inline" />
+                      Tambah sesi
+                    </button>
+                  )}
+                  {index === 0 && (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-brand p-2"
+                      onClick={() =>
+                        setHours((current) =>
+                          current.map((row) => ({
+                            ...row,
+                            enabled: day.enabled,
+                            sessions: structuredClone(day.sessions),
+                          })),
+                        )
+                      }
+                    >
+                      Salin ke semua hari
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
+        </fieldset>
+        <aside
+          className="sticky top-6 min-w-0 self-start compact:static"
+          aria-label="Pratinjau profil toko"
+        >
+          <p className="mb-3 font-mono text-[10px] font-semibold tracking-[0.14em] text-muted">
+            LOKASI TOKO
           </p>
-        )}
-        <div className="flex flex-wrap gap-3 border-t border-line pt-5">
-          <button
-            className={primaryButton}
-            disabled={saving || searching || !locationReady || !confirmed}
-          >
-            <Check size={17} />
-            {saving
-              ? "Menyimpan…"
-              : store
-                ? "Simpan perubahan toko"
-                : "Daftarkan toko"}
-          </button>
-          <button
-            type="button"
-            className={secondaryButton}
-            onClick={onCancel}
-            disabled={saving}
-          >
-            Batal
-          </button>
+          <div className="overflow-hidden rounded-xl border border-line bg-light">
+            {point ? (
+              <StoreMap
+                latitude={point.latitude}
+                longitude={point.longitude}
+                onChange={(next) => {
+                  if (!saving) movePoint(next);
+                }}
+              />
+            ) : (
+              <div className={`${s.empty} min-h-64`}>
+                <MapPin size={30} />
+                <p>Cari alamat untuk menampilkan pin.</p>
+              </div>
+            )}
+          </div>
+          <p className={`${s.muted} mt-3`}>
+            {point
+              ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)} · ${confirmed ? "dikonfirmasi mitra" : "perlu konfirmasi"}`
+              : "Lokasi belum dipilih"}
+          </p>
+          <div className="mt-6 rounded-xl border border-line bg-surface p-5">
+            <p className="font-mono text-xs text-muted mb-4">
+              PRATINJAU UNTUK PEMBELI
+            </p>
+            <h3 className={s.title}>{fields.name || "Nama toko"}</h3>
+            <p className={s.muted}>
+              {fields.category || "Kategori toko"} · {address || "Alamat toko"}
+            </p>
+            {fields.landmark && (
+              <p className={s.muted}>Patokan: {fields.landmark}</p>
+            )}
+            <p className="mt-3 text-sm text-brand">
+              Jadwal mengikuti hari yang dipilih.
+            </p>
+          </div>
+        </aside>
+      </div>
+      {(dirty || !store) && (
+        <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 shadow-lg tablet:bottom-20">
+          <p className={s.muted}>
+            {store
+              ? `${Math.max(1, changed)} perubahan belum disimpan`
+              : "Lengkapi identitas dan konfirmasi pin toko."}
+          </p>
+          <div className={s.actions}>
+            <button
+              type="button"
+              className={profileSecondary}
+              onClick={onCancel}
+              disabled={saving}
+            >
+              Batalkan
+            </button>
+            <button
+              className={profilePrimary}
+              disabled={saving || searching || !locationReady || !confirmed}
+            >
+              <Check size={16} />
+              {saving
+                ? "Menyimpan…"
+                : store
+                  ? "Simpan perubahan toko"
+                  : "Daftarkan toko"}
+            </button>
+          </div>
         </div>
-      </fieldset>
+      )}
     </form>
   );
 }

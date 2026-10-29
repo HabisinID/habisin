@@ -4,7 +4,11 @@
 .map :global(.habisin-map-popup .leaflet-popup-content-wrapper) {
   border-radius: 12px;
   box-shadow: 0 3px 14px #00000066;
+  background: var(--color-surface);
   color: var(--color-dark);
+}
+.map :global(.habisin-map-popup .leaflet-popup-tip) {
+  background: var(--color-surface);
 }
 .map :global(.habisin-map-popup .leaflet-popup-content) {
   margin: 14px 16px;
@@ -28,7 +32,7 @@
   border: 2px solid white;
   border-radius: 999px;
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   box-shadow: 0 3px 10px #0003;
   text-align: center;
   white-space: nowrap;
@@ -45,24 +49,24 @@
 }
 .discovery :global(.discovery-pin span) {
   background: var(--color-yellow);
-  color: var(--color-dark);
+  color: var(--color-on-sticker);
   border: 1.5px solid var(--color-dark);
   border-radius: 6px;
   transform: rotate(3deg);
 }
 .discovery :global(.free-pin span) {
-  background: white;
+  background: var(--color-surface);
   border-color: var(--color-brand);
   color: var(--color-brand);
 }
 .discovery :global(.urgent-pin span) {
-  background: #ff9300;
+  background: var(--color-urgency);
   color: var(--color-dark);
-  border-color: #a34a00;
+  border-color: var(--color-urgency-text);
 }
 .discovery :global(.selected-pin span) {
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   border: 2px solid white;
   box-shadow: 0 0 0 2px var(--color-brand);
 }
@@ -70,7 +74,7 @@
 .locate {
   position: absolute;
   z-index: 450;
-  background: white;
+  background: var(--color-surface);
   color: var(--color-dark);
   border: 1px solid var(--color-line);
   box-shadow: 0 2px 8px #0002;
@@ -99,7 +103,7 @@
   left: 16px;
   bottom: 28px;
   padding: 10px 12px;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 6px;
   display: flex;
@@ -122,15 +126,16 @@
 }
 .gold {
   background: var(--color-yellow);
+  color: var(--color-on-sticker);
 }
 .free {
-  background: white;
+  background: var(--color-surface);
 }
 .orange {
-  background: #ff9300;
+  background: var(--color-urgency);
 }
 .discovery :global(.leaflet-control-attribution) {
-  background: #fffd;
+  background: color-mix(in srgb, var(--color-surface) 87%, transparent);
   color: var(--color-dark);
 }
 .discovery [role="status"] {

@@ -51,6 +51,8 @@ def _save_new_store(request):
 
 
 def _mutate_store(request, store):
+    if store.closed_at:
+        return Response({"detail": "Toko ditutup permanen dan tidak dapat diubah."}, status=409)
     if request.method == "DELETE":
         if request.data.get("confirmation_name") != store.name:
             return Response({"detail": "Ketik nama toko dengan tepat untuk mengonfirmasi penghapusan."}, status=400)

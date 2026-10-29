@@ -40,6 +40,7 @@
 }
 .brand > span {
   background: var(--color-yellow);
+  color: var(--color-on-sticker);
   border: 1px solid var(--color-dark);
   border-radius: 6px;
   font-size: 16px;
@@ -76,13 +77,13 @@
   font-size: 12px;
   margin-left: auto;
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   padding: 2px 6px;
   border-radius: 999px;
 }
 .verify {
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   margin-bottom: 4px;
 }
 .workspace {
@@ -171,7 +172,7 @@
 .input {
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: white;
+  background: var(--color-surface);
   color: var(--color-dark);
   min-height: 48px;
   padding: 10px 14px;
@@ -201,7 +202,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: white;
+  background: var(--color-surface);
   color: var(--color-error);
   border-left: 2px solid var(--color-error);
   border-radius: 6px;
@@ -222,7 +223,7 @@
   padding: 0 14px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: white;
+  background: var(--color-surface);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -230,6 +231,7 @@
 .chip[aria-checked="true"],
 .chip[aria-pressed="true"] {
   background: var(--color-yellow);
+  color: var(--color-on-sticker);
   border-color: var(--color-dark);
 }
 .moreCategories {
@@ -242,7 +244,7 @@
   position: absolute;
   right: 0;
   top: 42px;
-  background: white;
+  background: var(--color-surface);
   box-shadow: 0 8px 24px #1c26162b;
   z-index: 5;
   border: 1px solid var(--color-line);
@@ -306,7 +308,7 @@
 .switch > span {
   width: 24px;
   height: 24px;
-  background: white;
+  background: var(--color-surface);
   border-radius: 50%;
   box-shadow: 0 1px 2px #0002;
   transition: transform 0.15s;
@@ -330,7 +332,7 @@
   min-height: 48px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: white;
+  background: var(--color-surface);
   padding-left: 12px;
   color: var(--color-muted);
 }
@@ -358,7 +360,7 @@
   display: flex;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: white;
+  background: var(--color-surface);
   overflow: visible;
 }
 .stepper button {
@@ -400,7 +402,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   height: 48px;
@@ -484,7 +486,7 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 32px;
-  background: white;
+  background: var(--color-surface);
   box-shadow: 0 -2px 8px #1c261614;
   z-index: 10;
   min-height: 80px;
@@ -509,11 +511,11 @@
 }
 .primary {
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
   border: 1px solid var(--color-brand);
 }
 .secondary {
-  background: white;
+  background: var(--color-surface);
   color: var(--color-dark);
   border: 1px solid var(--color-border);
 }
@@ -551,7 +553,7 @@
   margin-bottom: 4px;
 }
 .previewCard {
-  background: white;
+  background: var(--color-surface);
   border-radius: 12px;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -636,8 +638,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--color-dark);
-  color: white;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
   border-radius: 6px;
   box-shadow: 0 4px 12px #1c261633;
   padding: 12px 14px;
@@ -719,8 +721,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--color-dark);
-  color: white;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
   padding: 0 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -756,7 +758,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: #ffffffad;
+  background: color-mix(in srgb, var(--color-surface) 68%, transparent);
   font-size: 12px;
   color: var(--color-dark);
   text-align: center;
@@ -768,7 +770,7 @@
 }
 .photoError {
   border: 1px solid var(--color-error);
-  background: white;
+  background: var(--color-surface);
   border-radius: 0 0 12px 12px;
   padding: 10px;
   display: flex;
@@ -1066,7 +1068,7 @@
   transform: rotate(3deg);
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-dark);
+  color: var(--color-on-sticker);
 }
 .mapPreview :global(.leaflet-control-attribution) {
   font-size: 9px;
@@ -1134,10 +1136,10 @@
   .chip[aria-checked="true"] {
     background: var(--color-brand);
     border-color: var(--color-brand);
-    color: white;
+    color: var(--color-on-brand);
   }
   .donation {
-    background: white;
+    background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: 12px;
     padding: 12px 16px;
@@ -1180,4 +1182,88 @@
   .mobileHeader a[aria-label="Habisin beranda"] {
     flex-basis: 100%;
   }
+}
+
+/* Categories remain in the form flow; all pills are keyboard reachable. */
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  gap: 8px;
+  padding: 4px 3px 10px;
+  scrollbar-width: thin;
+}
+.chips > button {
+  flex: none;
+  white-space: nowrap;
+}
+.detailHeading {
+  font-size: 16px;
+  font-weight: 800;
+  padding: 18px 0;
+}
+.compact {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.compact .sidebar,
+.compact .preview,
+.compact .mobileHeader,
+.compact .desktopHeader {
+  display: none;
+}
+.compact .workspace {
+  height: auto;
+  min-height: 100%;
+}
+.compact .body {
+  display: block;
+}
+.compact .scroll {
+  padding: 20px;
+  overflow: visible;
+}
+.compact .form {
+  height: auto;
+  overflow: visible;
+}
+.compact .actions {
+  position: sticky;
+  bottom: 0;
+  padding: 16px;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+}
+.compact .photo {
+  max-width: 100%;
+}
+.compact .detailFields {
+  grid-template-columns: 1fr;
+}
+.compact .span {
+  grid-column: auto;
+}
+
+.compact .identity {
+  grid-template-columns: 1fr;
+}
+.compact .pricesAndStock {
+  grid-template-columns: 1fr;
+}
+.compact .timingAndNotes {
+  grid-template-columns: 1fr;
+}
+.compact .scroll {
+  min-width: 0;
+}
+.compact .fields {
+  min-width: 0;
+}
+.compact .identityFields {
+  min-width: 0;
+}
+.compact .photoField {
+  max-width: 100%;
 }

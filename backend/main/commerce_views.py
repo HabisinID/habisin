@@ -10,6 +10,9 @@ from rest_framework.response import Response
 from .models import Listing, ListingStockAction, Reservation, Store, PartnerApproval
 from .serializers import ListingSerializer, ReservationSerializer, UserSerializer
 from .listing_services import ListingConflict, lock_listing
+from .models import Listing, ListingStockAction, Reservation, Store
+from .serializers import ListingSerializer, PartnerOrderSerializer, UserSerializer
+from .listing_services import ListingConflict, lock_listing, ensure_partner_listing_mutable
 
 
 def require_role(request, role):
@@ -46,9 +49,9 @@ def partner_dashboard(request):
     return Response({
         "period": period, "booked_portions": sum(row.quantity for row in paid), "simulated_total": sum(row.total for row in paid),
         "series": [{"day": (start.date()+timedelta(days=i)).isoformat(), "portions": series.get((start.date()+timedelta(days=i)).isoformat(),0)} for i in range(days)],
-        "pickups": [{**ReservationSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in pickups],
-        "orders": [{**ReservationSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in owned.order_by("-created_at")[:100]],
-        "listings": ListingSerializer(Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-pk"),many=True).data,
+        "pickups": [{**PartnerOrderSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in pickups],
+        "orders": [{**PartnerOrderSerializer(row).data, "buyer_name": row.user.get_full_name() or row.user.username} for row in owned.order_by("-created_at")[:100]],
+        "listings": ListingSerializer(Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-pk"),many=True).data,
         "stores": [{"id":s.pk,"name":s.name,"address":s.address,"closing_time":s.closing_time.isoformat(),"is_open":s.is_open} for s in stores],
     })
 
@@ -59,6 +62,7 @@ def sold_out(request, pk):
     Reservation.expire_overdue()
     with transaction.atomic():
         item = lock_listing(pk, request.user)
+        ensure_partner_listing_mutable(item)
         if item.stock < 1:
             raise ListingConflict("Listing sudah habis; muat ulang dashboard.")
         ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
@@ -74,6 +78,7 @@ def undo_sold_out(request, pk):
     Reservation.expire_overdue()
     with transaction.atomic():
         item = lock_listing(pk, request.user)
+        ensure_partner_listing_mutable(item)
         try:
             token = uuid.UUID(str(request.data.get("token")))
         except (ValueError, TypeError, AttributeError):

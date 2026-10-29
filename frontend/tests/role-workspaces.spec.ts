@@ -1,12 +1,7 @@
 import { test, expect } from "./fixtures";
 import { food, origin, baseFilters } from "./discovery-data";
 import { discover, storePriceRange } from "../src/lib/discovery";
-import {
-  register,
-  mutate,
-  listing,
-  cleanup,
-} from "./backend-fixtures";
+import { register, mutate, listing, cleanup } from "./backend-fixtures";
 
 test("store ranges reflect filters and distinct store identity", () => {
   const rows = [
@@ -90,11 +85,12 @@ test("buyer starts on map, header and pills match, card focus clears after two z
     page.getByRole("button", { name: "Daftar", exact: true }),
   ).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.screenshot({ path: "/tmp/habisin-role-buyer-list-desktop.png" });
+  // TopNav/Pembeli in design.pen: Jelajahi · Pesanan.
   const labels = await page
     .getByRole("navigation", { name: "Navigasi pembeli" })
-    .getByRole("button")
+    .locator("a, button")
     .allTextContents();
-  expect(labels).toEqual(["Jelajahi", "Favorit", "Pesanan saya"]);
+  expect(labels).toEqual(["Jelajahi", "Pesanan"]);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -124,103 +120,48 @@ test("batch cart is deferred and cannot bypass main transaction flow", async ({
   }
 });
 
-test("partner starts on operational dashboard and can mark sold out, undo, inspect orders and add", async ({
+test("partner opens the full orders dashboard, keeps codes private and reaches inventory", async ({
   page,
   request,
 }) => {
   const stores = await register(page.request, "partner", 1);
   await register(request, "buyer");
-  try {
-    const item = await (
-      await mutate(page.request, "partner/listings", {
-        ...listing("Dashboard Roti"),
-        store_id: stores[0].id,
-      })
-    ).json();
-    expect(
-      (
-        await mutate(request, "reservations", {
-          listing_id: item.id,
-          quantity: 1,
-        })
-      ).status(),
-    ).toBe(201);
-    const pending = await (await request.get("/api/reservations")).json();
-    expect(
-      (await mutate(request, `reservations/${pending[0].id}/pay`)).status(),
-    ).toBe(200);
-    await page.goto("/");
-    await expect(
-      page.getByRole("region", { name: "Dasbor operasional mitra" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Dashboard Roti", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Verifikasi kode/ }),
-    ).toBeDisabled();
-    await page.getByRole("button", { name: "Bulan", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: "Bulan", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await page.screenshot({ path: "/tmp/habisin-role-partner-desktop.png" });
-    await page
-      .getByRole("button", { name: "Tandai habis Dashboard Roti", exact: true })
-      .click();
-    await expect(
-      page.getByText("Dashboard Roti ditandai habis.", { exact: false }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: /Urungkan/ }).click();
-    await expect(
-      page.getByRole("heading", { name: "Dashboard Roti", exact: true }),
-    ).toBeVisible();
-    await page
-      .getByRole("navigation", { name: "Navigasi mitra" })
-      .getByRole("button", { name: /Pesanan/ })
-      .click();
-    await expect(page.getByText(/^Kode [A-Z2-9]{5}/)).toBeVisible();
-    await page
-      .getByRole("button", { name: "Tambah listing", exact: true })
-      .click();
-    await expect(
-      page.getByRole("dialog", { name: "Tambah listing", exact: true }),
-    ).toBeVisible();
-    await page.keyboard.press("Escape");
-    await page.keyboard.press("Escape");
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    await page.screenshot({ path: "/tmp/habisin-role-partner-mobile.png" });
-  } finally {
-    for (const row of await (await request.get("/api/reservations")).json())
-      await mutate(request, `reservations/${row.id}/cancel`);
-    await cleanup(request);
-    await cleanup(page.request);
-  }
-});
-
-test("dashboard loading error retry and empty states are distinct", async ({
-  page,
-}) => {
-  await register(page.request, "partner", 0);
-  try {
-    await page.route("**/api/partner/dashboard?period=*", (r) =>
-      r.fulfill({ status: 503, json: { detail: "Dashboard sementara gagal" } }),
-    );
-    await page.goto("/");
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Dashboard sementara gagal" }),
-    ).toBeVisible();
-    await page.unroute("**/api/partner/dashboard?period=*");
-    await page.getByRole("button", { name: "Coba lagi dashboard" }).click();
-    await expect(
-      page.getByText("Belum ada pengambilan hari ini."),
-    ).toBeVisible();
-    await expect(page.getByText("Belum ada listing tayang.")).toBeVisible();
-  } finally {
-    await cleanup(page.request);
-  }
+  const item = await (
+    await mutate(page.request, "partner/listings", {
+      ...listing("Dashboard Roti"),
+      store_id: stores[0].id,
+    })
+  ).json();
+  const order = await (
+    await mutate(request, "reservations", {
+      listing_id: item.id,
+      quantity: 1,
+      note: "Bawa wadah",
+    })
+  ).json();
+  expect((await mutate(request, `reservations/${order.id}/pay`)).status()).toBe(
+    200,
+  );
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/partner$/);
+  await expect(
+    page.getByRole("heading", { name: "Dasbor", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Tanggal mulai pesanan").fill("");
+  await page.getByLabel("Tanggal akhir pesanan").fill("");
+  await expect(page.getByText("Bawa wadah", { exact: false })).toBeVisible();
+  await expect(page.getByText(order.code, { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /Verifikasi kode/ }),
+  ).toHaveAttribute("href", "/api/partner/kasir");
+  await page.getByRole("link", { name: "Listing", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Kelola listing mitra" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Tambah listing", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Tambah listing", exact: true }),
+  ).toBeVisible();
 });

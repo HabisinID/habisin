@@ -11,7 +11,22 @@ router.register(r"admin/listings", views.AdminListingViewSet, basename="adminlis
 urlpatterns = [
     path("", include(router.urls)),
 
+from . import store_views, commerce_views, reviews_views, verification, workspace_views
+
+urlpatterns = [
+    path("partner/orders", workspace_views.partner_orders),
+    path("partner/reservations/<int:pk>/cancel", workspace_views.partner_cancel),
+    path("partner/stores/<int:pk>/close", workspace_views.close_store),
+    path("admin/summary", workspace_views.admin_summary),
+    path("admin/listings", workspace_views.admin_listings),
+    path("admin/listings/<int:pk>/moderate", workspace_views.moderate_listing),
+    path("admin/moderation-logs", workspace_views.moderation_logs),
     path("partner/dashboard", commerce_views.partner_dashboard),
+    path("partner/kasir", verification.page),
+    path("partner/kasir/check", verification.check),
+    path("partner/kasir/recent", verification.recent),
+    path("partner/kasir/<int:pk>/pickup", verification.pickup),
+    path("partner/kasir/<int:pk>/undo", verification.undo),
     path("partner/listings/<int:pk>/sold-out", commerce_views.sold_out),
     path("partner/listings/<int:pk>/undo-sold-out", commerce_views.undo_sold_out),
     path("auth/csrf", views.csrf),
@@ -36,4 +51,11 @@ urlpatterns = [
     path("partner/stores/<int:pk>", store_views.partner_store_detail),
     path("stores/<int:pk>", store_views.public_store),
     path("stores/<int:pk>/listings", store_views.public_store_listings),
+    path("stores/<int:pk>/reviews", reviews_views.store_reviews),
+    path("listings/<int:pk>/review-eligibility", reviews_views.review_eligibility),
+    path("reservations/<int:pk>/feedback", reviews_views.reservation_feedback),
+    path("reviews", reviews_views.create_review),
+    path("reviews/mine", reviews_views.my_feedback),
+    path("reviews/<int:pk>", reviews_views.review_detail),
+    path("complaints", reviews_views.create_complaint),
 ]

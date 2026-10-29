@@ -1,0 +1,2 @@
+# Pinned with SRI hashes in the cashier page: keep the bytes exactly as committed.
+frontend/public/vendor/** -text

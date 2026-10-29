@@ -17,11 +17,13 @@ class Book(models.Model):
 
 
 class Profile(models.Model):
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=10, choices=[("buyer", "Pembeli"), ("partner", "Mitra")], default="buyer")
 
 
 class Store(models.Model):
+    profile_picture = models.ImageField(upload_to="stores/", blank=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="stores")
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000)
@@ -33,6 +35,13 @@ class Store(models.Model):
     is_open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    category = models.CharField(max_length=30, blank=True)
+    neighborhood = models.CharField(max_length=120, blank=True)
+    city = models.CharField(max_length=80, blank=True, default="Depok")
+    landmark = models.CharField(max_length=250, blank=True)
+    weekly_hours = models.JSONField(default=list, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -76,6 +85,11 @@ class Listing(models.Model):
     taken_down = models.BooleanField(default=False)
     takedown_reason = models.TextField(blank=True)
 
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderation_reason = models.CharField(max_length=500, blank=True)
+    moderated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="moderated_listings")
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -83,6 +97,19 @@ class Listing(models.Model):
                 name="listing_exactly_one_image_source",
             ),
         ]
+
+
+class ModerationLog(models.Model):
+    listing = models.ForeignKey(Listing, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
+    target_name = models.CharField(max_length=160)
+    store_name = models.CharField(max_length=120)
+    action = models.CharField(max_length=12, choices=[("take_down", "Turunkan"), ("restore", "Pulihkan")])
+    reason = models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
 
 
 class Reservation(models.Model):
@@ -213,3 +240,58 @@ class ModerationLog(models.Model):
 
     def __str__(self):
         return f"[{self.action_type}] oleh {self.admin_user} pada {self.created_at}"
+
+class Review(models.Model):
+    reservation = models.ForeignKey(Reservation, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviews")
+    listing = models.ForeignKey(Listing, on_delete=models.PROTECT, related_name="reviews")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_reviews")
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(max_length=1000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(rating__gte=1, rating__lte=5), name="review_rating_between_1_5"),
+            models.UniqueConstraint(fields=["user", "listing"], name="review_user_product_unique"),
+        ]
+
+
+class Complaint(models.Model):
+    STATUS_CHOICES = [("open", "Terbuka"), ("reviewed", "Ditinjau"), ("resolved", "Selesai")]
+    REASON_CHOICES = [
+        ("hygiene", "Masalah kebersihan"),
+        ("freshness", "Makanan basi atau tidak segar"),
+        ("mismatch", "Makanan tidak sesuai pesanan"),
+        ("other", "Masalah lainnya"),
+    ]
+
+    reservation = models.OneToOneField(Reservation, on_delete=models.CASCADE, related_name="complaint")
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="complaints")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_complaints")
+    reason = models.CharField(max_length=12, choices=REASON_CHOICES, default="other")
+    description = models.TextField(max_length=2000)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class VerificationLog(models.Model):
+    """Modul 8: every code a cashier handed over or turned away, for "Verifikasi terakhir"."""
+    OUTCOMES = [("picked_up", "Diambil"), ("not_found", "Tidak ditemukan"), ("other_store", "Milik toko lain"), ("used", "Sudah dipakai"), ("cancelled", "Dibatalkan"), ("expired", "Kedaluwarsa"), ("unpaid", "Belum dibayar")]
+
+    partner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="verification_logs")
+    # Empty for unknown codes and other stores' orders, so their details never reach this partner.
+    reservation = models.ForeignKey(Reservation, null=True, blank=True, on_delete=models.SET_NULL)
+    code = models.CharField(max_length=5)
+    outcome = models.CharField(max_length=12, choices=OUTCOMES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        # "Verifikasi terakhir" reads a partner's newest rows on every check.
+        indexes = [models.Index(fields=["partner", "-created_at", "-id"], name="verlog_partner_recent_idx")]
