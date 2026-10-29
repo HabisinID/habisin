@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from .geocoding import location_token, search_address
-from .models import Store, Listing, Reservation
+from .models import Store, Listing, Reservation, PartnerApproval
 from django.db.models.deletion import ProtectedError
 from .serializers import GeocodeSerializer, StoreSerializer, ListingSerializer
 from .listing_services import available_listings
@@ -18,8 +18,14 @@ class IsPartner(BasePermission):
     message = "Pengelolaan toko hanya tersedia untuk akun mitra."
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and not request.user.is_staff and getattr(getattr(request.user, "profile", None), "role", None) == "partner"
-
+        user = request.user
+        is_partner = user.is_authenticated and not user.is_staff and getattr(getattr(user, "profile", None), "role", None) == "partner"
+        if not is_partner:
+            return False
+        if not PartnerApproval.objects.filter(user=user, status="approved").exists():
+            self.message = "Akun mitra belum disetujui admin."
+            return False
+        return True
 
 class GeocodeThrottle(UserRateThrottle):
     rate = "10/min"

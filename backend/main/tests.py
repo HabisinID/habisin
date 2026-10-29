@@ -8,7 +8,8 @@ from django.core.management import call_command, CommandError
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
-from .models import Listing, Profile, Reservation, Store
+from .models import Listing, Profile, Reservation, Store, PartnerApproval, ModerationLog
+from .listing_services import available_listings
 
 
 class AuthenticationTests(TestCase):
@@ -445,6 +446,8 @@ class PartnerListingTests(TestCase):
         Profile.objects.create(user=self.partner, role="partner")
         self.other = User.objects.create_user(username="other_partner")
         Profile.objects.create(user=self.other, role="partner")
+        PartnerApproval.objects.create(user=self.partner, status="approved")
+        PartnerApproval.objects.create(user=self.other, status="approved")
         self.buyer = User.objects.create_user(username="customer")
         Profile.objects.create(user=self.buyer)
         self.data = {
@@ -579,3 +582,396 @@ class PartnerListingTests(TestCase):
         self.assertIsNone(self.item.owner)
         self.assertFalse(self.item.active)
         self.assertTrue(Reservation.objects.filter(pk=order.pk).exists())
+
+
+def rows(response):
+    data = response.json()
+    return data["results"] if isinstance(data, dict) and "results" in data else data
+
+
+def make_user(username, role="buyer", staff=False, approval=None):
+    user = User.objects.create_user(username=username, password="Secure-Meal-927!", is_staff=staff)
+    Profile.objects.create(user=user, role=role)
+    if approval:
+        PartnerApproval.objects.create(user=user, status=approval)
+    return user
+
+
+def make_store(owner):
+    return Store.objects.create(owner=owner, name="Toko Uji", description="Toko untuk uji", address="Beji, Depok", opening_time="08:00", closing_time="20:00", latitude=-6.36, longitude=106.83)
+
+
+def make_listing(owner, store, **changes):
+    values = dict(
+        owner=owner, store_profile=store, name="Roti Uji", store=store.name, category="Roti & kue",
+        description="Roti layak makan", address=store.address, price=10000, original_price=20000, stock=4,
+        image="https://example.com/roti.jpg", latitude=store.latitude, longitude=store.longitude,
+        prepared_at=timezone.now() - timedelta(hours=1), pickup_start=timezone.now() - timedelta(minutes=5),
+        pickup_end=timezone.now() + timedelta(hours=4),
+    )
+    values.update(changes)
+    return Listing.objects.create(**values)
+
+
+class PartnerRegistrationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient(enforce_csrf_checks=True)
+
+    def register(self, role, username):
+        token = self.client.get("/api/auth/csrf").json()["csrfToken"]
+        data = {"name": "Uji", "username": username, "email": f"{username}@example.com", "password": "Secure-Meal-927!", "role": role}
+        return self.client.post("/api/auth/register", data, format="json", HTTP_X_CSRFTOKEN=token)
+
+    def test_partner_registration_creates_pending_approval(self):
+        self.assertEqual(self.register("partner", "mitra_baru").status_code, 201)
+        approval = PartnerApproval.objects.get(user__username="mitra_baru")
+        self.assertEqual(approval.status, "pending")
+        self.assertIsNone(approval.reviewed_at)
+
+    def test_buyer_registration_creates_no_approval(self):
+        self.assertEqual(self.register("buyer", "pembeli_baru").status_code, 201)
+        self.assertFalse(PartnerApproval.objects.exists())
+
+
+class PartnerAccessTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.partner = make_user("mitra", "partner", approval="pending")
+        self.client.force_authenticate(self.partner)
+        self.paths = ["/api/partner/listings", "/api/partner/stores", "/api/partner/dashboard"]
+
+    def set_status(self, value):
+        PartnerApproval.objects.filter(user=self.partner).update(status=value)
+
+    def test_pending_partner_is_blocked(self):
+        for path in self.paths:
+            self.assertEqual(self.client.get(path).status_code, 403, path)
+
+    def test_rejected_partner_is_blocked(self):
+        self.set_status("rejected")
+        for path in self.paths:
+            self.assertEqual(self.client.get(path).status_code, 403, path)
+
+    def test_partner_without_approval_record_is_blocked(self):
+        PartnerApproval.objects.filter(user=self.partner).delete()
+        for path in self.paths:
+            self.assertEqual(self.client.get(path).status_code, 403, path)
+
+    def test_approved_partner_can_work(self):
+        self.set_status("approved")
+        for path in self.paths:
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_pending_partner_cannot_use_sold_out_action(self):
+        store = make_store(self.partner)
+        item = make_listing(self.partner, store)
+        self.assertEqual(self.client.post(f"/api/partner/listings/{item.pk}/sold-out").status_code, 403)
+        item.refresh_from_db()
+        self.assertEqual(item.stock, 4)
+
+
+class AdminApprovalTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.admin = make_user("admin_uji", staff=True)
+        self.partner = make_user("mitra", "partner", approval="pending")
+        self.approval = PartnerApproval.objects.get(user=self.partner)
+        self.client.force_authenticate(self.admin)
+        self.base = f"/api/admin/partner-approvals/{self.approval.pk}"
+
+    def test_admin_lists_and_filters_requests(self):
+        make_user("mitra_lama", "partner", approval="approved")
+        everyone = [row["username"] for row in rows(self.client.get("/api/admin/partner-approvals/"))]
+        self.assertCountEqual(everyone, ["mitra", "mitra_lama"])
+        pending = [row["username"] for row in rows(self.client.get("/api/admin/partner-approvals/?status=pending"))]
+        self.assertEqual(pending, ["mitra"])
+
+    def test_approve_updates_status_and_writes_log(self):
+        response = self.client.post(f"{self.base}/approve/", {}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "approved")
+        self.assertIsNotNone(self.approval.reviewed_at)
+        log = ModerationLog.objects.get(action_type="APPROVE_PARTNER")
+        self.assertEqual(log.target_name, "mitra")
+        self.assertEqual(log.admin_user, self.admin)
+
+    def test_reject_requires_reason(self):
+        response = self.client.post(f"{self.base}/reject/", {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "pending")
+        self.assertFalse(ModerationLog.objects.exists())
+
+    def test_reject_with_reason_updates_status_and_writes_log(self):
+        response = self.client.post(f"{self.base}/reject/", {"reason": "Data tidak lengkap"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "rejected")
+        self.assertIsNotNone(self.approval.reviewed_at)
+        log = ModerationLog.objects.get(action_type="REJECT_PARTNER")
+        self.assertEqual(log.reason, "Data tidak lengkap")
+        self.assertEqual(log.target_name, "mitra")
+
+    def test_processed_request_cannot_be_processed_again(self):
+        self.assertEqual(self.client.post(f"{self.base}/approve/", {}, format="json").status_code, 200)
+        self.assertEqual(self.client.post(f"{self.base}/approve/", {}, format="json").status_code, 400)
+        self.assertEqual(self.client.post(f"{self.base}/reject/", {"reason": "Salah"}, format="json").status_code, 400)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "approved")
+        self.assertEqual(ModerationLog.objects.count(), 1)
+
+    def test_approved_partner_gains_access(self):
+        partner_client = APIClient()
+        partner_client.force_authenticate(self.partner)
+        self.assertEqual(partner_client.get("/api/partner/listings").status_code, 403)
+        self.client.post(f"{self.base}/approve/", {}, format="json")
+        self.assertEqual(partner_client.get("/api/partner/listings").status_code, 200)
+
+    def test_rejected_partner_stays_blocked(self):
+        partner_client = APIClient()
+        partner_client.force_authenticate(self.partner)
+        self.client.post(f"{self.base}/reject/", {"reason": "Ditolak"}, format="json")
+        self.assertEqual(partner_client.get("/api/partner/listings").status_code, 403)
+
+    def test_approval_endpoint_is_read_only_for_direct_edits(self):
+        self.assertEqual(self.client.patch(f"{self.base}/", {"status": "approved"}, format="json").status_code, 405)
+        self.assertEqual(self.client.delete(f"{self.base}/").status_code, 405)
+        self.assertEqual(self.client.post("/api/admin/partner-approvals/", {}, format="json").status_code, 405)
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "pending")
+
+    def test_only_admin_can_use_approval_endpoints(self):
+        buyer = make_user("pembeli")
+        for user in [self.partner, buyer]:
+            client = APIClient()
+            client.force_authenticate(user)
+            self.assertEqual(client.get("/api/admin/partner-approvals/").status_code, 403)
+            self.assertEqual(client.post(f"{self.base}/approve/", {}, format="json").status_code, 403)
+        anonymous = APIClient()
+        self.assertIn(anonymous.get("/api/admin/partner-approvals/").status_code, [401, 403])
+        self.approval.refresh_from_db()
+        self.assertEqual(self.approval.status, "pending")
+
+
+class ListingTakeDownTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.admin = make_user("admin_uji", staff=True)
+        self.partner = make_user("mitra", "partner", approval="approved")
+        self.buyer = make_user("pembeli")
+        self.store = make_store(self.partner)
+        self.item = make_listing(self.partner, self.store)
+        self.client.force_authenticate(self.admin)
+        self.base = f"/api/admin/listings/{self.item.pk}"
+        self.partner_client = APIClient()
+        self.partner_client.force_authenticate(self.partner)
+        self.buyer_client = APIClient()
+        self.buyer_client.force_authenticate(self.buyer)
+
+    def take_down(self, reason="Mengandung konten yang melanggar"):
+        return self.client.post(f"{self.base}/take-down/", {"reason": reason}, format="json")
+
+    def public_ids(self):
+        return [row["id"] for row in self.buyer_client.get("/api/listings").json()]
+
+    def test_admin_sees_all_listings_with_moderation_fields(self):
+        other = make_listing(self.partner, self.store, name="Kue Uji", active=False)
+        response = self.client.get("/api/admin/listings/")
+        self.assertEqual(response.status_code, 200)
+        data = {row["id"]: row for row in rows(response)}
+        self.assertEqual(set(data), {self.item.pk, other.pk})
+        self.assertFalse(data[self.item.pk]["taken_down"])
+        self.assertEqual(data[self.item.pk]["owner_username"], "mitra")
+
+    def test_take_down_requires_reason(self):
+        for body in [{}, {"reason": "   "}]:
+            self.assertEqual(self.client.post(f"{self.base}/take-down/", body, format="json").status_code, 400)
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.taken_down)
+        self.assertTrue(self.item.active)
+        self.assertFalse(ModerationLog.objects.exists())
+
+    def test_take_down_marks_listing_and_writes_log(self):
+        response = self.take_down()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["taken_down"])
+        self.assertFalse(response.json()["active"])
+        self.item.refresh_from_db()
+        self.assertTrue(self.item.taken_down)
+        self.assertFalse(self.item.active)
+        self.assertEqual(self.item.takedown_reason, "Mengandung konten yang melanggar")
+        log = ModerationLog.objects.get(action_type="TAKEDOWN_LISTING")
+        self.assertEqual(log.target_name, "Roti Uji")
+        self.assertEqual(log.reason, "Mengandung konten yang melanggar")
+        self.assertEqual(log.admin_user, self.admin)
+
+    def test_take_down_twice_is_rejected(self):
+        self.assertEqual(self.take_down().status_code, 200)
+        self.assertEqual(self.take_down().status_code, 400)
+        self.assertEqual(ModerationLog.objects.filter(action_type="TAKEDOWN_LISTING").count(), 1)
+
+    def test_taken_down_listing_disappears_from_public_views(self):
+        self.assertIn(self.item.pk, self.public_ids())
+        store_path = f"/api/stores/{self.store.pk}/listings"
+        self.assertEqual([row["id"] for row in self.client.get(store_path).json()], [self.item.pk])
+        self.take_down()
+        self.assertNotIn(self.item.pk, self.public_ids())
+        self.assertEqual(self.client.get(store_path).json(), [])
+        self.assertFalse(available_listings().filter(pk=self.item.pk).exists())
+
+    def test_taken_down_listing_cannot_be_ordered(self):
+        self.take_down()
+        response = self.buyer_client.post("/api/reservations", {"listing_id": self.item.pk, "quantity": 1}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Reservation.objects.exists())
+
+    def test_take_down_cancels_active_reservations(self):
+        paid = Reservation.objects.create(user=self.buyer, listing=self.item, quantity=1, total=10000, code="AB234", status="paid")
+        pending = Reservation.objects.create(user=self.buyer, listing=self.item, quantity=1, total=10000, code="CD345", status="pending")
+        done = Reservation.objects.create(user=self.buyer, listing=self.item, quantity=1, total=10000, code="EF456", status="picked_up")
+        self.assertEqual(self.take_down().status_code, 200)
+        for order in [paid, pending]:
+            order.refresh_from_db()
+            self.assertEqual(order.status, "cancelled")
+            self.assertTrue(order.cancellation_note)
+            self.assertIsNotNone(order.cancelled_at)
+        done.refresh_from_db()
+        self.assertEqual(done.status, "picked_up")
+
+    def test_partner_cannot_reactivate_taken_down_listing(self):
+        self.take_down()
+        response = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.active)
+        self.assertTrue(self.item.taken_down)
+        self.assertNotIn(self.item.pk, self.public_ids())
+
+    def test_partner_still_sees_taken_down_listing_in_inventory(self):
+        self.take_down()
+        response = self.partner_client.get(f"/api/partner/listings/{self.item.pk}")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["active"])
+
+    def test_restore_lets_partner_reactivate(self):
+        self.take_down()
+        response = self.client.post(f"{self.base}/restore/", {}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["taken_down"])
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.taken_down)
+        self.assertEqual(self.item.takedown_reason, "")
+        self.assertFalse(self.item.active)
+        self.assertTrue(ModerationLog.objects.filter(action_type="RESTORE_LISTING", target_name="Roti Uji").exists())
+        reactivated = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
+        self.assertEqual(reactivated.status_code, 200)
+        self.assertIn(self.item.pk, self.public_ids())
+
+    def test_restore_requires_taken_down_listing(self):
+        self.assertEqual(self.client.post(f"{self.base}/restore/", {}, format="json").status_code, 400)
+        self.assertFalse(ModerationLog.objects.exists())
+
+    def test_only_admin_can_take_down_or_restore(self):
+        for client in [self.partner_client, self.buyer_client]:
+            self.assertEqual(client.get("/api/admin/listings/").status_code, 403)
+            self.assertEqual(client.post(f"{self.base}/take-down/", {"reason": "x"}, format="json").status_code, 403)
+            self.assertEqual(client.post(f"{self.base}/restore/", {}, format="json").status_code, 403)
+        self.assertIn(APIClient().post(f"{self.base}/take-down/", {"reason": "x"}, format="json").status_code, [401, 403])
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.taken_down)
+        self.assertTrue(self.item.active)
+
+    def test_admin_listing_endpoint_cannot_edit_or_delete(self):
+        self.assertEqual(self.client.patch(f"{self.base}/", {"name": "Baru"}, format="json").status_code, 405)
+        self.assertEqual(self.client.delete(f"{self.base}/").status_code, 405)
+        self.assertTrue(Listing.objects.filter(pk=self.item.pk).exists())
+
+
+class ModerationLogTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.admin = make_user("admin_uji", staff=True)
+        self.second_admin = make_user("admin_dua", staff=True)
+        self.client.force_authenticate(self.admin)
+        self.path = "/api/admin/moderation-logs/"
+        self.body = {"action_type": "CATATAN", "target_name": "contoh", "reason": "uji coba"}
+
+    def create(self, **changes):
+        return self.client.post(self.path, {**self.body, **changes}, format="json")
+
+    def test_create_assigns_current_admin(self):
+        response = self.create()
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["admin_username"], "admin_uji")
+        self.assertEqual(ModerationLog.objects.get().admin_user, self.admin)
+
+    def test_create_cannot_forge_admin(self):
+        response = self.create(admin_user=self.second_admin.pk)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(ModerationLog.objects.get().admin_user, self.admin)
+
+    def test_create_requires_all_fields(self):
+        for missing in ["action_type", "target_name", "reason"]:
+            body = {key: value for key, value in self.body.items() if key != missing}
+            self.assertEqual(self.client.post(self.path, body, format="json").status_code, 400, missing)
+        self.assertFalse(ModerationLog.objects.exists())
+
+    def test_read_list_detail_and_filter(self):
+        first = self.create().json()["id"]
+        self.create(action_type="TAKEDOWN_LISTING", target_name="Roti")
+        self.assertEqual(len(rows(self.client.get(self.path))), 2)
+        detail = self.client.get(f"{self.path}{first}/")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["target_name"], "contoh")
+        filtered = rows(self.client.get(f"{self.path}?action_type=TAKEDOWN_LISTING"))
+        self.assertEqual([row["target_name"] for row in filtered], ["Roti"])
+
+    def test_update(self):
+        log_id = self.create().json()["id"]
+        response = self.client.patch(f"{self.path}{log_id}/", {"reason": "diubah"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "diubah")
+        replaced = self.client.put(f"{self.path}{log_id}/", {**self.body, "reason": "diganti"}, format="json")
+        self.assertEqual(replaced.status_code, 200)
+        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "diganti")
+
+    def test_update_cannot_forge_admin(self):
+        log_id = self.create().json()["id"]
+        self.client.patch(f"{self.path}{log_id}/", {"admin_user": self.second_admin.pk}, format="json")
+        self.assertEqual(ModerationLog.objects.get(pk=log_id).admin_user, self.admin)
+
+    def test_delete(self):
+        log_id = self.create().json()["id"]
+        self.assertEqual(self.client.delete(f"{self.path}{log_id}/").status_code, 204)
+        self.assertFalse(ModerationLog.objects.filter(pk=log_id).exists())
+        self.assertEqual(self.client.get(f"{self.path}{log_id}/").status_code, 404)
+
+    def test_actions_are_logged_and_visible(self):
+        partner = make_user("mitra", "partner", approval="pending")
+        approval = PartnerApproval.objects.get(user=partner)
+        self.client.post(f"/api/admin/partner-approvals/{approval.pk}/approve/", {}, format="json")
+        store = make_store(partner)
+        item = make_listing(partner, store)
+        self.client.post(f"/api/admin/listings/{item.pk}/take-down/", {"reason": "Melanggar"}, format="json")
+        actions = [row["action_type"] for row in rows(self.client.get(self.path))]
+        self.assertCountEqual(actions, ["APPROVE_PARTNER", "TAKEDOWN_LISTING"])
+
+    def test_only_admin_can_use_moderation_log(self):
+        log_id = self.create().json()["id"]
+        buyer = make_user("pembeli")
+        partner = make_user("mitra", "partner", approval="approved")
+        for user in [buyer, partner]:
+            client = APIClient()
+            client.force_authenticate(user)
+            self.assertEqual(client.get(self.path).status_code, 403)
+            self.assertEqual(client.post(self.path, self.body, format="json").status_code, 403)
+            self.assertEqual(client.patch(f"{self.path}{log_id}/", {"reason": "x"}, format="json").status_code, 403)
+            self.assertEqual(client.delete(f"{self.path}{log_id}/").status_code, 403)
+        self.assertIn(APIClient().get(self.path).status_code, [401, 403])
+        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "uji coba")

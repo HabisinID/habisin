@@ -9,15 +9,19 @@ from django.db import transaction, IntegrityError
 from django.db.models import F
 from django.middleware.csrf import get_token
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
 from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from .models import Profile, Listing, Reservation, Store, ListingStockAction, PartnerApproval, ModerationLog
+from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
 from .models import Profile, Listing, Reservation, Store, ListingStockAction
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores, ensure_partner_listing_mutable
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
 from .reservation_policy import reservation_policy
 from rest_framework import serializers as drf_serializers
+from .serializers import PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer, PartnerApprovalSerializer, ModerationLogSerializer, AdminListingSerializer
 from .serializers import PartnerListingReadSerializer, PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer
 
 
@@ -51,6 +55,8 @@ def register(request):
         with transaction.atomic():
             user = User.objects.create_user(username=data["username"], email=data["email"], password=data["password"], first_name=data["name"])
             Profile.objects.create(user=user, role=data["role"])
+            if data["role"] == "partner":
+                PartnerApproval.objects.create(user=user)
     except IntegrityError:
         return Response({"detail": "Username sudah digunakan."}, status=400)
     login(request, user)
@@ -141,12 +147,15 @@ def password(request):
     update_session_auth_hash(request, request.user)
     return Response({"detail": "Password berhasil diubah."})
 
+def partner_approved(user):
+    approval = PartnerApproval.objects.filter(user=user).first()
+    return approval is not None and approval.status == "approved"
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def listings(request):
     Reservation.expire_overdue()
-    items = available_listings().select_related("store_profile")
+    items = available_listings().filter(taken_down=False).select_related("store_profile")
     return Response(ListingSerializer(items, many=True).data)
 
 
@@ -163,6 +172,11 @@ def _target_store_id(data):
 def partner_listings(request):
     if UserSerializer(request.user).data["role"] != "partner":
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
+    if not partner_approved(request.user):
+        return Response({"detail": "Akun mitra belum disetujui admin."}, status=403)
+    if request.method == "GET":
+        items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
+        return Response(ListingSerializer(items, many=True).data)
     Reservation.expire_overdue()
     if request.method == "GET":
         items = Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-id")
@@ -180,6 +194,8 @@ def partner_listings(request):
 def partner_listing_detail(request, pk):
     if UserSerializer(request.user).data["role"] != "partner":
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
+    if not partner_approved(request.user):
+        return Response({"detail": "Akun mitra belum disetujui admin."}, status=403)
     Reservation.expire_overdue()
     with compensate_media_writes() as media, transaction.atomic():
         target_id = _target_store_id(request.data)
@@ -373,3 +389,112 @@ def listing_reservation_policy(request, pk):
     if item is None:
         return Response({"detail": "Makanan tidak ditemukan."}, status=404)
     return Response(reservation_policy(request.user, item))
+
+
+class IsAdminUser(permissions.BasePermission):
+    """Custom permission: Hanya mengizinkan admin (is_staff=True) yang boleh akses."""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_staff
+
+class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PartnerApprovalSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = PartnerApproval.objects.select_related("user").order_by("-requested_at")
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+    def review(self, request, new_status, action_type, default_reason):
+        approval = self.get_object()
+        if approval.status != "pending":
+            return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
+        reason = str(request.data.get("reason", "")).strip()
+        if new_status == "rejected" and not reason:
+            return Response({"detail": "Alasan penolakan wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            approval.status = new_status
+            approval.reviewed_at = timezone.now()
+            approval.save(update_fields=["status", "reviewed_at"])
+            ModerationLog.objects.create(
+                admin_user=request.user,
+                action_type=action_type,
+                target_name=approval.user.username,
+                reason=reason or default_reason,
+            )
+        return Response(PartnerApprovalSerializer(approval).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self.review(request, "approved", "APPROVE_PARTNER", "Disetujui oleh admin")
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self.review(request, "rejected", "REJECT_PARTNER", "Ditolak oleh admin")
+
+
+class AdminListingViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Listing.objects.select_related("store_profile", "owner").order_by("-id")
+    serializer_class = AdminListingSerializer
+    permission_classes = [IsAdminUser]
+
+    @action(detail=True, methods=["post"], url_path="take-down")
+    def take_down(self, request, pk=None):
+        listing = self.get_object()
+        if listing.taken_down:
+            return Response({"detail": "Listing sudah diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+        reason = str(request.data.get("reason", "")).strip()
+        if not reason:
+            return Response({"detail": "Alasan take-down wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            Reservation.objects.filter(listing=listing, status__in=Reservation.ACTIVE_STATUSES).update(
+                status="cancelled",
+                cancellation_note="Listing diturunkan oleh admin.",
+                cancelled_at=timezone.now(),
+            )
+            listing.taken_down = True
+            listing.takedown_reason = reason
+            listing.active = False
+            listing.save(update_fields=["taken_down", "takedown_reason", "active"])
+            ModerationLog.objects.create(
+                admin_user=request.user,
+                action_type="TAKEDOWN_LISTING",
+                target_name=listing.name,
+                reason=reason,
+            )
+        return Response(AdminListingSerializer(listing).data)
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        listing = self.get_object()
+        if not listing.taken_down:
+            return Response({"detail": "Listing tidak dalam status diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+        reason = str(request.data.get("reason", "")).strip() or "Dipulihkan oleh admin"
+        with transaction.atomic():
+            listing.taken_down = False
+            listing.takedown_reason = ""
+            listing.save(update_fields=["taken_down", "takedown_reason"])
+            ModerationLog.objects.create(
+                admin_user=request.user,
+                action_type="RESTORE_LISTING",
+                target_name=listing.name,
+                reason=reason,
+            )
+        return Response(AdminListingSerializer(listing).data)
+
+
+class ModerationLogViewSet(viewsets.ModelViewSet):
+    serializer_class = ModerationLogSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = ModerationLog.objects.select_related("admin_user").order_by("-created_at")
+        action_type = self.request.query_params.get("action_type")
+        if action_type:
+            queryset = queryset.filter(action_type=action_type)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(admin_user=self.request.user)
