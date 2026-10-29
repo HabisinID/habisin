@@ -158,6 +158,8 @@ class PartnerListingSerializer(ListingSerializer):
             for field in ["price", "address", "latitude", "longitude", "pickup_start", "pickup_end"]:
                 if field in attrs and attrs[field] != getattr(self.instance, field):
                     errors[field] = "Tidak dapat diubah selama ada pesanan aktif."
+        if attrs.get("active") is True and self.instance and self.instance.taken_down:
+            errors["active"] = "Listing ini diturunkan admin dan tidak dapat diaktifkan."
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
@@ -277,3 +279,10 @@ class ModerationLogSerializer(serializers.ModelSerializer):
         model = ModerationLog
         fields = ["id", "admin_user", "admin_username", "action_type", "target_name", "reason", "created_at"]
         read_only_fields = ["id", "admin_user", "created_at"]
+
+class AdminListingSerializer(ListingSerializer):
+    owner_username = serializers.ReadOnlyField(source="owner.username")
+
+    class Meta(ListingSerializer.Meta):
+        fields = ListingSerializer.Meta.fields + ["taken_down", "takedown_reason", "owner_username"]
+        read_only_fields = ["taken_down", "takedown_reason"]
