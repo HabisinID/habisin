@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from . import store_views, commerce_views, workspace_views, verification
+from . import store_views, commerce_views, reviews_views, verification, workspace_views
 
 urlpatterns = [
     path("partner/orders", workspace_views.partner_orders),
@@ -40,4 +40,11 @@ urlpatterns = [
     path("partner/stores/<int:pk>", store_views.partner_store_detail),
     path("stores/<int:pk>", store_views.public_store),
     path("stores/<int:pk>/listings", store_views.public_store_listings),
+    path("stores/<int:pk>/reviews", reviews_views.store_reviews),
+    path("listings/<int:pk>/review-eligibility", reviews_views.review_eligibility),
+    path("reservations/<int:pk>/feedback", reviews_views.reservation_feedback),
+    path("reviews", reviews_views.create_review),
+    path("reviews/mine", reviews_views.my_feedback),
+    path("reviews/<int:pk>", reviews_views.review_detail),
+    path("complaints", reviews_views.create_complaint),
 ]

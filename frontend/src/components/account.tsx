@@ -6,6 +6,7 @@ import ProfilePictureInput, {
   pictureRequestBody,
 } from "./profile-picture";
 import Modal from "./modal";
+import BuyerReviewsSection from "./buyer-reviews";
 import {
   ProfileIdentity,
   ProfileSectionHeading,
@@ -251,6 +252,12 @@ export function Profile({
       setBusy(false);
     }
   }
+  const tabs = [
+    ["profile", "Profil", "01"],
+    ...(user.role === "buyer" ? [["reviews", "Ulasan saya", "02"]] : []),
+    ["password", "Password", user.role === "buyer" ? "03" : "02"],
+    ["delete", "Hapus akun", user.role === "buyer" ? "04" : "03"],
+  ];
   return (
     <Modal title="Akun kamu" onClose={onClose} wide>
       <div className="grid grid-cols-[230px_minmax(0,1fr)] gap-8 tablet:grid-cols-1 tablet:gap-6">
@@ -258,13 +265,9 @@ export function Profile({
           <ProfileIdentity user={user} />
           <nav
             aria-label="Pengaturan akun"
-            className="flex flex-col gap-1 tablet:grid tablet:grid-cols-3"
+            className={`flex flex-col gap-1 tablet:grid ${user.role === "buyer" ? "tablet:grid-cols-2" : "tablet:grid-cols-3"}`}
           >
-            {[
-              ["profile", "Profil", "01"],
-              ["password", "Password", "02"],
-              ["delete", "Hapus akun", "03"],
-            ].map(([key, label, number]) => (
+            {tabs.map(([key, label, number]) => (
               <button
                 type="button"
                 key={key}
@@ -291,6 +294,9 @@ export function Profile({
             Tempat untuk mengelola identitas dan keamanan akunmu.
           </p>
         </aside>
+        {tab === "reviews" ? (
+          <BuyerReviewsSection />
+        ) : (
         <form
           className="flex min-w-0 flex-col gap-5 [&_label:not(.check-label)]:flex [&_label:not(.check-label)]:flex-col [&_label:not(.check-label)]:gap-2 [&_label]:text-sm [&_label]:font-semibold [&_input:not([type=checkbox]):not([type=file])]:min-h-11 [&_input:not([type=checkbox]):not([type=file])]:w-full [&_input:not([type=checkbox]):not([type=file])]:rounded-lg [&_input:not([type=checkbox]):not([type=file])]:border [&_input:not([type=checkbox]):not([type=file])]:border-border [&_input:not([type=checkbox]):not([type=file])]:bg-surface [&_input:not([type=checkbox]):not([type=file])]:px-3.5 [&_input:not([type=checkbox]):not([type=file])]:py-3 [&_input]:text-sm"
           key={tab}
@@ -417,6 +423,7 @@ export function Profile({
             </p>
           )}
         </form>
+        )}
       </div>
     </Modal>
   );
