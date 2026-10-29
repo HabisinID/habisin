@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from . import store_views, commerce_views, workspace_views, reviews_views, verification
+from . import store_views, commerce_views, workspace_views, reviews_views, verification, admin_complaints_views
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
 router = DefaultRouter()
@@ -18,6 +18,8 @@ urlpatterns = [
     path("partner/reservations/<int:pk>/cancel", workspace_views.partner_cancel),
     path("partner/stores/<int:pk>/close", workspace_views.close_store),
     path("admin/summary", workspace_views.admin_summary),
+    path("admin/complaints", admin_complaints_views.admin_complaints),
+    path("admin/complaints/<int:pk>", admin_complaints_views.admin_complaint_status),
     path("admin/listings", workspace_views.admin_listings),
     path("admin/listings/<int:pk>/moderate", workspace_views.moderate_listing),
     path("admin/moderation-logs", workspace_views.moderation_logs),

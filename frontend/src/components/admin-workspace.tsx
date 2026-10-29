@@ -16,6 +16,7 @@ type Summary = {
   listings_taken_down: number;
   recent_activity: ModerationEntry[];
   complaints_available: boolean;
+  complaints_open: number;
   partner_approval_available: boolean;
 };
 type PageData<T> = {
@@ -286,11 +287,11 @@ function AdminContent({ mode }: { mode: Mode }) {
               <ShieldAlert size={24} className="text-urgency-text" />
               <h2 className={`${s.title} mt-4`}>Laporan komplain</h2>
               <p className={`${s.muted} my-3`}>
-                Belum tersedia. Alur komplain pembeli belum diimplementasikan.
+                {summary.complaints_open ?? 0} laporan menunggu atau sedang ditinjau.
               </p>
-              <button className={s.secondary} disabled>
-                Laporan komplain belum tersedia
-              </button>
+              <Link href="/admin/complaints" className={s.secondary}>
+                Tinjau laporan komplain
+              </Link>
             </section>
             <section className={s.card}>
               <h2 className={s.title}>Pendaftaran mitra</h2>

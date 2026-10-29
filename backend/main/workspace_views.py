@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from .commerce_views import require_role
 from .listing_services import ListingConflict, available_listings, lock_listing
-from .models import Listing, ListingStockAction, ModerationLog, Reservation, Store
+from .models import Complaint, Listing, ListingStockAction, ModerationLog, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, StoreSerializer
 from .views import release_stock
 
@@ -147,7 +147,8 @@ def admin_summary(request):
                      "stores_open": Store.objects.filter(is_open=True, closed_at__isnull=True).count(),
                      "listings_taken_down": Listing.objects.filter(moderated_at__isnull=False, deleted_at__isnull=True).count(),
                      "recent_activity": [log_data(row) for row in ModerationLog.objects.select_related("actor")[:5]],
-                     "complaints_available": False, "partner_approval_available": False})
+                     "complaints_available": True, "complaints_open": Complaint.objects.filter(status__in=["open", "reviewed"]).count(),
+                     "partner_approval_available": False})
 
 
 @api_view(["GET"])
