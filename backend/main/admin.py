@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Profile, Listing, Reservation, Store, PartnerApproval, ModerationLog
+from .models import Profile, Listing, Reservation, Store, PartnerApproval, ModerationLog, AdminModerationLog
 
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
@@ -8,7 +8,7 @@ class ListingAdmin(admin.ModelAdmin):
     search_fields = ["name", "store", "owner__username"]
 
 
-admin.site.register([Profile, Reservation, PartnerApproval, ModerationLog])
+admin.site.register([Profile, Reservation, PartnerApproval, ModerationLog, AdminModerationLog])
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):

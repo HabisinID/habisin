@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from ._moderation_merge import AddFieldPreservingColumns
+
 
 class Migration(migrations.Migration):
 
@@ -10,12 +12,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='takedown_reason',
             field=models.TextField(blank=True),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='taken_down',
             field=models.BooleanField(default=False),

@@ -8,7 +8,7 @@ from django.core.management import call_command, CommandError
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
-from .models import Listing, Profile, Reservation, Store, PartnerApproval, ModerationLog
+from .models import Listing, Profile, Reservation, Store, PartnerApproval, AdminModerationLog
 from .listing_services import available_listings
 
 
@@ -695,7 +695,7 @@ class AdminApprovalTests(TestCase):
         self.approval.refresh_from_db()
         self.assertEqual(self.approval.status, "approved")
         self.assertIsNotNone(self.approval.reviewed_at)
-        log = ModerationLog.objects.get(action_type="APPROVE_PARTNER")
+        log = AdminModerationLog.objects.get(action_type="APPROVE_PARTNER")
         self.assertEqual(log.target_name, "mitra")
         self.assertEqual(log.admin_user, self.admin)
 
@@ -704,7 +704,7 @@ class AdminApprovalTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.approval.refresh_from_db()
         self.assertEqual(self.approval.status, "pending")
-        self.assertFalse(ModerationLog.objects.exists())
+        self.assertFalse(AdminModerationLog.objects.exists())
 
     def test_reject_with_reason_updates_status_and_writes_log(self):
         response = self.client.post(f"{self.base}/reject/", {"reason": "Data tidak lengkap"}, format="json")
@@ -712,7 +712,7 @@ class AdminApprovalTests(TestCase):
         self.approval.refresh_from_db()
         self.assertEqual(self.approval.status, "rejected")
         self.assertIsNotNone(self.approval.reviewed_at)
-        log = ModerationLog.objects.get(action_type="REJECT_PARTNER")
+        log = AdminModerationLog.objects.get(action_type="REJECT_PARTNER")
         self.assertEqual(log.reason, "Data tidak lengkap")
         self.assertEqual(log.target_name, "mitra")
 
@@ -722,7 +722,7 @@ class AdminApprovalTests(TestCase):
         self.assertEqual(self.client.post(f"{self.base}/reject/", {"reason": "Salah"}, format="json").status_code, 400)
         self.approval.refresh_from_db()
         self.assertEqual(self.approval.status, "approved")
-        self.assertEqual(ModerationLog.objects.count(), 1)
+        self.assertEqual(AdminModerationLog.objects.count(), 1)
 
     def test_approved_partner_gains_access(self):
         partner_client = APIClient()
@@ -794,7 +794,7 @@ class ListingTakeDownTests(TestCase):
         self.item.refresh_from_db()
         self.assertFalse(self.item.taken_down)
         self.assertTrue(self.item.active)
-        self.assertFalse(ModerationLog.objects.exists())
+        self.assertFalse(AdminModerationLog.objects.exists())
 
     def test_take_down_marks_listing_and_writes_log(self):
         response = self.take_down()
@@ -805,7 +805,7 @@ class ListingTakeDownTests(TestCase):
         self.assertTrue(self.item.taken_down)
         self.assertFalse(self.item.active)
         self.assertEqual(self.item.takedown_reason, "Mengandung konten yang melanggar")
-        log = ModerationLog.objects.get(action_type="TAKEDOWN_LISTING")
+        log = AdminModerationLog.objects.get(action_type="TAKEDOWN_LISTING")
         self.assertEqual(log.target_name, "Roti Uji")
         self.assertEqual(log.reason, "Mengandung konten yang melanggar")
         self.assertEqual(log.admin_user, self.admin)
@@ -813,7 +813,7 @@ class ListingTakeDownTests(TestCase):
     def test_take_down_twice_is_rejected(self):
         self.assertEqual(self.take_down().status_code, 200)
         self.assertEqual(self.take_down().status_code, 400)
-        self.assertEqual(ModerationLog.objects.filter(action_type="TAKEDOWN_LISTING").count(), 1)
+        self.assertEqual(AdminModerationLog.objects.filter(action_type="TAKEDOWN_LISTING").count(), 1)
 
     def test_taken_down_listing_disappears_from_public_views(self):
         self.assertIn(self.item.pk, self.public_ids())
@@ -867,14 +867,14 @@ class ListingTakeDownTests(TestCase):
         self.assertFalse(self.item.taken_down)
         self.assertEqual(self.item.takedown_reason, "")
         self.assertFalse(self.item.active)
-        self.assertTrue(ModerationLog.objects.filter(action_type="RESTORE_LISTING", target_name="Roti Uji").exists())
+        self.assertTrue(AdminModerationLog.objects.filter(action_type="RESTORE_LISTING", target_name="Roti Uji").exists())
         reactivated = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
         self.assertEqual(reactivated.status_code, 200)
         self.assertIn(self.item.pk, self.public_ids())
 
     def test_restore_requires_taken_down_listing(self):
         self.assertEqual(self.client.post(f"{self.base}/restore/", {}, format="json").status_code, 400)
-        self.assertFalse(ModerationLog.objects.exists())
+        self.assertFalse(AdminModerationLog.objects.exists())
 
     def test_only_admin_can_take_down_or_restore(self):
         for client in [self.partner_client, self.buyer_client]:
@@ -909,18 +909,18 @@ class ModerationLogTests(TestCase):
         response = self.create()
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["admin_username"], "admin_uji")
-        self.assertEqual(ModerationLog.objects.get().admin_user, self.admin)
+        self.assertEqual(AdminModerationLog.objects.get().admin_user, self.admin)
 
     def test_create_cannot_forge_admin(self):
         response = self.create(admin_user=self.second_admin.pk)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(ModerationLog.objects.get().admin_user, self.admin)
+        self.assertEqual(AdminModerationLog.objects.get().admin_user, self.admin)
 
     def test_create_requires_all_fields(self):
         for missing in ["action_type", "target_name", "reason"]:
             body = {key: value for key, value in self.body.items() if key != missing}
             self.assertEqual(self.client.post(self.path, body, format="json").status_code, 400, missing)
-        self.assertFalse(ModerationLog.objects.exists())
+        self.assertFalse(AdminModerationLog.objects.exists())
 
     def test_read_list_detail_and_filter(self):
         first = self.create().json()["id"]
@@ -936,20 +936,20 @@ class ModerationLogTests(TestCase):
         log_id = self.create().json()["id"]
         response = self.client.patch(f"{self.path}{log_id}/", {"reason": "diubah"}, format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "diubah")
+        self.assertEqual(AdminModerationLog.objects.get(pk=log_id).reason, "diubah")
         replaced = self.client.put(f"{self.path}{log_id}/", {**self.body, "reason": "diganti"}, format="json")
         self.assertEqual(replaced.status_code, 200)
-        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "diganti")
+        self.assertEqual(AdminModerationLog.objects.get(pk=log_id).reason, "diganti")
 
     def test_update_cannot_forge_admin(self):
         log_id = self.create().json()["id"]
         self.client.patch(f"{self.path}{log_id}/", {"admin_user": self.second_admin.pk}, format="json")
-        self.assertEqual(ModerationLog.objects.get(pk=log_id).admin_user, self.admin)
+        self.assertEqual(AdminModerationLog.objects.get(pk=log_id).admin_user, self.admin)
 
     def test_delete(self):
         log_id = self.create().json()["id"]
         self.assertEqual(self.client.delete(f"{self.path}{log_id}/").status_code, 204)
-        self.assertFalse(ModerationLog.objects.filter(pk=log_id).exists())
+        self.assertFalse(AdminModerationLog.objects.filter(pk=log_id).exists())
         self.assertEqual(self.client.get(f"{self.path}{log_id}/").status_code, 404)
 
     def test_actions_are_logged_and_visible(self):
@@ -974,4 +974,4 @@ class ModerationLogTests(TestCase):
             self.assertEqual(client.patch(f"{self.path}{log_id}/", {"reason": "x"}, format="json").status_code, 403)
             self.assertEqual(client.delete(f"{self.path}{log_id}/").status_code, 403)
         self.assertIn(APIClient().get(self.path).status_code, [401, 403])
-        self.assertEqual(ModerationLog.objects.get(pk=log_id).reason, "uji coba")
+        self.assertEqual(AdminModerationLog.objects.get(pk=log_id).reason, "uji coba")

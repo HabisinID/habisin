@@ -14,9 +14,8 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
-from .models import Profile, Listing, Reservation, Store, ListingStockAction, PartnerApproval, ModerationLog
+from .models import Profile, Listing, Reservation, Store, ListingStockAction, PartnerApproval, AdminModerationLog
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
-from .models import Profile, Listing, Reservation, Store, ListingStockAction
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores, ensure_partner_listing_mutable
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
 from .reservation_policy import reservation_policy
@@ -174,9 +173,6 @@ def partner_listings(request):
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
     if not partner_approved(request.user):
         return Response({"detail": "Akun mitra belum disetujui admin."}, status=403)
-    if request.method == "GET":
-        items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
-        return Response(ListingSerializer(items, many=True).data)
     Reservation.expire_overdue()
     if request.method == "GET":
         items = Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-id")
@@ -418,7 +414,7 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
             approval.status = new_status
             approval.reviewed_at = timezone.now()
             approval.save(update_fields=["status", "reviewed_at"])
-            ModerationLog.objects.create(
+            AdminModerationLog.objects.create(
                 admin_user=request.user,
                 action_type=action_type,
                 target_name=approval.user.username,
@@ -458,7 +454,7 @@ class AdminListingViewSet(viewsets.ReadOnlyModelViewSet):
             listing.takedown_reason = reason
             listing.active = False
             listing.save(update_fields=["taken_down", "takedown_reason", "active"])
-            ModerationLog.objects.create(
+            AdminModerationLog.objects.create(
                 admin_user=request.user,
                 action_type="TAKEDOWN_LISTING",
                 target_name=listing.name,
@@ -476,7 +472,7 @@ class AdminListingViewSet(viewsets.ReadOnlyModelViewSet):
             listing.taken_down = False
             listing.takedown_reason = ""
             listing.save(update_fields=["taken_down", "takedown_reason"])
-            ModerationLog.objects.create(
+            AdminModerationLog.objects.create(
                 admin_user=request.user,
                 action_type="RESTORE_LISTING",
                 target_name=listing.name,
@@ -490,7 +486,7 @@ class ModerationLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        queryset = ModerationLog.objects.select_related("admin_user").order_by("-created_at")
+        queryset = AdminModerationLog.objects.select_related("admin_user").order_by("-created_at")
         action_type = self.request.query_params.get("action_type")
         if action_type:
             queryset = queryset.filter(action_type=action_type)
