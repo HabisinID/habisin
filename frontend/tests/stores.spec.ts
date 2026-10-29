@@ -261,9 +261,7 @@ test("anonymous visitors can sign in and buyers cannot manage stores", async ({
   await page.goto("/partner/store");
   await page.getByRole("button", { name: "Masuk", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Senang kamu kembali." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Login" })).toBeVisible();
   await page.getByRole("button", { name: "Tutup", exact: true }).click();
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({ json: { ...partner, role: "buyer" } }),

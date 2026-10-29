@@ -6,7 +6,8 @@ from datetime import timedelta
 from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 from .geocoding import location_token
-from .models import Listing, Profile, Reservation, Store
+from .models import Listing, Profile, Reservation, Store, PartnerApproval
+from .test_migration_database import FreshMigrationDatabaseMixin
 
 
 def listing_payload(store_id):
@@ -14,6 +15,7 @@ def listing_payload(store_id):
 
 
 def create_store(user, name="Cabang A", **changes):
+    PartnerApproval.objects.get_or_create(user=user, defaults={"status": "approved"})
     data = store_payload(user, name)
     data.pop("geocode_token")
     data.pop("location_confirmed")
@@ -29,6 +31,7 @@ class MultipleStoreAPITests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="branches", password="Branch-Secure-927!")
         Profile.objects.create(user=self.user, role="partner")
+        PartnerApproval.objects.get_or_create(user=self.user, defaults={"status": "approved"})
         self.client = APIClient()
         self.client.force_authenticate(self.user)
 
@@ -50,6 +53,7 @@ class MultipleStoreAPITests(TestCase):
     def test_foreign_owner_roles_csrf_and_location_validation(self):
         other = User.objects.create_user(username="foreign_partner")
         Profile.objects.create(user=other, role="partner")
+        PartnerApproval.objects.get_or_create(user=other, defaults={"status": "approved"})
         item = self.create("A")
         path = f'/api/partner/stores/{item["id"]}'
         self.client.force_authenticate(other)
@@ -99,13 +103,12 @@ class MultipleStoreAPITests(TestCase):
         self.assertNotIn("email", result["store_summary"])
 
 
-class MultipleStoreMigrationTests(TransactionTestCase):
+class MultipleStoreMigrationTests(FreshMigrationDatabaseMixin, TransactionTestCase):
     def test_existing_store_survives_and_owner_can_add_second_store(self):
         executor = MigrationExecutor(connection)
         latest = executor.loader.graph.leaf_nodes()
         old = [("main", "0004_merge_listing_store")]
-        executor.migrate(old)
-        apps = executor.loader.project_state(old).apps
+        apps = self.reset_main_to(old[0][1])
         user = apps.get_model("auth", "User").objects.create(username="migration_partner")
         Store = apps.get_model("main", "Store")
         data = dict(owner_id=user.pk, name="Cabang pertama", description="Dapur", address="Jalan Margonda 1", opening_time="08:00", closing_time="20:00", latitude=-6.36, longitude=106.83)
@@ -126,6 +129,7 @@ class LinkedListingTests(TestCase):
     def setUp(self):
         self.partner = User.objects.create_user(username="linked_partner", password="Linked-Secure-927!")
         Profile.objects.create(user=self.partner, role="partner")
+        PartnerApproval.objects.get_or_create(user=self.partner, defaults={"status": "approved"})
         self.buyer = User.objects.create_user(username="linked_buyer")
         Profile.objects.create(user=self.buyer)
         self.a = create_store(self.partner)

@@ -15,9 +15,7 @@ from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from .models import Profile, Listing, Reservation, Store, ListingStockAction, PartnerApproval, ModerationLog
-from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores
-from .models import Profile, Listing, Reservation, Store, ListingStockAction
-from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores, ensure_partner_listing_mutable
+from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores, ensure_partner_listing_mutable, set_listing_moderation
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
 from .reservation_policy import reservation_policy
 from rest_framework import serializers as drf_serializers
@@ -174,9 +172,6 @@ def partner_listings(request):
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
     if not partner_approved(request.user):
         return Response({"detail": "Akun mitra belum disetujui admin."}, status=403)
-    if request.method == "GET":
-        items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
-        return Response(ListingSerializer(items, many=True).data)
     Reservation.expire_overdue()
     if request.method == "GET":
         items = Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-id")
@@ -200,6 +195,8 @@ def partner_listing_detail(request, pk):
     with compensate_media_writes() as media, transaction.atomic():
         target_id = _target_store_id(request.data)
         item = lock_listing(pk, request.user, target_id)
+        if request.method == "GET" and not item.deleted_at:
+            return Response(PartnerListingReadSerializer(item).data)
         ensure_partner_listing_mutable(item)
         if request.method == "DELETE":
             if item.reservation_set.filter(status__in=Reservation.ACTIVE_STATUSES).exists():
@@ -409,12 +406,13 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
 
     def review(self, request, new_status, action_type, default_reason):
         approval = self.get_object()
-        if approval.status != "pending":
-            return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
         reason = str(request.data.get("reason", "")).strip()
         if new_status == "rejected" and not reason:
             return Response({"detail": "Alasan penolakan wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
+            approval = PartnerApproval.objects.select_for_update().get(pk=approval.pk)
+            if approval.status != "pending":
+                return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
             approval.status = new_status
             approval.reviewed_at = timezone.now()
             approval.save(update_fields=["status", "reviewed_at"])
@@ -442,45 +440,48 @@ class AdminListingViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="take-down")
     def take_down(self, request, pk=None):
-        listing = self.get_object()
-        if listing.taken_down:
-            return Response({"detail": "Listing sudah diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+        visible = self.get_object()
         reason = str(request.data.get("reason", "")).strip()
-        if not reason:
-            return Response({"detail": "Alasan take-down wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
+        if not reason or len(reason) > 500:
+            return Response({"detail": "Alasan take-down wajib diisi, maksimal 500 karakter."}, status=status.HTTP_400_BAD_REQUEST)
+        Reservation.expire_overdue()
         with transaction.atomic():
-            Reservation.objects.filter(listing=listing, status__in=Reservation.ACTIVE_STATUSES).update(
-                status="cancelled",
-                cancellation_note="Listing diturunkan oleh admin.",
+            listing = lock_listing(visible.pk)
+            if listing.deleted_at:
+                raise ListingConflict("Listing sudah dihapus pemilik.")
+            if listing.taken_down or listing.moderated_at:
+                return Response({"detail": "Listing sudah diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+            orders = list(Reservation.objects.select_for_update().filter(
+                listing=listing, status__in=Reservation.ACTIVE_STATUSES,
+            ).order_by("pk"))
+            Reservation.objects.filter(pk__in=[order.pk for order in orders]).update(
+                status="cancelled", cancelled_by="admin",
+                cancellation_note=("Listing diturunkan oleh admin: " + reason)[:500],
                 cancelled_at=timezone.now(),
             )
-            listing.taken_down = True
-            listing.takedown_reason = reason
-            listing.active = False
-            listing.save(update_fields=["taken_down", "takedown_reason", "active"])
+            listing.stock += sum(order.quantity for order in orders)
+            listing.save(update_fields=["stock"])
+            set_listing_moderation(listing, True, request.user, reason)
             ModerationLog.objects.create(
-                admin_user=request.user,
-                action_type="TAKEDOWN_LISTING",
-                target_name=listing.name,
-                reason=reason,
+                admin_user=request.user, action_type="TAKEDOWN_LISTING",
+                target_name=listing.name, reason=reason,
             )
         return Response(AdminListingSerializer(listing).data)
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
-        listing = self.get_object()
-        if not listing.taken_down:
-            return Response({"detail": "Listing tidak dalam status diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+        visible = self.get_object()
         reason = str(request.data.get("reason", "")).strip() or "Dipulihkan oleh admin"
         with transaction.atomic():
-            listing.taken_down = False
-            listing.takedown_reason = ""
-            listing.save(update_fields=["taken_down", "takedown_reason"])
+            listing = lock_listing(visible.pk)
+            if listing.deleted_at:
+                raise ListingConflict("Listing sudah dihapus pemilik.")
+            if not (listing.taken_down or listing.moderated_at):
+                return Response({"detail": "Listing tidak dalam status diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
+            set_listing_moderation(listing, False, request.user, reason)
             ModerationLog.objects.create(
-                admin_user=request.user,
-                action_type="RESTORE_LISTING",
-                target_name=listing.name,
-                reason=reason,
+                admin_user=request.user, action_type="RESTORE_LISTING",
+                target_name=listing.name, reason=reason,
             )
         return Response(AdminListingSerializer(listing).data)
 

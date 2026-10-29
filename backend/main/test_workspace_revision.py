@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.test import TestCase
 from . import test_commerce
-from .models import Listing, ModerationLog, Profile, Reservation
+from .models import Listing, WorkspaceModerationLog, Profile, Reservation
 
 
 class WorkspaceRevisionTests(TestCase):
@@ -90,13 +90,13 @@ class WorkspaceRevisionTests(TestCase):
         self.admin()
         self.assertEqual(self.moderate(reason=' ').status_code,400)
         self.assertEqual(self.moderate(action='activate').status_code,400)
-        self.assertEqual(ModerationLog.objects.count(),0)
+        self.assertEqual(WorkspaceModerationLog.objects.count(),0)
 
     def test_takedown_blocks_every_mutation_but_preserves_tickets_and_restore(self):
         order=self.order(paid=True)
         self.admin();self.assertEqual(self.moderate().status_code,200)
         self.assertEqual(self.moderate().status_code,200)
-        self.assertEqual(ModerationLog.objects.count(),1)
+        self.assertEqual(WorkspaceModerationLog.objects.count(),1)
         summary=self.client.get('/api/admin/summary').data
         self.assertEqual(summary['listings_taken_down'],1)
         self.assertFalse(summary['complaints_available'])
@@ -110,7 +110,7 @@ class WorkspaceRevisionTests(TestCase):
         self.assertEqual(self.client.post('/api/reservations',{'listing_id':self.a.pk},format='json').status_code,400)
         self.admin();self.assertEqual(self.moderate('restore','Foto diperbaiki').status_code,200)
         self.a.refresh_from_db();self.assertFalse(self.a.active);self.assertIsNone(self.a.moderated_at)
-        self.assertEqual(ModerationLog.objects.count(),2)
+        self.assertEqual(WorkspaceModerationLog.objects.count(),2)
         self.client.force_authenticate(self.partner)
         self.assertEqual(self.client.patch(path,{'active':True},format='json').status_code,200)
 

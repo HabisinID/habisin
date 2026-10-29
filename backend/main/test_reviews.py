@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Complaint, Listing, Profile, Reservation, Review, Store
+from .models import PartnerApproval, Complaint, Listing, Profile, Reservation, Review, Store
 
 
 class ReviewAndComplaintTests(TestCase):
@@ -14,6 +14,7 @@ class ReviewAndComplaintTests(TestCase):
         self.client = APIClient()
         self.partner = User.objects.create_user(username="review_partner")
         Profile.objects.create(user=self.partner, role="partner")
+        PartnerApproval.objects.get_or_create(user=self.partner, defaults={"status": "approved"})
         self.buyer = User.objects.create_user(username="review_buyer", first_name="Raihan")
         Profile.objects.create(user=self.buyer, role="buyer")
         self.other_buyer = User.objects.create_user(username="review_other")

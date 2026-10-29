@@ -39,9 +39,7 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   await page
     .getByRole("button", { name: "Simpan Surprise Pastry Box ke favorit" })
     .click();
-  await expect(
-    page.getByRole("dialog", { name: "Senang kamu kembali." }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Login" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".food-pin")).toHaveCount(6);
   await page.locator(".food-pin").filter({ hasText: "Kopi Tuku" }).click();

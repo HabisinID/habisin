@@ -107,7 +107,7 @@ function Inventory({ userId }: { userId: number }) {
     };
   }, [userId, form]);
   const status = (item: Listing) =>
-    item.moderated_at
+    item.moderated_at || item.taken_down
       ? "removed"
       : !item.active ||
           item.stock === 0 ||
@@ -122,7 +122,7 @@ function Inventory({ userId }: { userId: number }) {
     (item) => filter === "all" || status(item) === filter,
   );
   const draftMatches = draft && (!storeId || draft.fields.store_id === storeId);
-  const removed = subset.filter((item) => item.moderated_at);
+  const removed = subset.filter((item) => item.moderated_at || item.taken_down);
   async function update(
     item: Listing,
     changes: Partial<ListingInput> & { active?: boolean },
@@ -311,6 +311,7 @@ function Inventory({ userId }: { userId: number }) {
               {visible.map((item) => {
                 const locked =
                   !!item.moderated_at ||
+                  !!item.taken_down ||
                   !!stores.find((store) => store.id === item.store_id)
                     ?.closed_at;
                 const pending = busyRows.includes(item.id);
@@ -328,10 +329,14 @@ function Inventory({ userId }: { userId: number }) {
                             <p className={s.muted}>
                               {item.category} · {item.store}
                             </p>
-                            {item.moderated_at && (
+                            {(item.moderated_at || item.taken_down) && (
                               <p className="mt-2 max-w-sm text-error text-xs">
-                                Diturunkan {pickup(item.moderated_at)} ·{" "}
-                                {item.moderation_reason}
+                                Diturunkan
+                                {item.moderated_at
+                                  ? ` ${pickup(item.moderated_at)}`
+                                  : " admin"}{" "}
+                                ·{" "}
+                                {item.moderation_reason || item.takedown_reason}
                               </p>
                             )}
                           </div>
@@ -523,7 +528,9 @@ function Inventory({ userId }: { userId: number }) {
             compact={!!form.item}
             userId={userId}
             item={form.item}
-            items={items.filter((item) => !item.moderated_at)}
+            items={items.filter(
+              (item) => !item.moderated_at && !item.taken_down,
+            )}
             now={now}
             busy={busy}
             setBusy={setBusy}

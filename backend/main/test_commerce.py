@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
-from .models import CheckoutBatch, Listing, ListingStockAction, Profile, Reservation
+from .models import PartnerApproval, CheckoutBatch, Listing, ListingStockAction, Profile, Reservation
 from .test_listing_revision import create_store, listing_payload
 
 class CommerceTests(TestCase):
@@ -14,6 +14,8 @@ class CommerceTests(TestCase):
         self.other=User.objects.create_user(username="commerce_other")
         self.buyer=User.objects.create_user(username="commerce_buyer")
         for user,role in [(self.partner,"partner"),(self.other,"partner"),(self.buyer,"buyer")]: Profile.objects.create(user=user,role=role)
+        for user in (self.partner, self.other):
+            PartnerApproval.objects.get_or_create(user=user, defaults={"status": "approved"})
         self.store=create_store(self.partner)
         self.a=self.food(self.partner,self.store,"A")
         self.b=self.food(self.partner,self.store,"B")

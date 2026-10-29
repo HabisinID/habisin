@@ -846,7 +846,7 @@ class ListingTakeDownTests(TestCase):
     def test_partner_cannot_reactivate_taken_down_listing(self):
         self.take_down()
         response = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 409)
         self.item.refresh_from_db()
         self.assertFalse(self.item.active)
         self.assertTrue(self.item.taken_down)

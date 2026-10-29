@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
-from .models import Listing, Store
+from .models import Listing, ListingStockAction, Store
 
 
 class ListingConflict(APIException):
@@ -17,6 +17,7 @@ def available_listings(queryset=None):
     return queryset.filter(
         active=True,
         taken_down=False,
+        moderated_at__isnull=True,
         stock__gt=0,
         pickup_end__gt=now,
         deleted_at__isnull=True,
@@ -47,7 +48,23 @@ def ensure_partner_listing_mutable(item):
     if item.deleted_at:
         from django.http import Http404
         raise Http404("Listing sudah dihapus.")
-    if item.moderated_at:
-        raise ListingConflict("Listing diturunkan admin dan terkunci. " + item.moderation_reason)
+    if item.moderated_at or item.taken_down:
+        raise ListingConflict("Listing diturunkan admin dan terkunci. " + (item.moderation_reason or item.takedown_reason))
     if item.store_profile_id and item.store_profile.closed_at:
         raise ListingConflict("Toko ditutup permanen; listing tidak dapat diubah.")
+
+
+def set_listing_moderation(item, removed, actor, reason):
+    """Both admin APIs share one state; caller holds store/listing locks."""
+    item.taken_down = removed
+    item.takedown_reason = reason if removed else ""
+    item.moderated_at = timezone.now() if removed else None
+    item.moderated_by = actor if removed else None
+    item.moderation_reason = reason if removed else ""
+    # Restoring never publishes a listing without its partner's confirmation.
+    item.active = False
+    item.save(update_fields=[
+        "taken_down", "takedown_reason", "moderated_at", "moderated_by",
+        "moderation_reason", "active",
+    ])
+    ListingStockAction.objects.filter(listing=item, used=False).update(used=True)

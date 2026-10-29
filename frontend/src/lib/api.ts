@@ -28,6 +28,8 @@ export type Listing = {
   pickup_start: string;
   pickup_end: string;
   active: boolean;
+  taken_down?: boolean;
+  takedown_reason?: string;
   moderated_at?: string | null;
   moderation_reason?: string;
   deleted_at?: string | null;
@@ -92,7 +94,7 @@ export type Reservation = {
   /** Legacy history fields; new transaction responses do not require them. */
   can_cancel?: boolean;
   cancellation_note?: string;
-  cancelled_by?: "buyer" | "partner" | "";
+  cancelled_by?: "buyer" | "partner" | "admin" | "";
   cancelled_at?: string | null;
   cancellation_reason?: string;
 };

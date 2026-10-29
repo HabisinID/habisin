@@ -128,17 +128,13 @@ for (const width of [1440, 390]) {
     await page
       .getByRole("button", { name: "Saya pemilik toko", exact: true })
       .click();
-    await expect(
-      page.getByRole("dialog", { name: "Senang kamu kembali." }),
-    ).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Login" })).toBeVisible();
     await page.keyboard.press("Escape");
     await page
       .getByRole("button", { name: "Daftarkan toko", exact: true })
       .first()
       .click();
-    await expect(
-      page.getByRole("dialog", { name: "Senang kamu kembali." }),
-    ).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Login" })).toBeVisible();
   });
 }
 test("empty, loading and offline catalogs never become demo listing sections and can retry", async ({

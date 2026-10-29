@@ -7,7 +7,12 @@ export default function CancellationNotice({ order }: { order: Reservation }) {
       className="mt-4 rounded-field border border-error/40 bg-error-tint p-4 text-sm leading-relaxed text-error"
     >
       <p className="font-bold">
-        Dibatalkan oleh {order.cancelled_by === "partner" ? "mitra" : "pembeli"}
+        Dibatalkan oleh{" "}
+        {order.cancelled_by === "admin"
+          ? "admin"
+          : order.cancelled_by === "partner"
+            ? "mitra"
+            : "pembeli"}
       </p>
       <p className="mt-1 whitespace-pre-wrap break-words">
         {order.cancellation_note}

@@ -368,7 +368,11 @@ function OrdersContent() {
                     <p className="text-error mt-2">
                       <strong>
                         Dibatalkan{" "}
-                        {order.cancelled_by === "partner" ? "mitra" : "pembeli"}
+                        {order.cancelled_by === "admin"
+                          ? "admin"
+                          : order.cancelled_by === "partner"
+                            ? "mitra"
+                            : "pembeli"}
                         :
                       </strong>{" "}
                       {order.cancellation_note}

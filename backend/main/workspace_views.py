@@ -13,8 +13,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .commerce_views import require_role
-from .listing_services import ListingConflict, available_listings, lock_listing
-from .models import Listing, ListingStockAction, ModerationLog, Reservation, Store
+from .listing_services import ListingConflict, available_listings, lock_listing, set_listing_moderation
+from .models import Listing, ListingStockAction, WorkspaceModerationLog, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, StoreSerializer
 from .views import release_stock
 
@@ -145,8 +145,8 @@ def admin_summary(request):
     return Response({"listings_live": available_listings().count(), "orders_today": Reservation.objects.filter(created_at__gte=start).count(),
                      "partners_active": User.objects.filter(is_active=True, is_staff=False, profile__role="partner").count(),
                      "stores_open": Store.objects.filter(is_open=True, closed_at__isnull=True).count(),
-                     "listings_taken_down": Listing.objects.filter(moderated_at__isnull=False, deleted_at__isnull=True).count(),
-                     "recent_activity": [log_data(row) for row in ModerationLog.objects.select_related("actor")[:5]],
+                     "listings_taken_down": Listing.objects.filter(Q(moderated_at__isnull=False) | Q(taken_down=True), deleted_at__isnull=True).count(),
+                     "recent_activity": [log_data(row) for row in WorkspaceModerationLog.objects.select_related("actor")[:5]],
                      "complaints_available": False, "partner_approval_available": False})
 
 
@@ -156,7 +156,7 @@ def admin_listings(request):
     items = Listing.objects.filter(deleted_at__isnull=True).select_related("store_profile").order_by("-pk")
     status = request.query_params.get("status", "all")
     if status == "removed":
-        items = items.filter(moderated_at__isnull=False)
+        items = items.filter(Q(moderated_at__isnull=False) | Q(taken_down=True))
     elif status == "live":
         items = available_listings(items)
     elif status != "all":
@@ -178,23 +178,18 @@ def moderate_listing(request, pk):
         item = lock_listing(pk)
         if item.deleted_at:
             raise ListingConflict("Listing sudah dihapus pemilik.")
-        removed = bool(item.moderated_at)
+        removed = bool(item.moderated_at or item.taken_down)
         if removed == (action == "take_down"):
             return Response(ListingSerializer(item).data)
-        item.moderated_at = timezone.now() if action == "take_down" else None
-        item.moderated_by = request.user if action == "take_down" else None
-        item.moderation_reason = reason if action == "take_down" else ""
-        item.active = False
-        item.save(update_fields=["moderated_at", "moderated_by", "moderation_reason", "active"])
-        ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
-        ModerationLog.objects.create(listing=item, actor=request.user, target_name=item.name, store_name=item.store, action=action, reason=reason)
+        set_listing_moderation(item, action == "take_down", request.user, reason)
+        WorkspaceModerationLog.objects.create(listing=item, actor=request.user, target_name=item.name, store_name=item.store, action=action, reason=reason)
         return Response(ListingSerializer(item).data)
 
 
 @api_view(["GET"])
 def moderation_logs(request):
     require_role(request, "admin")
-    logs = ModerationLog.objects.select_related("actor").all()
+    logs = WorkspaceModerationLog.objects.select_related("actor").all()
     action = request.query_params.get("action")
     if action:
         if action not in ["take_down", "restore"]:

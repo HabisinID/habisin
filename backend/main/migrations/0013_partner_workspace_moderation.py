@@ -3,6 +3,7 @@
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+from ._moderation_logs import CreateModerationModel
 
 
 class Migration(migrations.Migration):
@@ -63,8 +64,8 @@ class Migration(migrations.Migration):
             name='weekly_hours',
             field=models.JSONField(blank=True, default=list),
         ),
-        migrations.CreateModel(
-            name='ModerationLog',
+        CreateModerationModel(
+            name='WorkspaceModerationLog',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('target_name', models.CharField(max_length=160)),
@@ -72,7 +73,7 @@ class Migration(migrations.Migration):
                 ('action', models.CharField(choices=[('take_down', 'Turunkan'), ('restore', 'Pulihkan')], max_length=12)),
                 ('reason', models.CharField(max_length=500)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('actor', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='moderation_logs', to=settings.AUTH_USER_MODEL)),
+                ('actor', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='workspace_moderation_logs', to=settings.AUTH_USER_MODEL)),
                 ('listing', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='moderation_logs', to='main.listing')),
             ],
             options={

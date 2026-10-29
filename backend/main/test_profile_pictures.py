@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
-from .models import Profile, Store
+from .models import PartnerApproval, Profile, Store
 
 
 def photo():
@@ -26,6 +26,7 @@ class ProfilePicturesTests(TestCase):
         self.addCleanup(settings.disable)
         self.user = User.objects.create_user("owner", password="test-password")
         Profile.objects.create(user=self.user, role="partner")
+        PartnerApproval.objects.get_or_create(user=self.user, defaults={"status": "approved"})
         self.client = APIClient()
         self.client.force_authenticate(self.user)
         self.store = Store.objects.create(owner=self.user, name="Store", description="Food", address="Depok", opening_time="08:00", closing_time="20:00", latitude=0, longitude=0)
@@ -48,6 +49,7 @@ class ProfilePicturesTests(TestCase):
         self.assertEqual(self.client.get(f"/api/stores/{self.store.pk}").data["profile_picture"], response.data["profile_picture"])
         other = User.objects.create_user("other")
         Profile.objects.create(user=other, role="partner")
+        PartnerApproval.objects.get_or_create(user=other, defaults={"status": "approved"})
         self.client.force_authenticate(other)
         self.assertEqual(self.client.patch(path, {"profile_picture": photo()}, format="multipart").status_code, 404)
         self.client.force_authenticate(self.user)

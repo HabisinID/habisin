@@ -4,17 +4,14 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 from django.utils import timezone
+from .test_migration_database import FreshMigrationDatabaseMixin
 
 
-class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0016_repair_profile_picture_columns')]
+class MergeMigrationTests(FreshMigrationDatabaseMixin, TransactionTestCase):
+    final = [('main', '0019_repair_moderation_log_models')]
 
     def upgrade_from(self, origin, status):
-        executor = MigrationExecutor(connection)
-        executor.migrate([('main', None)])
-        executor = MigrationExecutor(connection)
-        executor.migrate([('main', origin)])
-        apps = executor.loader.project_state([('main', origin)]).apps
+        apps = self.reset_main_to(origin)
         try:
             user = apps.get_model('auth', 'User').objects.create(username='migration-buyer', password='hashed-fixture')
             apps.get_model('main','Profile').objects.create(user_id=user.pk,role='buyer')
@@ -63,11 +60,7 @@ class MergeMigrationTests(TransactionTestCase):
     def test_both_0013_branches_upgrade_without_losing_data(self):
         for origin in ['0013_partner_workspace_moderation', '0013_verification_log']:
             with self.subTest(origin=origin):
-                executor = MigrationExecutor(connection)
-                executor.migrate([('main', None)])
-                executor = MigrationExecutor(connection)
-                executor.migrate([('main', origin)])
-                apps = executor.loader.project_state([('main', origin)]).apps
+                apps = self.reset_main_to(origin)
                 user = apps.get_model('auth', 'User').objects.create(username='merge-' + origin)
                 if origin == '0013_verification_log':
                     apps.get_model('main', 'VerificationLog').objects.create(partner_id=user.pk, code='ABCDE', outcome='not_found')

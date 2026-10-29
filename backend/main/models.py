@@ -99,9 +99,9 @@ class Listing(models.Model):
         ]
 
 
-class ModerationLog(models.Model):
+class WorkspaceModerationLog(models.Model):
     listing = models.ForeignKey(Listing, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
-    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="moderation_logs")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="workspace_moderation_logs")
     target_name = models.CharField(max_length=160)
     store_name = models.CharField(max_length=120)
     action = models.CharField(max_length=12, choices=[("take_down", "Turunkan"), ("restore", "Pulihkan")])
@@ -138,7 +138,7 @@ class Reservation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     pickup_deadline = models.DateTimeField(null=True, editable=False)
     cancellation_note = models.CharField(max_length=500, blank=True)
-    cancelled_by = models.CharField(max_length=7, blank=True, choices=[("buyer", "Pembeli"), ("partner", "Mitra")])
+    cancelled_by = models.CharField(max_length=7, blank=True, choices=[("buyer", "Pembeli"), ("partner", "Mitra"), ("admin", "Admin")])
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     @property
