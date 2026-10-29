@@ -41,7 +41,7 @@ function Account({
   onUser: (user: User | null) => void;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState("password"),
+  const [tab, setTab] = useState("profile"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
