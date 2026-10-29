@@ -3,10 +3,10 @@ from . import views
 from . import store_views, commerce_views
 from rest_framework.routers import DefaultRouter
 
-# router untuk Admin Panel (Partner Approval & Moderation Log)
 router = DefaultRouter()
 router.register(r"admin/partner-approvals", views.PartnerApprovalViewSet, basename="partnerapproval")
 router.register(r"admin/moderation-logs", views.ModerationLogViewSet, basename="moderationlog")
+router.register(r"admin/listings", views.AdminListingViewSet, basename="adminlisting")
 
 urlpatterns = [
     path("", include(router.urls)),
