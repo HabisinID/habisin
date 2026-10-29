@@ -397,7 +397,7 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        queryset = PartnerApproval.objects.select_related("user").order_by("-requested_at")
+        queryset = PartnerApproval.objects.select_related("user").prefetch_related("user__stores").order_by("-requested_at")    
         status_filter = self.request.query_params.get("status")
         if status_filter:
             queryset = queryset.filter(status=status_filter)

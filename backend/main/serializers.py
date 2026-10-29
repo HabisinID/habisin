@@ -329,10 +329,29 @@ class StoreSerializer(serializers.ModelSerializer):
 
 class PartnerApprovalSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source="user.username")
+    name = serializers.ReadOnlyField(source="user.first_name")
+    email = serializers.ReadOnlyField(source="user.email")
+    store = serializers.SerializerMethodField()
+
+    def get_store(self, item):
+        stores = list(item.user.stores.all())
+        if not stores:
+            return None
+        store = stores[0]
+        return {
+            "name": store.name,
+            "category": store.category,
+            "neighborhood": store.neighborhood,
+            "address": store.address,
+            "opening_time": store.opening_time.strftime("%H:%M"),
+            "closing_time": store.closing_time.strftime("%H:%M"),
+            "latitude": store.latitude,
+            "longitude": store.longitude,
+        }
 
     class Meta:
         model = PartnerApproval
-        fields = ["id", "user", "username", "status", "requested_at", "reviewed_at"]
+        fields = ["id", "user", "username", "name", "email", "store", "status", "requested_at", "reviewed_at"]
         read_only_fields = ["id", "user", "requested_at"]
 
 
