@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
-from .models import Listing, Profile, Reservation
+from .models import Listing, Profile, Reservation, PartnerApproval
 from .test_listing_revision import create_store, listing_payload
 
 
@@ -13,6 +13,7 @@ class FoodInformationTests(TestCase):
     def setUp(self):
         self.partner = User.objects.create_user(username="metadata_partner")
         Profile.objects.create(user=self.partner, role="partner")
+        PartnerApproval.objects.create(user=self.partner, status="approved")
         self.store = create_store(self.partner)
         self.client = APIClient()
         self.client.force_authenticate(self.partner)
@@ -121,6 +122,7 @@ class ReservationPolicyTests(TestCase):
         self.client.force_authenticate(None)
         self.assertEqual(self.client.get(f"/api/listings/{self.a.pk}/reservation-policy").status_code, 403)
         Profile.objects.create(user=self.partner, role="partner")
+        PartnerApproval.objects.create(user=self.partner, status="approved")
         self.client.force_authenticate(self.partner)
         self.assertEqual(self.client.get(f"/api/listings/{self.a.pk}/reservation-policy").status_code, 403)
 

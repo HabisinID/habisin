@@ -173,9 +173,6 @@ def partner_listings(request):
         return Response({"detail": "Pengelolaan listing hanya tersedia untuk akun mitra."}, status=403)
     if not partner_approved(request.user):
         return Response({"detail": "Akun mitra belum disetujui admin."}, status=403)
-    if request.method == "GET":
-        items = Listing.objects.filter(owner=request.user).select_related("store_profile").order_by("-id")
-        return Response(ListingSerializer(items, many=True).data)
     Reservation.expire_overdue()
     if request.method == "GET":
         items = Listing.objects.filter(owner=request.user, deleted_at__isnull=True).select_related("store_profile").order_by("-id")

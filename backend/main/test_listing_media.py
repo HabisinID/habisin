@@ -11,7 +11,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
-from .models import Listing, Profile, Reservation
+from .models import Listing, Profile, Reservation, PartnerApproval
 from .test_listing_revision import create_store, listing_payload
 
 
@@ -34,6 +34,7 @@ class ListingMediaTests(TestCase):
         self.addCleanup(self.settings_override.disable)
         self.user = User.objects.create_user(username="photo_partner", password="Photo-Secure-927!")
         Profile.objects.create(user=self.user, role="partner")
+        PartnerApproval.objects.create(user=self.user, status="approved")
         self.store = create_store(self.user)
         self.client = APIClient()
         self.client.force_authenticate(self.user)
