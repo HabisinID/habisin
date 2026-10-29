@@ -350,6 +350,8 @@ test("account password repeat and active-order deletion guard", async ({
     await mutate(request, "reservations", { listing_id: food.id, quantity: 1 })
   ).json();
   await page.goto("/partner/account");
+  // The account page opens on its profile tab.
+  await page.getByRole("button", { name: "Kata sandi", exact: true }).click();
   await page.locator('input[autocomplete="current-password"]').fill(password);
   const fields = page.locator('input[autocomplete="new-password"]');
   await fields.nth(0).fill("Updated-Workspace-918!");

@@ -129,7 +129,7 @@ for (const width of [1440, 390]) {
       .getByRole("button", { name: "Saya pemilik toko", exact: true })
       .click();
     await expect(
-      page.getByRole("dialog", { name: "Senang kamu kembali." }),
+      page.getByRole("dialog", { name: "Login", exact: true }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await page
@@ -137,7 +137,7 @@ for (const width of [1440, 390]) {
       .first()
       .click();
     await expect(
-      page.getByRole("dialog", { name: "Senang kamu kembali." }),
+      page.getByRole("dialog", { name: "Login", exact: true }),
     ).toBeVisible();
   });
 }
