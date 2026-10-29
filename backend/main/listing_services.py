@@ -13,7 +13,13 @@ class ListingConflict(APIException):
 
 def available_listings(queryset=None):
     queryset = Listing.objects.all() if queryset is None else queryset
-    return queryset.filter(active=True, stock__gt=0, pickup_end__gt=timezone.now()).filter(
+    now = timezone.now()
+    return queryset.filter(
+        active=True,
+        taken_down=False,
+        stock__gt=0,
+        pickup_end__gt=now,
+    ).filter(
         Q(store_profile__isnull=True) | Q(store_profile__is_open=True)
     )
 
