@@ -14,15 +14,18 @@ from .serializers import GeocodeSerializer, StoreSerializer, ListingSerializer
 from .listing_services import available_listings
 
 
-def has_permission(self, request, view):
-    user = request.user
-    is_partner = user.is_authenticated and not user.is_staff and getattr(getattr(user, "profile", None), "role", None) == "partner"
-    if not is_partner:
-        return False
-    if not PartnerApproval.objects.filter(user=user, status="approved").exists():
-        self.message = "Akun mitra belum disetujui admin."
-        return False
-    return True
+class IsPartner(BasePermission):
+    message = "Pengelolaan toko hanya tersedia untuk akun mitra."
+
+    def has_permission(self, request, view):
+        user = request.user
+        is_partner = user.is_authenticated and not user.is_staff and getattr(getattr(user, "profile", None), "role", None) == "partner"
+        if not is_partner:
+            return False
+        if not PartnerApproval.objects.filter(user=user, status="approved").exists():
+            self.message = "Akun mitra belum disetujui admin."
+            return False
+        return True
 
 class GeocodeThrottle(UserRateThrottle):
     rate = "10/min"
