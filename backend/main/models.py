@@ -73,6 +73,8 @@ class Listing(models.Model):
     storage_notes = models.CharField(max_length=500, blank=True)
     allergens = models.CharField(max_length=500, blank=True)
     active = models.BooleanField(default=True)
+    taken_down = models.BooleanField(default=False)
+    takedown_reason = models.TextField(blank=True)
 
     class Meta:
         constraints = [
