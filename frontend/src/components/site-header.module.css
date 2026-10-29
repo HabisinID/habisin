@@ -255,6 +255,7 @@
 }
 
 /* Navbar photos fill a rounded square without action-button padding. */
+.header .actions a[data-navbar-avatar],
 .header .actions button[data-navbar-avatar],
 .header .actions span[data-navbar-avatar] {
   display: grid;

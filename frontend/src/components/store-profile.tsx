@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { ArrowLeft, ArrowUpRight, MapPin } from "lucide-react";
 import StoreCatalog from "./store-catalog";
+import StoreReviews from "./store-reviews";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, ApiError, type Store, type User } from "@/lib/api";
@@ -101,6 +102,9 @@ export default function StoreProfile({ id }: { id: string }) {
             <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-10 tablet:grid-cols-1">
               <div className="min-w-0">
                 <StoreCatalog id={id} />
+                <div className="mt-10">
+                  <StoreReviews storeId={store.id} />
+                </div>
               </div>
               <aside className="sticky top-6 min-w-0 overflow-hidden rounded-xl border border-line bg-surface tablet:static">
                 <div className="flex items-center gap-2 border-b border-line px-5 py-4">

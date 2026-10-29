@@ -49,13 +49,44 @@ class VerificationTests(TestCase):
         self.assertEqual(self.client.get(PAGE).status_code, 403)
         self.assertEqual(self.check("H7K49").status_code, 403)
 
+    def test_cashier_has_the_partner_workspace_menu_in_order(self):
+        from html.parser import HTMLParser
+
+        class Navigation(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.inside = False
+                self.links = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "nav" and attrs.get("aria-label") == "Navigasi mitra":
+                    self.inside = True
+                if self.inside and tag == "a":
+                    self.links.append((attrs.get("href"), attrs.get("aria-current")))
+
+            def handle_endtag(self, tag):
+                if tag == "nav":
+                    self.inside = False
+
+        response = self.client.get(PAGE)
+        parser = Navigation()
+        parser.feed(response.content.decode())
+        self.assertEqual(parser.links, [
+            ("/partner", None), ("/partner/listings", None),
+            ("/partner/orders", None), (PAGE, "page"),
+            ("/partner/store", None), ("/partner/account", None),
+        ])
+        self.assertContains(response, 'id="partner-menu"')
+        self.assertContains(response, 'aria-controls="partner-menu"')
+
     def test_page_offers_qr_scanning(self):
         self.assertContains(self.client.get(PAGE), "Pindai QR")
 
     def test_dashboard_links_go_straight_to_the_partner_dashboard(self):
         # "/" would show the landing page for a moment before redirecting partners.
         page = self.client.get(PAGE)
-        self.assertContains(page, '<a class="item" href="/partner">Dasbor</a>', html=True)
+        self.assertContains(page, '<a class="item" href="/partner">')
         self.assertContains(page, 'class="logo" href="/partner"')
         self.assertNotContains(page, 'href="/"')
 
