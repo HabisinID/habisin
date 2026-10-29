@@ -82,10 +82,26 @@ for (const width of [1440, 390]) {
     await anonymous(page);
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "Roti, nasi, dan kue",
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Jangan disisain. Yuk, dihabisin.",
     );
-    const nearby = page.getByRole("region", { name: "Makanan di sekitarmu" });
+    await expect(
+      page.getByText("Rasa tetap enak. Harga lebih bijak.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Cari makanan di dekatmu", exact: true }),
+    ).toHaveAttribute("href", "/jelajahi");
+    // Real catalog numbers, not the design's placeholders.
+    await expect(
+      page.getByText(/^\d+ toko di Beji buka hari ini$/),
+    ).toBeVisible();
+    await expect(page.getByText(/^Hemat sampai \d+%$/)).toBeVisible();
+    await expect(
+      page.getByRole("complementary", { name: "Tutup berikutnya" }),
+    ).toBeVisible();
+    const nearby = page.getByRole("region", {
+      name: "Malam ini di sekitar Beji",
+    });
     await expect(nearby.locator(".food-card")).toHaveCount(4);
     expect(await nearby.locator(".card-title").allTextContents()).toEqual([
       "Roti Aktif",
@@ -97,7 +113,7 @@ for (const width of [1440, 390]) {
     await expect(page.locator(".hero .food-pin")).toHaveCount(5);
     for (const name of [
       "Dari peta ke kasir dalam tiga langkah",
-      "Sisa etalase jadi pemasukan, bukan kantong sampah.",
+      "Sisa etalase jam tujuh malam jadi pemasukan, bukan kantong sampah.",
       "Kenapa ini penting di Indonesia",
       "Pertanyaan yang sering muncul",
     ])
@@ -109,10 +125,23 @@ for (const width of [1440, 390]) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    const ticket = page
+      .getByRole("region", { name: "Contoh tiket" })
+      .or(page.getByRole("complementary", { name: "Contoh tiket" }));
+    await expect(ticket).toBeVisible();
     await expect(
-      page
-        .getByRole("region", { name: "Contoh tiket" })
-        .or(page.getByRole("complementary", { name: "Contoh tiket" })),
+      ticket.getByRole("img", { name: "QR contoh H7K · 49" }),
+    ).toBeVisible();
+    for (const feature of [
+      "Tayang dalam satu menit",
+      "Verifikasi di kasir dalam lima detik",
+      "Bisa juga donasi",
+    ])
+      await expect(
+        page.getByRole("heading", { name: feature, exact: true }),
+      ).toBeVisible();
+    await expect(
+      page.getByText("Kode cocok · Roti Sisir Mentega × 2"),
     ).toBeVisible();
     await page.screenshot({
       path: `/tmp/habisin-landing-${width}.png`,
@@ -126,7 +155,7 @@ for (const width of [1440, 390]) {
       "href",
     );
     await page
-      .getByRole("button", { name: "Saya pemilik toko", exact: true })
+      .getByRole("button", { name: "Punya toko? Jual sisa etalase" })
       .click();
     await expect(
       page.getByRole("dialog", { name: "Login", exact: true }),
@@ -162,7 +191,7 @@ test("empty, loading and offline catalogs never become demo listing sections and
     page.getByText("Memuat makanan yang sedang tersedia…"),
   ).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Makanan di sekitarmu" }),
+    page.getByRole("region", { name: "Malam ini di sekitar Beji" }),
   ).toHaveCount(0);
   release();
   await expect(
@@ -181,7 +210,7 @@ test("empty, loading and offline catalogs never become demo listing sections and
   await page.getByRole("button", { name: "Coba lagi katalog" }).click();
   await expect(
     page
-      .getByRole("region", { name: "Makanan di sekitarmu" })
+      .getByRole("region", { name: "Malam ini di sekitar Beji" })
       .locator(".food-card"),
   ).toHaveCount(4);
 });
@@ -192,7 +221,7 @@ test("public explore uses buyer map and list, gates favorites and paid/free orde
   await page.goto("/");
   await page.evaluate(() => localStorage.setItem("habisin-saved", "[777]"));
   await page
-    .getByRole("link", { name: "Lihat makanan di sekitar saya", exact: true })
+    .getByRole("link", { name: "Cari makanan di dekatmu", exact: true })
     .click();
   await expect(page).toHaveURL("/jelajahi");
   await expect(
@@ -295,11 +324,11 @@ test("real listing expiry removes landing cards and the complete nearby section 
   ]);
   await page.goto("/");
   await expect(
-    page.getByRole("region", { name: "Makanan di sekitarmu" }),
+    page.getByRole("region", { name: "Malam ini di sekitar Beji" }),
   ).toBeVisible();
   await page.clock.runFor(6000);
   await expect(
-    page.getByRole("region", { name: "Makanan di sekitarmu" }),
+    page.getByRole("region", { name: "Malam ini di sekitar Beji" }),
   ).toHaveCount(0);
   await expect(page.locator(".food-pin")).toHaveCount(0);
 });
