@@ -83,6 +83,14 @@ class VerificationTests(TestCase):
     def test_page_offers_qr_scanning(self):
         self.assertContains(self.client.get(PAGE), "Pindai QR")
 
+    def test_page_shows_the_date_and_links_to_all_orders_today(self):
+        now = timezone.localtime()
+        months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+        page = self.client.get(PAGE)
+        self.assertContains(page, f"{now.day} {months[now.month - 1]}")
+        self.assertContains(page, "Semua pesanan hari ini")
+        self.assertContains(page, 'href="/partner/orders"')
+
     def test_page_counts_orders_waiting_for_pickup(self):
         self.order("H7K49")
         self.order("AAAAA", status="pending")
@@ -101,8 +109,40 @@ class VerificationTests(TestCase):
         self.assertContains(response, "Kode cocok")
         self.assertContains(response, "H7K · 49")
         self.assertContains(response, "Rani A.")
-        self.assertContains(response, "Roti Cabang × 2")
+        self.assertContains(response, "2 porsi")
         self.assertEqual(self.logs(), [])
+
+    def test_matching_code_reads_like_a_receipt_with_green_boxes(self):
+        order = self.order()
+        response = self.check("H7K49")
+        self.assertContains(response, 'data-tone="green"')
+        for label in ["Roti Cabang", "Pembeli", "Jendela ambil", "Dibayar (simulasi)", "No. pesanan"]:
+            self.assertContains(response, f'<span class="label">{label}</span>', html=True)
+        self.assertContains(response, f"HBS-{order.pk}")
+        self.assertContains(response, "Kode lain")
+
+    def test_unknown_code_offers_scanning_and_clearing_the_boxes(self):
+        response = self.check("XXXXX")
+        self.assertContains(response, "data-scan")
+        self.assertContains(response, "Kosongkan kotak")
+        self.assertNotContains(response, "Kode lain")
+
+    def test_used_code_links_to_the_order(self):
+        order = self.order("UUUUU", status="picked_up", picked_up_at=timezone.now())
+        response = self.check("UUUUU")
+        self.assertContains(response, f"Lihat pesanan HBS-{order.pk}")
+        self.assertContains(response, 'href="/partner/orders"')
+
+    def test_cancelled_code_shows_the_stock_and_links_to_the_listing(self):
+        self.order("CCCCC", status="cancelled", cancelled_by="buyer", cancelled_at=timezone.now())
+        response = self.check("CCCCC")
+        self.assertContains(response, '<span class="label">Stok listing sekarang</span>', html=True)
+        self.assertContains(response, "Buka listing Roti Cabang")
+        self.assertContains(response, 'href="/partner/listings"')
+
+    def test_expired_code_shows_the_pickup_window(self):
+        self.order("EEEEE", status="expired")
+        self.assertContains(self.check("EEEEE"), '<span class="label">Jendela ambil</span>', html=True)
 
     def test_buyer_name_is_shortened_even_when_stored_whole(self):
         # Sign-up stores the whole name in first_name.
@@ -172,6 +212,7 @@ class VerificationTests(TestCase):
         response = self.client.post(f"{PAGE}/{order.pk}/pickup")
         self.assertContains(response, "Diserahkan pukul")
         self.assertContains(response, "Urungkan")
+        self.assertContains(response, 'role="progressbar"')
         order.refresh_from_db()
         self.assertEqual(order.status, "picked_up")
         self.assertIsNotNone(order.picked_up_at)
