@@ -397,7 +397,7 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        queryset = PartnerApproval.objects.select_related("user").order_by("-requested_at")
+        queryset = PartnerApproval.objects.select_related("user").prefetch_related("user__stores").order_by("-requested_at")    
         status_filter = self.request.query_params.get("status")
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -408,8 +408,8 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
         if approval.status != "pending":
             return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
         reason = str(request.data.get("reason", "")).strip()
-        if new_status == "rejected" and not reason:
-            return Response({"detail": "Alasan penolakan wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
+        if new_status == "rejected" and not 20 <= len(reason) <= 300:
+            return Response({"detail": "Alasan penolakan harus 20 sampai 300 karakter."}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
             approval.status = new_status
             approval.reviewed_at = timezone.now()
