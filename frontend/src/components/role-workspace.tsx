@@ -163,7 +163,8 @@ export default function RoleWorkspace({
           end={
             user ? (
               <>
-                <span
+                <Link
+                  href="/partner/account"
                   data-navbar-avatar
                   className={s.avatar}
                   aria-label={`Akun ${user.name || user.username}`}
@@ -172,7 +173,7 @@ export default function RoleWorkspace({
                     src={user.profile_picture}
                     name={user.name || user.username}
                   />
-                </span>
+                </Link>
                 <LogoutButton className={s.mobileLogout} onLogout={logout} />
               </>
             ) : undefined
