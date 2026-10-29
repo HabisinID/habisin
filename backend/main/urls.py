@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from . import store_views, commerce_views
+from . import store_views, commerce_views, workspace_views, reviews_views, verification
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -11,9 +11,6 @@ router.register(r"admin/listings", views.AdminListingViewSet, basename="adminlis
 urlpatterns = [
     path("", include(router.urls)),
 
-from . import store_views, commerce_views, reviews_views, verification, workspace_views
-
-urlpatterns = [
     path("partner/orders", workspace_views.partner_orders),
     path("partner/reservations/<int:pk>/cancel", workspace_views.partner_cancel),
     path("partner/stores/<int:pk>/close", workspace_views.close_store),
