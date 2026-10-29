@@ -96,6 +96,11 @@ export default function RoleWorkspace({
           { href: "/admin/listings", label: "Listing", Icon: List },
           { href: "/admin/log", label: "Log moderasi", Icon: History },
           { href: "/admin/account", label: "Akun", Icon: UserRound },
+          {
+            href: "/admin/partner-approval",
+            label: "Pendaftaran mitra",
+            Icon: ClipboardList,
+          },
         ];
   const navigation = (
     <>
@@ -119,10 +124,6 @@ export default function RoleWorkspace({
       )}
       {role === "admin" && (
         <>
-          <button disabled title="Belum diimplementasikan">
-            <ClipboardList size={18} />
-            Pendaftaran mitra
-          </button>
           <button disabled title="Belum diimplementasikan">
             <ShoppingBag size={18} />
             Laporan komplain
