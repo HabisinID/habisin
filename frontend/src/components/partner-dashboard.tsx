@@ -172,11 +172,6 @@ export default function PartnerDashboard({
       <aside className={s.partnerSidebar}>
         <HabisinLogo />
         <small>Mitra</small>
-        {/* Modul 8: the cashier page is rendered by Django, so a plain link. */}
-        <a className={s.verify} href="/api/partner/kasir">
-          <ShieldCheck size={18} />
-          Verifikasi kode
-        </a>
         <nav aria-label="Navigasi mitra">
           <button
             aria-current={section === "dashboard" ? "page" : undefined}
@@ -196,6 +191,11 @@ export default function PartnerDashboard({
             <ShoppingBag size={18} />
             Pesanan <b>{activeOrders.length}</b>
           </button>
+          {/* Django renders the cashier, so use a full-page link. */}
+          <a className={s.verify} href="/api/partner/kasir">
+            <ShieldCheck size={18} />
+            Verifikasi kode
+          </a>
           <Link href="/partner/store">
             <Store size={18} />
             Profil toko

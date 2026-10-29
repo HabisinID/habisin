@@ -415,7 +415,8 @@
   color: var(--color-brand);
   font-weight: 700;
 }
-.verify {
+.verify,
+.partnerSidebar .verify {
   display: flex;
   align-items: center;
   gap: 10px;

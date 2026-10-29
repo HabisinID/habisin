@@ -3,7 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { QRCodeSVG } from "qrcode.react";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { cleanup, listing, mutate, register } from "./backend-fixtures";
+import {
+  cleanup,
+  listing,
+  mutate,
+  register,
+  password,
+} from "./backend-fixtures";
 
 // Modul 8: the HTMX cashier page served by Django through the /api proxy.
 // Needs both servers, like role-workspaces.spec.ts.
@@ -289,4 +295,113 @@ test("a QR read from a closed scanner session is ignored", async ({ page }) => {
   await page.waitForTimeout(800);
   await expect(dialog).toBeVisible();
   await expect(page.getByLabel("Karakter 1")).toHaveValue("");
+});
+
+test("cashier and partner workspace share navigation order on desktop and mobile", async ({
+  page,
+}) => {
+  await register(page.request, "partner", 1);
+  const labels = [
+    "Dasbor",
+    "Listing",
+    "Pesanan",
+    "Verifikasi kode",
+    "Profil toko",
+    "Akun",
+  ];
+  const hrefs = [
+    "/partner",
+    "/partner/listings",
+    "/partner/orders",
+    "/api/partner/kasir",
+    "/partner/store",
+    "/partner/account",
+  ];
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ["/partner", "/partner/orders", "/api/partner/kasir"]) {
+      await page.goto(path);
+      if (width === 390)
+        await page
+          .getByRole("button", { name: "Menu mitra", exact: true })
+          .click();
+      const nav =
+        width === 390
+          ? page
+              .getByRole("dialog")
+              .getByRole("navigation", { name: "Menu mitra", exact: true })
+          : page.getByRole("navigation", {
+              name: "Navigasi mitra",
+              exact: true,
+            });
+      await expect(nav.getByRole("link")).toHaveText(labels);
+      for (let i = 0; i < hrefs.length; i++)
+        await expect(nav.getByRole("link").nth(i)).toHaveAttribute(
+          "href",
+          hrefs[i],
+        );
+      if (path === "/api/partner/kasir")
+        await expect(
+          nav.getByRole("link", { name: "Verifikasi kode", exact: true }),
+        ).toHaveAttribute("aria-current", "page");
+      if (width === 390) {
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog")).toHaveCount(0);
+        await expect(
+          page.getByRole("button", { name: "Menu mitra", exact: true }),
+        ).toBeFocused();
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+  }
+  await page.getByLabel("Karakter 1", { exact: true }).fill("A");
+  await page.getByRole("button", { name: "Menu mitra", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Karakter 1", { exact: true })).toHaveValue("A");
+  await page.getByRole("button", { name: "Menu mitra", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: "Pesanan", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/partner\/orders$/);
+});
+
+test("cashier logout can be cancelled and retries safely after a server error", async ({
+  page,
+}) => {
+  await register(page.request, "partner", 0);
+  const user = await (await page.request.get("/api/auth/me")).json();
+  await page.goto("/api/partner/kasir");
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Keluar dari akun?" });
+  await dialog.getByRole("button", { name: "Batal", exact: true }).click();
+  expect((await page.request.get("/api/auth/me")).status()).toBe(200);
+  await page.route("**/api/auth/logout", (route) =>
+    route.fulfill({ status: 503, json: { detail: "Offline" } }),
+  );
+  await page.getByRole("button", { name: "Keluar", exact: true }).click();
+  await dialog.getByRole("button", { name: "Ya, keluar", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Gagal keluar. Coba lagi.",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Ya, keluar", exact: true }),
+  ).toBeEnabled();
+  await page.unroute("**/api/auth/logout");
+  await dialog.getByRole("button", { name: "Ya, keluar", exact: true }).click();
+  await expect(page).toHaveURL("/");
+  expect((await page.request.get("/api/auth/me")).status()).toBe(403);
+  // Restore this disposable account's session so afterEach can delete it.
+  expect(
+    (
+      await mutate(page.request, "auth/login", {
+        username: user.username,
+        password,
+      })
+    ).status(),
+  ).toBe(200);
 });
