@@ -281,7 +281,9 @@ test("offline, the ticket stays readable from the device", async ({ page }) => {
   const code = await page.getByTestId("ticket-code").textContent();
   await page.route(`**/api/reservations/${id}`, (route) => route.abort());
   await page.reload();
-  await expect(page.getByText("Tersimpan di perangkat")).toBeVisible();
+  await expect(
+    page.getByText("Tersimpan di perangkat", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("ticket-code")).toHaveText(code!);
   await expect(page.getByRole("img", { name: /^QR kode ambil/ })).toBeVisible();
 });
