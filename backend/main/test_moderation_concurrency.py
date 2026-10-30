@@ -4,6 +4,7 @@ from threading import Barrier
 from unittest import skipUnless
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db import close_old_connections, connection, connections
 from django.test import TransactionTestCase
 from django.utils import timezone
@@ -15,7 +16,11 @@ from .models import AdminModerationLog, ModerationLog, PartnerApproval, Reservat
 
 @skipUnless(connection.vendor == "postgresql", "Requires PostgreSQL row locks")
 class ModerationConcurrencyTests(TransactionTestCase):
-    setUp = test_commerce.CommerceTests.setUp
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        test_commerce.CommerceTests.setUp(self)
+
     food = test_commerce.CommerceTests.food
 
     def test_takedown_serializes_with_each_stock_and_ticket_writer(self):

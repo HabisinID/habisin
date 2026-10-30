@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
@@ -11,7 +12,11 @@ from .models import AdminModerationLog, ListingStockAction, ModerationLog, Reser
 
 
 class ModerationContractTests(TestCase):
-    setUp = test_commerce.CommerceTests.setUp
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        test_commerce.CommerceTests.setUp(self)
+
     food = test_commerce.CommerceTests.food
 
     def admin_action(self, action="take_down", workspace=True, reason="Makanan tidak aman untuk dikonsumsi"):
