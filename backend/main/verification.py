@@ -126,8 +126,12 @@ def pickup(request, order):
 def undo(request, order):
     if order.status != "picked_up" or timezone.now() - order.picked_up_at > UNDO_WINDOW:
         return render(request, "main/kasir/_message.html", {"message": "Batas urungkan 60 detik sudah lewat."}, status=409)
+    if order.listing.deleted_at or order.listing.moderated_at or order.listing.taken_down:
+        return render(request, "main/kasir/_message.html", {"message": "Listing diarsipkan atau diturunkan admin; pesanan tidak dapat diaktifkan kembali."}, status=409)
     order.status, order.picked_up_at = "paid", None
-    order.save(update_fields=["status", "picked_up_at"])
+    # A cashier undo makes the order active again, so buyer history must show it.
+    order.buyer_archived_at = None
+    order.save(update_fields=["status", "picked_up_at", "buyer_archived_at"])
     VerificationLog.objects.filter(reservation=order, outcome="picked_up").delete()
     return result(request, "match", order, order.code)
 

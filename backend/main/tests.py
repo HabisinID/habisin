@@ -264,7 +264,7 @@ class ReservationFlowTests(TestCase):
         for pk in [cancelled, picked_up]:
             self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 204)
         self.assertEqual(self.stock(), stock)
-        self.assertEqual(set(Reservation.objects.values_list("pk", flat=True)), {pending, paid})
+        self.assertEqual(set(Reservation.objects.filter(buyer_archived_at__isnull=True).values_list("pk", flat=True)), {pending, paid})
 
     def test_other_users_cannot_touch_order(self):
         pk = self.order()
@@ -525,7 +525,7 @@ class PartnerListingTests(TestCase):
             ids = [row["id"] for row in self.client.get("/api/listings").json()]
             self.assertEqual(item.pk in ids, active)
         self.assertEqual(self.client.delete(path).status_code, 204)
-        self.assertFalse(Listing.objects.filter(pk=item.pk).exists())
+        self.assertTrue(Listing.objects.filter(pk=item.pk, deleted_at__isnull=False, active=False).exists())
 
     def test_inventory_permissions_and_cross_partner_access(self):
         self.client.force_authenticate(self.other)

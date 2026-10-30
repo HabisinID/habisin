@@ -140,6 +140,8 @@ class Reservation(models.Model):
     cancellation_note = models.CharField(max_length=500, blank=True)
     cancelled_by = models.CharField(max_length=7, blank=True, choices=[("buyer", "Pembeli"), ("partner", "Mitra"), ("admin", "Admin")])
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    # Hiding buyer history must not erase complaints, reviews or sales metrics.
+    buyer_archived_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def deadline(self):
