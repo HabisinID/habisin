@@ -133,6 +133,7 @@ function ModerationLogContent() {
   const [filter, setFilter] = useState<Filter>("all");
   const [range, setRange] = useState("7");
   const [page, setPage] = useState(1);
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     const c = new AbortController();
@@ -146,7 +147,7 @@ function ModerationLogContent() {
   if (loading) return <p>Memuat…</p>;
   if (error) return <p role="alert">{error}</p>;
 
-  const cutoff = range === "all" ? 0 : Date.now() - Number(range) * 86400000;
+  const cutoff = range === "all" ? 0 : now - Number(range) * 86400000;
   const inRange = items.filter(
     (l) => new Date(l.created_at).getTime() >= cutoff,
   );
