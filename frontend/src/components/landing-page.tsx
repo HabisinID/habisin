@@ -405,7 +405,7 @@ export default function LandingPage({
             <button className={s.partnerCta} onClick={onPartner}>
               Daftarkan toko
             </button>
-            <p>Gratis untuk mitra. Listing bisa langsung tayang.</p>
+            <p>Pendaftaran ditinjau admin, biasanya 1×24 jam.</p>
           </div>
         </div>
         <div
