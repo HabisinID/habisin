@@ -98,8 +98,11 @@ class WorkspaceRevisionTests(TestCase):
         self.assertEqual(self.moderate().status_code,200)
         self.assertEqual(ModerationLog.objects.count(),1)
         summary=self.client.get('/api/admin/summary').data
-        self.assertEqual(summary['listings_taken_down'],1)
-        self.assertFalse(summary['complaints_available'])
+        self.assertEqual(summary['listings_live'],1)
+        self.assertEqual(summary['orders_today'],1)
+        self.assertEqual(summary['partners_active'],2)
+        self.assertEqual(summary['pickup_portions_today'],0)
+        self.assertTrue(summary['complaints_available'])
         self.client.force_authenticate(self.partner)
         path=f'/api/partner/listings/{self.a.pk}'
         for method,payload,suffix in [('patch',{'stock':20},''),('patch',{'active':True},''),('patch',{'name':'Bypass'},''),('delete',{},''),('post',{},'/sold-out'),('post',{'token':'bad'},'/undo-sold-out')]:
