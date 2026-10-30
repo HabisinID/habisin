@@ -88,6 +88,9 @@ export function Auth({
     setError("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
     try {
+      if (mode === "register" && values.password !== values.password_confirm) {
+        throw new Error("Konfirmasi password harus sama dengan password.");
+      }
       onUser(await api<User>(`auth/${mode}`, "POST", values));
       onClose();
     } catch (e) {
@@ -161,6 +164,19 @@ export function Auth({
             }
           />
         </label>
+        {mode === "register" && (
+          <label>
+            Konfirmasi password
+            <PasswordInput
+              name="password_confirm"
+              required
+              minLength={8}
+              maxLength={128}
+              autoComplete="new-password"
+              placeholder="Ulangi password kamu"
+            />
+          </label>
+        )}
         {mode === "register" && (
           <label>
             Daftar sebagai
@@ -237,6 +253,9 @@ export function Profile({
         setMessage("Profil berhasil disimpan.");
       }
       if (tab === "password") {
+        if (data.new_password !== data.new_password_confirm) {
+          throw new Error("Konfirmasi password harus sama dengan password baru.");
+        }
         await api("auth/password", "POST", data);
         setMessage("Password berhasil diubah.");
         form.reset();
@@ -359,6 +378,16 @@ export function Profile({
                 Password baru
                 <PasswordInput
                   name="new_password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Konfirmasi password baru
+                <PasswordInput
+                  name="new_password_confirm"
                   required
                   minLength={8}
                   maxLength={128}
