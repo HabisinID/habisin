@@ -89,6 +89,7 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await expect(page.getByText("Username tersedia ✓")).toBeVisible();
     await page.getByLabel("Email", { exact: true }).fill("browser@example.com");
     await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Konfirmasi password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Buat akun", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     registered = true;
@@ -125,7 +126,10 @@ test("register, reserve, ticket, cancel, profile, password, login, and delete", 
     await expect(page.getByText("Profil berhasil disimpan.")).toBeVisible();
     await page.getByRole("button", { name: "Password", exact: true }).click();
     await page.getByLabel("Password lama").fill(password);
-    await page.getByLabel("Password baru").fill(newPassword);
+    await page.getByLabel("Password baru", { exact: true }).fill(newPassword);
+    await page
+      .getByLabel("Konfirmasi password baru", { exact: true })
+      .fill(newPassword);
     await page.getByRole("button", { name: "Simpan perubahan" }).click();
     await expect(page.getByText("Password berhasil diubah.")).toBeVisible();
     changed = true;

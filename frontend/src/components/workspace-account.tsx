@@ -243,13 +243,25 @@ function Account({
                   Ulangi kata sandi baru
                   <PasswordInput
                     className={profileField}
+                    name="new_password_confirm"
                     value={repeat}
+                    aria-invalid={!!repeat && repeat !== next}
+                    aria-describedby={
+                      repeat && repeat !== next
+                        ? "workspace-password-mismatch"
+                        : undefined
+                    }
+                    maxLength={128}
                     onChange={(e) => setRepeat(e.target.value)}
                     required
                     autoComplete="new-password"
                   />
                   {repeat && repeat !== next && (
-                    <small className="text-error" role="status">
+                    <small
+                      id="workspace-password-mismatch"
+                      className="text-error"
+                      role="status"
+                    >
                       Harus sama dengan kata sandi baru.
                     </small>
                   )}
