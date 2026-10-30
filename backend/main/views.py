@@ -407,12 +407,13 @@ class PartnerApprovalViewSet(viewsets.ReadOnlyModelViewSet):
 
     def review(self, request, new_status, action_type, default_reason):
         approval = self.get_object()
-        if approval.status != "pending":
-            return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
         reason = str(request.data.get("reason", "")).strip()
         if new_status == "rejected" and not reason:
             return Response({"detail": "Alasan penolakan wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
+            approval = PartnerApproval.objects.select_for_update().get(pk=approval.pk)
+            if approval.status != "pending":
+                return Response({"detail": "Pengajuan ini sudah diproses."}, status=status.HTTP_400_BAD_REQUEST)
             approval.status = new_status
             approval.reviewed_at = timezone.now()
             approval.save(update_fields=["status", "reviewed_at"])

@@ -47,3 +47,11 @@ ini. Data yang dahulu sudah terhapus memerlukan backup untuk dipulihkan.
 Migrasi baru menambah kolom arsip nullable tanpa menyembunyikan transaksi lama.
 Gunakan backup dan tinjau `migrate --plan` sebelum migrasi database kerja;
 pengujian otomatis memakai database/media sementara.
+
+## Persetujuan mitra
+
+Approve/reject mengunci pengajuan lalu memeriksa ulang status pending di dalam
+transaksi. Dua keputusan bersamaan hanya boleh menghasilkan satu keputusan dan
+satu log. Pengajuan yang sudah diproses tetap ditolak 400. Tes konkurensi
+`test_moderation_concurrency.py` memakai koneksi terpisah dan hanya berjalan pada
+PostgreSQL; tes SQLite tidak membuktikan jaminan penguncian baris.
