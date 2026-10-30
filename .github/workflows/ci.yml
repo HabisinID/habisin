@@ -76,6 +76,8 @@ jobs:
           python -m pip install -r requirements.txt
           python manage.py migrate
           python manage.py seed_demo
+          # The admin that approves partners created by the tests (tests/backend-fixtures.ts).
+          DJANGO_SUPERUSER_PASSWORD='E2e-Admin-Secure-927!' python manage.py createsuperuser --noinput --username e2e_admin --email e2e@example.com
           python manage.py runserver 127.0.0.1:8000 > ../django.log 2>&1 &
       - name: Build and start Next.js
         working-directory: frontend

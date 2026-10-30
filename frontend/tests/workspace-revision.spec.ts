@@ -350,6 +350,8 @@ test("account password repeat and active-order deletion guard", async ({
     await mutate(request, "reservations", { listing_id: food.id, quantity: 1 })
   ).json();
   await page.goto("/partner/account");
+  // The account page opens on its profile tab.
+  await page.getByRole("button", { name: "Kata sandi", exact: true }).click();
   await page.locator('input[autocomplete="current-password"]').fill(password);
   const fields = page.locator('input[autocomplete="new-password"]');
   await fields.nth(0).fill("Updated-Workspace-918!");
@@ -445,9 +447,11 @@ test("admin loading, service error retry and empty activity are explicit", async
   );
   await page.getByRole("button", { name: "Coba lagi admin" }).click();
   await expect(page.getByText("Belum ada aktivitas moderasi.")).toBeVisible();
-  await page.route("**/api/admin/moderation-logs?**", (r) =>
-    r.fulfill({ json: { results: [], count: 0, page: 1, page_size: 25 } }),
+  await page.route("**/api/admin/activity-logs**", (r) =>
+    r.fulfill({ json: [] }),
   );
   await page.goto("/admin/log");
-  await expect(page.getByText("Tidak ada log pada filter ini.")).toBeVisible();
+  await expect(
+    page.getByText("Belum ada catatan moderasi pada filter ini."),
+  ).toBeVisible();
 });

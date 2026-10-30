@@ -1,5 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
-import { expect } from "@playwright/test";
+import { expect, request as api } from "@playwright/test";
 export const password = "Module3-Secure-927!";
 export const image = "https://example.com/module3-photo.svg";
 
@@ -26,13 +26,53 @@ export async function mutate(
   });
 }
 
+// New partners wait for an admin's approval before they can add stores. CI
+// creates this admin (see .github/workflows/ci.yml); locally, create it once with
+// `createsuperuser` or point E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD at your own.
+const admin = {
+  username: process.env.E2E_ADMIN_USERNAME || "e2e_admin",
+  password: process.env.E2E_ADMIN_PASSWORD || "E2e-Admin-Secure-927!",
+};
+// One signed-in admin per worker, so approvals don't run into the login limit.
+let adminSession: Promise<APIRequestContext> | undefined;
+function signedInAdmin() {
+  adminSession ??= (async () => {
+    const context = await api.newContext({
+      baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000",
+    });
+    const response = await mutate(context, "auth/login", admin);
+    expect(response.status(), "E2E admin could not sign in").toBe(200);
+    return context;
+  })();
+  return adminSession;
+}
+async function approvePartner(username: string) {
+  const context = await signedInAdmin();
+  const pending = await context.get(
+    "/api/admin/partner-approvals?status=pending",
+  );
+  expect(pending.status()).toBe(200);
+  const body = await pending.json();
+  const rows: { id: number; username: string }[] = Array.isArray(body)
+    ? body
+    : body.results;
+  const row = rows.find((item) => item.username === username);
+  expect(row, `no pending approval for ${username}`).toBeTruthy();
+  const approved = await mutate(
+    context,
+    `admin/partner-approvals/${row!.id}/approve`,
+  );
+  expect(approved.status()).toBe(200);
+}
+
 export async function register(
   request: APIRequestContext,
   role: "buyer" | "partner",
   storeCount = 2,
 ) {
+  const username = `m3_${role}_${Date.now()}`;
   const response = await mutate(request, "auth/register", {
-    username: `m3_${role}_${Date.now()}`,
+    username,
     name: "Module Three",
     email: "module3@example.com",
     password,
@@ -41,6 +81,7 @@ export async function register(
   expect(response.status()).toBe(201);
   const stores = [];
   if (role === "partner") {
+    await approvePartner(username);
     for (const [name, address, latitude, longitude] of [
       ["Toko Modul Tiga", "Jalan Margonda, Beji, Depok", -6.366, 106.829],
       [
