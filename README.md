@@ -448,7 +448,10 @@ Setiap job dibatasi 20 menit. Laporan XML coverage tersedia sebagai artifact
 `backend-coverage`; log Django/Next.js, trace kegagalan, dan laporan HTML Playwright
 tersedia sebagai `e2e-debug`, termasuk saat retry berhasil. Artifact disimpan 7 hari.
 Backend browser memakai database/media sementara dan batas login khusus tes;
-pengaturan rate limit produksi tetap berlaku di aplikasi asli. Jangan merge PR
+fixture mitra disetujui lewat API admin dengan akun sementara. Untuk menjalankan
+tes mitra secara lokal, set `HABISIN_TEST_ADMIN_PASSWORD` yang sama pada proses
+`serve-backend.py` dan Playwright. Pengaturan rate limit produksi tetap berlaku
+di aplikasi asli. Jangan merge PR
 dengan CI merah. Atur branch protection di GitHub agar keempat job wajib lulus
 dan PR mendapat review rekan; CodeRabbit tetap menjadi masukan tambahan.
 

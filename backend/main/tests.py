@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.core.cache import cache
 from django.core.management import call_command, CommandError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from .models import Listing, Profile, Reservation, Store, PartnerApproval, AdminModerationLog
@@ -29,6 +29,7 @@ class AuthenticationTests(TestCase):
         for path in ["/api/auth/register", "/api/auth/login"]:
             self.assertEqual(self.client.post(path, self.data, format="json").status_code, 403)
 
+    @override_settings(CSRF_TRUSTED_ORIGINS=["http://127.0.0.1:3001"])
     def test_preview_origin_still_requires_token_and_rejects_external_origin(self):
         token = self.client.get("/api/auth/csrf").json()["csrfToken"]
         payload = {"username": "missing_preview_user", "password": "Wrong-Preview-381!"}
@@ -567,6 +568,10 @@ class PartnerListingTests(TestCase):
         self.assertEqual(self.client.post(f'/api/reservations/{order.json()["id"]}/cancel').json()["listing"]["stock"], 2)
 
     def test_seed_refuses_to_overwrite_partner_listing(self):
+        # PostgreSQL sequences keep advancing across TestCase rollbacks. Ensure
+        # this partner listing actually overlaps the fixed demo catalog IDs.
+        Listing.objects.filter(pk=self.item.pk).update(id=1)
+        self.item.pk = 1
         with self.assertRaises(CommandError):
             call_command("seed_demo", stdout=StringIO())
         self.item.refresh_from_db()
