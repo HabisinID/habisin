@@ -189,6 +189,20 @@ pembaruan jika masih ada pesanan aktif yang belum lewat batas; batalkan melalui
 **Pesanan saya** sebelum menjalankan ulang seed.
 Seed menolak benturan ID listing milik mitra; seluruh operasi dibatalkan atomik.
 
+Untuk demo penilaian PWS, gunakan batas ambil eksplisit agar listing tetap tampil
+sepanjang **20 November 2026 (WIB)**:
+
+```bash
+python manage.py seed_demo --pickup-end '2026-11-21T00:00:00+07:00'
+```
+
+Jalankan dari direktori backend pada lingkungan/database PWS setelah kode ini
+terdeploy. Opsi ini hanya memperbarui enam listing demo, bukan listing milik mitra.
+Deadline harus di masa depan dan menyertakan zona waktu. Tanpa opsi tersebut,
+default tetap delapan jam. Menjalankan ulang tanpa opsi akan mengembalikan batas
+ambil ke delapan jam. Jangan pasang seed sebagai perintah startup otomatis karena
+seed juga mengatur ulang stok dan menolak pesanan aktif.
+
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
 
