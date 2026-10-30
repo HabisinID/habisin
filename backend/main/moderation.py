@@ -45,7 +45,10 @@ def moderate_listing(pk, actor, action, reason, *, require_removed=False):
             item.moderated_by = None
             reason_to_save = ""
         item.taken_down = taking_down
-        item.takedown_reason = item.moderation_reason = reason_to_save
+        # Module 6 previously accepted unbounded reasons. Preserve that text
+        # while keeping the workspace's 500-character column valid on upgrade.
+        item.takedown_reason = reason_to_save
+        item.moderation_reason = reason_to_save[:500]
         if removed or taking_down:
             item.active = False
             item.save(update_fields=["active", "taken_down", "takedown_reason", "moderated_at", "moderated_by", "moderation_reason"])

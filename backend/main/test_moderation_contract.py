@@ -107,3 +107,11 @@ class ModerationContractTests(TestCase):
         self.assertEqual(order.status, "expired")
         self.assertEqual(self.a.stock, 4)
         self.assertTrue(token.used)
+
+    def test_legacy_long_reason_is_preserved_without_overflowing_workspace_field(self):
+        reason = "Legacy reason " * 100
+        type(self.a).objects.filter(pk=self.a.pk).update(taken_down=True, takedown_reason=reason)
+        self.assertEqual(self.admin_action().status_code, 200)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.takedown_reason, reason)
+        self.assertEqual(self.a.moderation_reason, reason[:500])
