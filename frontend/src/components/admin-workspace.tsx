@@ -12,9 +12,6 @@ type Summary = {
   listings_live: number;
   orders_today: number;
   partners_active: number;
-  users_active: number;
-  stores_open: number;
-  listings_taken_down: number;
   recent_activity: ModerationEntry[];
   complaints_available: boolean;
   complaints_open: number;
@@ -39,7 +36,6 @@ type Summary = {
     requested_at: string;
   }[];
   pickup_portions_today: number;
-  pickup_on_time_percent: number | null;
 };
 type PageData<T> = {
   results: T[];
@@ -396,18 +392,9 @@ function AdminContent({ mode }: { mode: Mode }) {
           <div className={s.metrics}>
             {[
               [summary.listings_live, "listing tayang"],
-              [summary.orders_today, "pesanan dibuat hari ini"],
+              [summary.orders_today, "pesanan hari ini"],
+              [summary.partners_active, "mitra aktif"],
               [summary.pickup_portions_today ?? 0, "porsi terselamatkan hari ini"],
-              [
-                summary.pickup_on_time_percent == null
-                  ? "—"
-                  : `${summary.pickup_on_time_percent}%`,
-                "pengambilan tepat waktu",
-              ],
-              [summary.partners_active, "akun mitra aktif"],
-              [summary.users_active, "pengguna aktif"],
-              [summary.stores_open, "toko aktif"],
-              [summary.listings_taken_down, "listing diturunkan"],
             ].map(([value, label]) => (
               <div key={label}>
                 <strong>{value}</strong>

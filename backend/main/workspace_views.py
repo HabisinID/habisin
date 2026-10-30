@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -145,9 +145,7 @@ def admin_summary(request):
     end = start + timedelta(days=1)
     completed_today = Reservation.objects.filter(
         status="picked_up", picked_up_at__gte=start, picked_up_at__lt=end
-    ).annotate(deadline_value=Coalesce("pickup_deadline", "listing__pickup_end"))
-    picked_up_count = completed_today.count()
-    on_time_count = completed_today.filter(picked_up_at__lte=F("deadline_value")).count()
+    )
     complaint_counts = {
         row["status"]: row["total"]
         for row in Complaint.objects.values("status").annotate(total=Count("id"))
@@ -186,9 +184,6 @@ def admin_summary(request):
         })
     return Response({"listings_live": available_listings().count(), "orders_today": Reservation.objects.filter(created_at__gte=start, created_at__lt=end).count(),
                      "partners_active": User.objects.filter(is_active=True, is_staff=False, profile__role="partner").count(),
-                     "users_active": User.objects.filter(is_active=True, is_staff=False).count(),
-                     "stores_open": Store.objects.filter(is_open=True, closed_at__isnull=True).count(),
-                     "listings_taken_down": Listing.objects.filter(moderated_at__isnull=False, deleted_at__isnull=True).count(),
                      "recent_activity": [log_data(row) for row in ModerationLog.objects.select_related("actor")[:5]],
                      "complaints_available": True, "complaints_open": complaints_open,
                      "complaints_new": complaints_new,
@@ -198,8 +193,7 @@ def admin_summary(request):
                      "partner_approval_available": True,
                      "partner_approvals_pending": PartnerApproval.objects.filter(status="pending").count(),
                      "partner_approval_preview": partner_approval_preview,
-                     "pickup_portions_today": completed_today.aggregate(total=Sum("quantity"))["total"] or 0,
-                     "pickup_on_time_percent": round(on_time_count * 100 / picked_up_count) if picked_up_count else None})
+                     "pickup_portions_today": completed_today.aggregate(total=Sum("quantity"))["total"] or 0})
 
 
 @api_view(["GET"])
