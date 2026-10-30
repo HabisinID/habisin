@@ -10,13 +10,11 @@ test("responsive catalog, active filters, and accessible dialogs retain their st
   page,
 }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByText("Katalog belum terhubung.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".food-card")).toHaveCount(0);
+  // The landing shows example food even when the catalog is offline.
+  await expect(page.locator(".food-card")).toHaveCount(4);
   for (const [width, headingSize] of [
-    [1500, "48px"],
-    [1280, "48px"],
+    [1500, "72px"],
+    [1280, "72px"],
     [900, "40px"],
     [760, "40px"],
     [480, "34px"],

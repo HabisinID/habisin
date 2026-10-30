@@ -111,8 +111,10 @@
   letter-spacing: -2.5px;
 }
 /* The yellow pen stroke under "dihabisin". */
+/* "dihabisin": yellow text with a green line underneath. */
 .underline {
-  background: linear-gradient(var(--color-yellow), var(--color-yellow)) 0 92% /
+  color: var(--color-yellow);
+  background: linear-gradient(var(--color-brand), var(--color-brand)) 0 100% /
     100% 5px no-repeat;
   padding-bottom: 6px;
 }
@@ -484,7 +486,11 @@
   font-size: 13px;
 }
 .verificationExample {
-  background: color-mix(in srgb, var(--color-on-inverse) 6%, var(--color-inverse));
+  background: color-mix(
+    in srgb,
+    var(--color-on-inverse) 6%,
+    var(--color-inverse)
+  );
   border: 1px solid color-mix(in srgb, var(--color-on-inverse) 18%, transparent);
   border-radius: 16px;
   padding: 32px;

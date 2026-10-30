@@ -423,14 +423,7 @@ export default function Home() {
           </>
         ) : (
           <LandingPage
-            items={items}
             now={now}
-            origin={origin}
-            online={online}
-            verified={hasServerData}
-            loading={catalogLoading}
-            onRefresh={refresh}
-            onSelect={(item) => router.push(`/jelajahi?listing=${item.id}`)}
             onSave={() => {
               setRegistrationRole("buyer");
               setPanel("login");

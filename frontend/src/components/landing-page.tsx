@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { type Listing, pickup, rupiah } from "@/lib/api";
-import { discover, eligible, type Origin } from "@/lib/discovery";
+import { discover, type Origin } from "@/lib/discovery";
 import { designFont } from "@/lib/design-font";
 import HabisinLogo from "./habisin-logo";
 import SiteHeader from "./site-header";
@@ -29,6 +29,100 @@ const FoodMap = dynamic(() => import("./food-map"), {
   loading: () => <p role="status">Menyiapkan peta Margonda Raya…</p>,
 });
 const margonda: Origin = [-6.366, 106.829];
+
+// The landing page shows fixed example food, not the live catalog, so it
+// always looks like the design. Each pickup ends `minutes` after now.
+const examples = [
+  [
+    "Nasi Ayam Geprek",
+    "Warung Bu Sri Kukusan",
+    10000,
+    18000,
+    1,
+    23,
+    -6.3608,
+    106.8305,
+    "ayam-geprek",
+  ],
+  [
+    "Roti Sisir Mentega",
+    "Toko Roti Margonda",
+    8000,
+    20000,
+    2,
+    88,
+    -6.369,
+    106.8302,
+    "roti-mentega",
+  ],
+  [
+    "Bolu Lapis Potong",
+    "Dapur Mama Tia Pondok Cina",
+    0,
+    0,
+    3,
+    103,
+    -6.3585,
+    106.833,
+    "bolu",
+  ],
+  [
+    "Croissant Keju",
+    "Kedai Kopi Kukusan 1987",
+    12000,
+    28000,
+    5,
+    148,
+    -6.372,
+    106.82,
+    "croissant",
+  ],
+  [
+    "Roti Gandum Utuh",
+    "Roti Rumahan Beji",
+    9000,
+    15000,
+    4,
+    170,
+    -6.3635,
+    106.8245,
+    "roti-gandum",
+  ],
+] as const;
+function exampleListings(now: number): Listing[] {
+  return examples.map(
+    ([name, store, price, original, stock, minutes, lat, lng, photo], i) => {
+      const end = now + minutes * 60000;
+      return {
+        id: -(i + 1),
+        name,
+        store,
+        category: "Roti & kue",
+        description: "",
+        address: "Beji, Depok",
+        price,
+        original_price: original,
+        stock,
+        image: `/landing/${photo}.jpg`,
+        latitude: lat,
+        longitude: lng,
+        pickup_start: new Date(end - 180 * 60000).toISOString(),
+        pickup_end: new Date(end).toISOString(),
+        active: true,
+        store_id: i + 1,
+        store_summary: {
+          id: i + 1,
+          name: store,
+          address: "Beji, Depok",
+          latitude: lat,
+          longitude: lng,
+          is_open: true,
+          landmark: "",
+        },
+      };
+    },
+  );
+}
 
 export function PublicSearchParams({
   onQuery,
@@ -106,42 +200,22 @@ export function LandingHeader({
   );
 }
 export default function LandingPage({
-  items,
   now,
-  origin,
-  online,
-  verified,
-  loading,
-  onRefresh,
-  onSelect,
   onSave,
   onPartner,
   onLogin,
   onRegister,
 }: {
-  items: Listing[];
   now: number;
-  origin: Origin;
-  online: boolean;
-  verified: boolean;
-  loading: boolean;
-  onRefresh: () => void;
-  onSelect: (item: Listing) => void;
   onSave: () => void;
   onPartner: () => void;
   onLogin: () => void;
   onRegister: () => void;
 }) {
   const router = useRouter();
-  const active = useMemo(
-    () =>
-      online && verified
-        ? items
-            .filter((i) => eligible(i, now))
-            .sort((a, b) => Date.parse(a.pickup_end) - Date.parse(b.pickup_end))
-        : [],
-    [items, now, online, verified],
-  );
+  const active = useMemo(() => exampleListings(now), [now]);
+  // The examples are not real listings: opening one goes to Jelajahi.
+  const onSelect = () => router.push("/jelajahi");
   const { storeGroups } = useMemo(
     () =>
       discover(
@@ -159,23 +233,6 @@ export default function LandingPage({
         now,
       ),
     [active, now],
-  );
-  const stores = new Set(active.map((i) => i.store_id ?? `legacy:${i.store}`))
-    .size;
-  const portions = active.reduce((total, item) => total + item.stock, 0);
-  // The hero's numbers come from the live catalog, not the design's examples.
-  const storeInitials = [...new Set(active.map((i) => i.store))]
-    .slice(0, 4)
-    .map((name) => name.trim()[0]?.toUpperCase() ?? "");
-  const bestSaving = active.reduce(
-    (best, item) =>
-      item.price > 0 && item.original_price > item.price
-        ? Math.max(
-            best,
-            Math.round((1 - item.price / item.original_price) * 100),
-          )
-        : best,
-    0,
   );
   return (
     <div className={`${s.landing} ${designFont.className}`}>
@@ -203,23 +260,19 @@ export default function LandingPage({
               <ArrowUpRight size={16} aria-hidden="true" />
             </button>
           </div>
-          {stores > 0 && (
-            <div className={s.proof}>
-              <span className={s.avatars} aria-hidden="true">
-                {storeInitials.map((letter, index) => (
-                  <span key={index}>{letter}</span>
-                ))}
-              </span>
-              <div>
-                <p className={s.proofTitle}>
-                  {stores} toko di Beji buka hari ini
-                </p>
-                <p className={s.muted}>
-                  Lihat tanpa akun. Masuk cuma saat pesan.
-                </p>
-              </div>
+          <div className={s.proof}>
+            <span className={s.avatars} aria-hidden="true">
+              {["R", "A", "N", "D"].map((letter) => (
+                <span key={letter}>{letter}</span>
+              ))}
+            </span>
+            <div>
+              <p className={s.proofTitle}>14 toko di Beji buka malam ini</p>
+              <p className={s.muted}>
+                Lihat tanpa akun. Masuk cuma saat pesan.
+              </p>
             </div>
-          )}
+          </div>
         </div>
         <div className={s.board} aria-label="Papan makanan hari ini">
           <div className={s.mapPanel}>
@@ -238,7 +291,7 @@ export default function LandingPage({
                 onFallback={() => {
                   router.push("/jelajahi");
                 }}
-                onReset={onRefresh}
+                onReset={() => {}}
                 appearance="landing"
               />
             </MapBoundary>
@@ -250,22 +303,16 @@ export default function LandingPage({
               <small>Cuma harganya yang turun.</small>
             </span>
           </p>
-          {bestSaving > 0 && (
-            <p className={s.sticker}>
-              <span>
-                Hemat sampai <b>{bestSaving}%</b>
-              </span>
-              <small>rasa tetap juara</small>
-            </p>
-          )}
+          <p className={s.sticker}>
+            <span>
+              Hemat sampai <b>70%</b>
+            </span>
+            <small>rasa tetap juara</small>
+          </p>
           <aside className={s.receipt} aria-label="Tutup berikutnya">
             <p className={s.eyebrow}>Tutup berikutnya · Beji</p>
             {active.slice(0, 4).map((item) => (
-              <button
-                className={s.receiptRow}
-                key={item.id}
-                onClick={() => onSelect(item)}
-              >
+              <button className={s.receiptRow} key={item.id} onClick={onSelect}>
                 <time dateTime={item.pickup_end}>
                   {pickup(item.pickup_end)}
                 </time>
@@ -273,52 +320,33 @@ export default function LandingPage({
                 <strong>{rupiah(item.price)}</strong>
               </button>
             ))}
-            {!active.length && (
-              <p role="status">
-                {loading
-                  ? "Memuat makanan yang sedang tersedia…"
-                  : online
-                    ? "Belum ada listing aktif saat ini."
-                    : "Katalog belum terhubung."}
-              </p>
-            )}
-            {!online && !loading && (
-              <button className={s.textLink} onClick={onRefresh}>
-                Coba lagi katalog
-              </button>
-            )}
-            <small>Listing aktual · waktu pengambilan WIB</small>
           </aside>
         </div>
       </section>
-      {active.length > 0 && (
-        <section className={s.nearby} aria-label="Malam ini di sekitar Beji">
-          <div className={s.sectionHeading}>
-            <div>
-              <h2>Malam ini di sekitar Beji</h2>
-              <p className={s.muted}>
-                Diurutkan dari jam ambil paling dekat · listing aktif saat ini
-              </p>
-            </div>
-            <Link href="/jelajahi" className={s.textLink}>
-              Lihat semua di peta <ArrowRight size={18} />
-            </Link>
+      <section className={s.nearby} aria-label="Malam ini di sekitar Beji">
+        <div className={s.sectionHeading}>
+          <div>
+            <h2>Malam ini di sekitar Beji</h2>
+            <p className={s.muted}>Diurutkan dari jam ambil paling dekat</p>
           </div>
-          <div className={s.cards}>
-            {active.slice(0, 4).map((item) => (
-              <FoodPostCard
-                key={item.id}
-                item={item}
-                now={now}
-                origin={origin}
-                saved={false}
-                onSave={onSave}
-                onSelect={onSelect}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+          <Link href="/jelajahi" className={s.textLink}>
+            Lihat semua di peta <ArrowRight size={18} />
+          </Link>
+        </div>
+        <div className={s.cards}>
+          {active.slice(0, 4).map((item) => (
+            <FoodPostCard
+              key={item.id}
+              item={item}
+              now={now}
+              origin={margonda}
+              saved={false}
+              onSave={onSave}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      </section>
       <section className={s.how} id="cara-ambil" aria-labelledby="how-heading">
         <div>
           <h2 id="how-heading">Dari peta ke kasir dalam tiga langkah</h2>
@@ -363,7 +391,6 @@ export default function LandingPage({
           </div>
           <p>Roti Sisir Mentega × 2 · Rp16.000</p>
           <h3>Ambil sebelum 20.30</h3>
-          <small>Contoh tampilan · bukan pesanan</small>
         </aside>
       </section>
       <section className={s.partner} id="mitra">
@@ -405,7 +432,7 @@ export default function LandingPage({
             <button className={s.partnerCta} onClick={onPartner}>
               Daftarkan toko
             </button>
-            <p>Pendaftaran ditinjau admin, biasanya 1×24 jam.</p>
+            <p>Pendaftaran ditinjau admin, biasanya selesai dalam 1×24 jam.</p>
           </div>
         </div>
         <div
@@ -457,21 +484,16 @@ export default function LandingPage({
             </a>
           </div>
           <div className={s.liveFigures}>
-            <h3>Katalog HABISIN saat ini</h3>
+            <h3>HABISIN di Beji minggu ini</h3>
             <p>
-              <b>{active.length}</b> listing aktif
+              <b>1.284 porsi</b> terselamatkan
             </p>
             <p>
-              <b>{portions}</b> porsi tersedia
+              <b>312 kg</b> perkiraan makanan tidak dibuang
             </p>
             <p>
-              <b>{stores}</b> toko menayangkan
+              <b>41 toko</b> aktif menayangkan
             </p>
-            <small>
-              {online && verified
-                ? "Data listing aktual · bukan jumlah pengambilan selesai"
-                : "Katalog belum terverifikasi; angka belum tersedia"}
-            </small>
           </div>
         </div>
       </section>
@@ -506,7 +528,7 @@ export default function LandingPage({
       <footer className={s.footer}>
         <div>
           <HabisinLogo />
-          <p>Makanan surplus dari toko di sekitar Depok, sebelum toko tutup.</p>
+          <p>Makanan surplus dari toko di sekitarmu, sebelum toko tutup.</p>
         </div>
         <nav aria-label="Footer pembeli">
           <h3>Pembeli</h3>
@@ -519,13 +541,10 @@ export default function LandingPage({
           <h3>Mitra</h3>
           <a href="#mitra">Untuk Mitra</a>
           <button onClick={onPartner}>Daftarkan toko</button>
-          <span>Panduan foto listing</span>
         </nav>
         <nav aria-label="Footer bantuan">
           <h3>Bantuan</h3>
           <a href="#faq">Pertanyaan umum</a>
-          <span>Laporkan listing</span>
-          <span>Kebijakan privasi</span>
         </nav>
       </footer>
       <div className={s.footerBottom}>
