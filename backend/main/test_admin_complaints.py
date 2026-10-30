@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Complaint, Listing, Profile, Reservation, Store
+from .models import Complaint, Listing, PartnerApproval, Profile, Reservation, Store
 
 
 class AdminComplaintHandlingTests(TestCase):
@@ -143,3 +143,86 @@ class AdminComplaintHandlingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["complaints_available"])
         self.assertEqual(response.data["complaints_open"], 2)
+
+    def test_admin_summary_is_admin_only(self):
+        self.client.force_authenticate(self.buyer)
+        self.assertEqual(self.client.get("/api/admin/summary").status_code, 403)
+
+        self.client.force_authenticate(self.partner)
+        self.assertEqual(self.client.get("/api/admin/summary").status_code, 403)
+
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get("/api/admin/summary").status_code, 403)
+
+    def test_admin_summary_reports_the_four_current_application_metrics(self):
+        older = self.make_complaint("M")
+        self.make_complaint("N")
+        local_now = timezone.localtime()
+        start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        Reservation.objects.filter(pk=older.reservation_id).update(
+            created_at=start_of_day - timedelta(seconds=1)
+        )
+
+        response = self.client.get("/api/admin/summary")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["listings_live"], 2)
+        self.assertEqual(response.data["orders_today"], 1)
+        self.assertEqual(response.data["partners_active"], 1)
+        self.assertEqual(response.data["pickup_portions_today"], 4)
+
+    def test_admin_summary_previews_at_most_three_unresolved_complaints(self):
+        complaints = [self.make_complaint(str(i)) for i in range(5)]
+        resolved = self.make_complaint("R", status="resolved")
+
+        response = self.client.get("/api/admin/summary")
+
+        preview = response.data["complaint_preview"]
+        self.assertEqual(len(preview), 3)
+        self.assertEqual(
+            [item["id"] for item in preview],
+            [complaints[4].pk, complaints[3].pk, complaints[2].pk],
+        )
+        self.assertNotIn(resolved.pk, [item["id"] for item in preview])
+        self.assertEqual(
+            set(preview[0]),
+            {"id", "listing_name", "store_name", "reason_label", "created_at"},
+        )
+
+    def test_admin_summary_previews_at_most_three_pending_partner_registrations(self):
+        approvals = []
+        for index in range(5):
+            user = User.objects.create_user(username=f"pending_partner_{index}")
+            approvals.append(PartnerApproval.objects.create(user=user))
+            if index == 0:
+                Store.objects.create(
+                    owner=user,
+                    name="Warung Pendaftar",
+                    description="Toko yang sedang menunggu persetujuan.",
+                    address="Jalan Margonda, Depok",
+                    opening_time=time(8),
+                    closing_time=time(21),
+                    latitude=-6.36,
+                    longitude=106.83,
+                    category="Nasi & lauk",
+                    neighborhood="Kukusan",
+                )
+        approved_user = User.objects.create_user(username="approved_partner")
+        PartnerApproval.objects.create(user=approved_user, status="approved")
+
+        response = self.client.get("/api/admin/summary")
+
+        preview = response.data["partner_approval_preview"]
+        self.assertEqual(len(preview), 3)
+        self.assertEqual(
+            [item["id"] for item in preview],
+            [approval.pk for approval in approvals[:3]],
+        )
+        self.assertEqual(response.data["partner_approvals_pending"], 5)
+        self.assertEqual(preview[0]["store_name"], "Warung Pendaftar")
+        self.assertEqual(preview[0]["category"], "Nasi & lauk")
+        self.assertEqual(preview[0]["neighborhood"], "Kukusan")
+        self.assertEqual(
+            set(preview[0]),
+            {"id", "name", "store_name", "category", "neighborhood", "requested_at"},
+        )
