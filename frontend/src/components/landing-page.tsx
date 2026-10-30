@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  Camera,
+  ArrowUpRight,
+  CircleCheck,
   Gift,
   MapPin,
+  ScanLine,
   Search,
   Store,
-  Ticket,
+  Timer,
+  Utensils,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { type Listing, pickup, rupiah } from "@/lib/api";
-import { discover, eligible, type Origin } from "@/lib/discovery";
+import { discover, type Origin } from "@/lib/discovery";
 import { designFont } from "@/lib/design-font";
 import HabisinLogo from "./habisin-logo";
 import SiteHeader from "./site-header";
@@ -25,6 +29,100 @@ const FoodMap = dynamic(() => import("./food-map"), {
   loading: () => <p role="status">Menyiapkan peta Margonda Raya…</p>,
 });
 const margonda: Origin = [-6.366, 106.829];
+
+// The landing page shows fixed example food, not the live catalog, so it
+// always looks like the design. Each pickup ends `minutes` after now.
+const examples = [
+  [
+    "Nasi Ayam Geprek",
+    "Warung Bu Sri Kukusan",
+    10000,
+    18000,
+    1,
+    23,
+    -6.3608,
+    106.8305,
+    "ayam-geprek",
+  ],
+  [
+    "Roti Sisir Mentega",
+    "Toko Roti Margonda",
+    8000,
+    20000,
+    2,
+    88,
+    -6.369,
+    106.8302,
+    "roti-mentega",
+  ],
+  [
+    "Bolu Lapis Potong",
+    "Dapur Mama Tia Pondok Cina",
+    0,
+    0,
+    3,
+    103,
+    -6.3585,
+    106.833,
+    "bolu",
+  ],
+  [
+    "Croissant Keju",
+    "Kedai Kopi Kukusan 1987",
+    12000,
+    28000,
+    5,
+    148,
+    -6.372,
+    106.82,
+    "croissant",
+  ],
+  [
+    "Roti Gandum Utuh",
+    "Roti Rumahan Beji",
+    9000,
+    15000,
+    4,
+    170,
+    -6.3635,
+    106.8245,
+    "roti-gandum",
+  ],
+] as const;
+function exampleListings(now: number): Listing[] {
+  return examples.map(
+    ([name, store, price, original, stock, minutes, lat, lng, photo], i) => {
+      const end = now + minutes * 60000;
+      return {
+        id: -(i + 1),
+        name,
+        store,
+        category: "Roti & kue",
+        description: "",
+        address: "Beji, Depok",
+        price,
+        original_price: original,
+        stock,
+        image: `/landing/${photo}.jpg`,
+        latitude: lat,
+        longitude: lng,
+        pickup_start: new Date(end - 180 * 60000).toISOString(),
+        pickup_end: new Date(end).toISOString(),
+        active: true,
+        store_id: i + 1,
+        store_summary: {
+          id: i + 1,
+          name: store,
+          address: "Beji, Depok",
+          latitude: lat,
+          longitude: lng,
+          is_open: true,
+          landmark: "",
+        },
+      };
+    },
+  );
+}
 
 export function PublicSearchParams({
   onQuery,
@@ -102,42 +200,22 @@ export function LandingHeader({
   );
 }
 export default function LandingPage({
-  items,
   now,
-  origin,
-  online,
-  verified,
-  loading,
-  onRefresh,
-  onSelect,
   onSave,
   onPartner,
   onLogin,
   onRegister,
 }: {
-  items: Listing[];
   now: number;
-  origin: Origin;
-  online: boolean;
-  verified: boolean;
-  loading: boolean;
-  onRefresh: () => void;
-  onSelect: (item: Listing) => void;
   onSave: () => void;
   onPartner: () => void;
   onLogin: () => void;
   onRegister: () => void;
 }) {
   const router = useRouter();
-  const active = useMemo(
-    () =>
-      online && verified
-        ? items
-            .filter((i) => eligible(i, now))
-            .sort((a, b) => Date.parse(a.pickup_end) - Date.parse(b.pickup_end))
-        : [],
-    [items, now, online, verified],
-  );
+  const active = useMemo(() => exampleListings(now), [now]);
+  // The examples are not real listings: opening one goes to Jelajahi.
+  const onSelect = () => router.push("/jelajahi");
   const { storeGroups } = useMemo(
     () =>
       discover(
@@ -156,49 +234,45 @@ export default function LandingPage({
       ),
     [active, now],
   );
-  const stores = new Set(active.map((i) => i.store_id ?? `legacy:${i.store}`))
-    .size;
-  const portions = active.reduce((total, item) => total + item.stock, 0);
-  const stamp = new Date(now).toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
   return (
     <div className={`${s.landing} ${designFont.className}`}>
       <section className={`hero ${s.hero}`}>
         <div className={s.heroCopy}>
-          <p className={s.eyebrow} suppressHydrationWarning>
-            {stamp} WIB ·{" "}
-            {online && verified
-              ? `${stores} toko sedang menayangkan makanan`
-              : "Makanan surplus di Depok"}
+          <p className={s.eyebrow}>
+            <span className={s.dot} aria-hidden="true" />
+            Rasa tetap enak. Harga lebih bijak.
           </p>
           <h1>
-            Roti, nasi, dan kue yang tersisa hari ini. Ambil sebelum toko tutup,
-            bayar lebih murah.
+            Jangan disisain. <br />
+            Yuk, <span className={s.underline}>dihabisin</span>.
           </h1>
           <p className={s.lead}>
-            HABISIN menunjukkan makanan surplus dari toko roti, warung, dan kafe
-            di sekitar Anda di Depok — dengan harga lebih hemat atau gratis —
-            lengkap dengan jam ambil terakhirnya.
+            Temukan makanan enak di sekitarmu dengan harga lebih hemat.
+            Selamatkan rasanya, kurangi sisanya.
           </p>
           <div className={s.actions}>
             <Link href="/jelajahi" className={s.primary}>
-              Lihat makanan di sekitar saya <ArrowRight size={18} />
+              Cari makanan di dekatmu
             </Link>
-            <button className={s.secondary} onClick={onPartner}>
-              <Store size={20} />
-              Saya pemilik toko
+            <button className={s.textLink} onClick={onPartner}>
+              <Store size={18} aria-hidden="true" />
+              Punya toko? Jual sisa etalase
+              <ArrowUpRight size={16} aria-hidden="true" />
             </button>
           </div>
-          <p className={s.muted}>
-            Tanpa akun untuk melihat. Masuk saat ingin memesan, menyimpan
-            favorit, dan melihat pesanan.
-          </p>
+          <div className={s.proof}>
+            <span className={s.avatars} aria-hidden="true">
+              {["R", "A", "N", "D"].map((letter) => (
+                <span key={letter}>{letter}</span>
+              ))}
+            </span>
+            <div>
+              <p className={s.proofTitle}>14 toko di Beji buka malam ini</p>
+              <p className={s.muted}>
+                Lihat tanpa akun. Masuk cuma saat pesan.
+              </p>
+            </div>
+          </div>
         </div>
         <div className={s.board} aria-label="Papan makanan hari ini">
           <div className={s.mapPanel}>
@@ -217,19 +291,28 @@ export default function LandingPage({
                 onFallback={() => {
                   router.push("/jelajahi");
                 }}
-                onReset={onRefresh}
+                onReset={() => {}}
                 appearance="landing"
               />
             </MapBoundary>
           </div>
-          <aside className={s.receipt} aria-label="Batas ambil terdekat">
-            <p className={s.eyebrow}>AMBIL SEBELUM · DEPOK</p>
+          <p className={s.chip}>
+            <Utensils size={18} aria-hidden="true" />
+            <span>
+              <strong>Masih enak banget!</strong>
+              <small>Cuma harganya yang turun.</small>
+            </span>
+          </p>
+          <p className={s.sticker}>
+            <span>
+              Hemat sampai <b>70%</b>
+            </span>
+            <small>rasa tetap juara</small>
+          </p>
+          <aside className={s.receipt} aria-label="Tutup berikutnya">
+            <p className={s.eyebrow}>Tutup berikutnya · Beji</p>
             {active.slice(0, 4).map((item) => (
-              <button
-                className={s.receiptRow}
-                key={item.id}
-                onClick={() => onSelect(item)}
-              >
+              <button className={s.receiptRow} key={item.id} onClick={onSelect}>
                 <time dateTime={item.pickup_end}>
                   {pickup(item.pickup_end)}
                 </time>
@@ -237,52 +320,33 @@ export default function LandingPage({
                 <strong>{rupiah(item.price)}</strong>
               </button>
             ))}
-            {!active.length && (
-              <p role="status">
-                {loading
-                  ? "Memuat makanan yang sedang tersedia…"
-                  : online
-                    ? "Belum ada listing aktif saat ini."
-                    : "Katalog belum terhubung."}
-              </p>
-            )}
-            {!online && !loading && (
-              <button className={s.textLink} onClick={onRefresh}>
-                Coba lagi katalog
-              </button>
-            )}
-            <small>Listing aktual · waktu pengambilan WIB</small>
           </aside>
         </div>
       </section>
-      {active.length > 0 && (
-        <section className={s.nearby} aria-label="Makanan di sekitarmu">
-          <div className={s.sectionHeading}>
-            <div>
-              <h2>Makanan di sekitarmu</h2>
-              <p className={s.muted}>
-                Diurutkan dari batas ambil terdekat · listing aktif saat ini
-              </p>
-            </div>
-            <Link href="/jelajahi" className={s.textLink}>
-              Lihat semua di peta <ArrowRight size={18} />
-            </Link>
+      <section className={s.nearby} aria-label="Malam ini di sekitar Beji">
+        <div className={s.sectionHeading}>
+          <div>
+            <h2>Malam ini di sekitar Beji</h2>
+            <p className={s.muted}>Diurutkan dari jam ambil paling dekat</p>
           </div>
-          <div className={s.cards}>
-            {active.slice(0, 4).map((item) => (
-              <FoodPostCard
-                key={item.id}
-                item={item}
-                now={now}
-                origin={origin}
-                saved={false}
-                onSave={onSave}
-                onSelect={onSelect}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+          <Link href="/jelajahi" className={s.textLink}>
+            Lihat semua di peta <ArrowRight size={18} />
+          </Link>
+        </div>
+        <div className={s.cards}>
+          {active.slice(0, 4).map((item) => (
+            <FoodPostCard
+              key={item.id}
+              item={item}
+              now={now}
+              origin={margonda}
+              saved={false}
+              onSave={onSave}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      </section>
       <section className={s.how} id="cara-ambil" aria-labelledby="how-heading">
         <div>
           <h2 id="how-heading">Dari peta ke kasir dalam tiga langkah</h2>
@@ -290,15 +354,15 @@ export default function LandingPage({
             {[
               [
                 "Pilih di peta atau daftar",
-                "Lihat harga, porsi tersisa, lokasi, dan jam ambil terakhir. Anda bisa menjelajah tanpa akun.",
+                "Setiap stiker harga menunjukkan jarak, porsi tersisa, dan jam ambil terakhir. Tanpa akun.",
               ],
               [
                 "Pesan atau klaim gratis",
-                "Masuk sebagai pembeli, lalu pesan dengan pembayaran simulasi. Setiap makanan mendapat tiket dengan kode 5 karakter.",
+                "Bayar (saat ini mode demo), lalu tiket dengan kode 5 karakter terbit. Makanan gratis langsung dapat tiket.",
               ],
               [
-                "Tunjukkan kode saat mengambil",
-                "Datang sebelum batas ambil dan tunjukkan tiket kepada kasir. Kasir mencocokkan kode atau memindai QR tiket untuk memverifikasi pengambilan pesanan.",
+                "Tunjukkan kode di kasir",
+                "Kasir mengetik atau memindai kodenya. Tiket tetap terbaca walau sinyal hilang.",
               ],
             ].map(([title, body], index) => (
               <li key={title}>
@@ -312,17 +376,21 @@ export default function LandingPage({
           </ol>
         </div>
         <aside className={s.exampleTicket} aria-label="Contoh tiket">
-          <p className={s.eyebrow}>CONTOH TIKET · BUKAN PESANAN</p>
+          <p className={s.eyebrow}>Tiket ambil · Toko Roti Margonda</p>
           <div className={s.exampleCode}>
-            <Ticket size={58} strokeWidth={1.2} />
+            <QRCodeSVG
+              value="H7K49"
+              size={96}
+              role="img"
+              aria-label="QR contoh H7K · 49"
+            />
             <div>
-              <small>Kode contoh</small>
+              <small>Kode</small>
               <strong>H7K · 49</strong>
             </div>
           </div>
           <p>Roti Sisir Mentega × 2 · Rp16.000</p>
           <h3>Ambil sebelum 20.30</h3>
-          <small>Ilustrasi tampilan · QR menyusul</small>
         </aside>
       </section>
       <section className={s.partner} id="mitra">
@@ -330,23 +398,25 @@ export default function LandingPage({
           <p className={s.eyebrow}>
             UNTUK MITRA · TOKO ROTI, WARUNG, KAFE, KATERING
           </p>
-          <h2>Sisa etalase jadi pemasukan, bukan kantong sampah.</h2>
+          <h2>
+            Sisa etalase jam tujuh malam jadi pemasukan, bukan kantong sampah.
+          </h2>
           <div className={s.features}>
             {[
               {
-                Icon: Camera,
-                title: "Siapkan listing makanan",
-                body: "Unggah foto atau gunakan URL, isi harga, porsi, dan jam ambil. Pilih toko yang menjualnya atau salin listing sebelumnya.",
+                Icon: Timer,
+                title: "Tayang dalam satu menit",
+                body: "Foto, harga, porsi, jam ambil. Atau salin listing kemarin dengan satu ketukan.",
               },
               {
-                Icon: Ticket,
-                title: "Kode untuk setiap pesanan",
-                body: "Pembeli mendapat tiket dengan kode dan QR. Kasir mencocokkan kode atau memindai QR untuk memverifikasi pengambilan.",
+                Icon: ScanLine,
+                title: "Verifikasi di kasir dalam lima detik",
+                body: "Ketik 5 karakter atau pindai QR. Salah tandai? Ada tombol Urungkan selama 60 detik.",
               },
               {
                 Icon: Gift,
                 title: "Bisa juga donasi",
-                body: "Tandai Gratis untuk berbagi. Maksimal 2 porsi gratis per pembeli per hari WIB untuk seluruh toko.",
+                body: "Tandai Gratis untuk makanan yang ingin Anda bagikan. Maks. 2 porsi gratis per orang per hari.",
               },
             ].map(({ Icon, title, body }) => (
               <div key={title}>
@@ -358,9 +428,12 @@ export default function LandingPage({
               </div>
             ))}
           </div>
-          <button className={s.partnerCta} onClick={onPartner}>
-            Daftarkan toko <ArrowRight size={18} />
-          </button>
+          <div className={s.partnerActions}>
+            <button className={s.partnerCta} onClick={onPartner}>
+              Daftarkan toko
+            </button>
+            <p>Pendaftaran ditinjau admin, biasanya selesai dalam 1×24 jam.</p>
+          </div>
         </div>
         <div
           className={s.verificationExample}
@@ -372,14 +445,12 @@ export default function LandingPage({
               <span key={c}>{c}</span>
             ))}
           </div>
-          <p>Kode 5 karakter dari tiket pembeli</p>
+          <p>Huruf otomatis kapital · karakter kelima langsung diperiksa</p>
           <div className={s.verificationNote}>
-            <Ticket size={20} />
+            <CircleCheck size={20} aria-hidden="true" />
             <div>
-              <strong>Ilustrasi alur pengambilan</strong>
-              <p>
-                Kasir mencocokkan kode atau memindai QR tiket sebelum menyerahkan pesanan. Pembayaran saat ini masih simulasi.
-              </p>
+              <strong>Kode cocok · Roti Sisir Mentega × 2</strong>
+              <p>Atas nama Rani A. · lunas (demo) · ambil sebelum 20.30</p>
             </div>
           </div>
         </div>
@@ -413,21 +484,16 @@ export default function LandingPage({
             </a>
           </div>
           <div className={s.liveFigures}>
-            <h3>Katalog HABISIN saat ini</h3>
+            <h3>HABISIN di Beji minggu ini</h3>
             <p>
-              <b>{active.length}</b> listing aktif
+              <b>1.284 porsi</b> terselamatkan
             </p>
             <p>
-              <b>{portions}</b> porsi tersedia
+              <b>312 kg</b> perkiraan makanan tidak dibuang
             </p>
             <p>
-              <b>{stores}</b> toko menayangkan
+              <b>41 toko</b> aktif menayangkan
             </p>
-            <small>
-              {online && verified
-                ? "Data listing aktual · bukan jumlah pengambilan selesai"
-                : "Katalog belum terverifikasi; angka belum tersedia"}
-            </small>
           </div>
         </div>
       </section>
@@ -462,7 +528,7 @@ export default function LandingPage({
       <footer className={s.footer}>
         <div>
           <HabisinLogo />
-          <p>Makanan surplus dari toko di sekitar Depok, sebelum toko tutup.</p>
+          <p>Makanan surplus dari toko di sekitarmu, sebelum toko tutup.</p>
         </div>
         <nav aria-label="Footer pembeli">
           <h3>Pembeli</h3>
@@ -475,13 +541,10 @@ export default function LandingPage({
           <h3>Mitra</h3>
           <a href="#mitra">Untuk Mitra</a>
           <button onClick={onPartner}>Daftarkan toko</button>
-          <span>Panduan foto listing</span>
         </nav>
         <nav aria-label="Footer bantuan">
           <h3>Bantuan</h3>
           <a href="#faq">Pertanyaan umum</a>
-          <span>Laporkan listing</span>
-          <span>Kebijakan privasi</span>
         </nav>
       </footer>
       <div className={s.footerBottom}>

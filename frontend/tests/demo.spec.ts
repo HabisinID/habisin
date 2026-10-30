@@ -17,15 +17,15 @@ test("discovery filters, favorites, interactive map, and responsive layout", asy
   page.on("pageerror", (error) => errors.push(error.message));
   await openCatalog(page);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Roti, nasi, dan kue",
+    "Jangan disisain.",
   );
   await expect(
     page
-      .getByRole("region", { name: "Makanan di sekitarmu" })
+      .getByRole("region", { name: "Malam ini di sekitar Beji" })
       .locator(".food-card"),
   ).toHaveCount(4);
   await page
-    .getByRole("link", { name: "Lihat makanan di sekitar saya", exact: true })
+    .getByRole("link", { name: "Cari makanan di dekatmu", exact: true })
     .click();
   await expect(page.locator(".food-card")).toHaveCount(6);
   await page

@@ -84,17 +84,73 @@
   gap: 24px;
 }
 .eyebrow {
-  font-family: ui-monospace, monospace;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 12px;
   color: var(--color-muted);
-  letter-spacing: 0.025em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+.hero .eyebrow {
+  color: var(--color-brand);
+  font-weight: 700;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
 .hero h1 {
-  font-size: 48px;
-  line-height: 1.1;
+  font-size: 72px;
+  line-height: 1.05;
   font-weight: 800;
-  letter-spacing: -1.5px;
+  letter-spacing: -2.5px;
+}
+/* The yellow pen stroke under "dihabisin". */
+/* "dihabisin": lighter green text over a hand-drawn yellow swoosh. */
+.underline {
+  color: var(--color-success);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 10 C 50 3, 120 2, 197 7' fill='none' stroke='%23f4d56a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E")
+    0 100% / 100% 14px no-repeat;
+  padding-bottom: 10px;
+}
+.proof {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.avatars {
+  display: flex;
+}
+.avatars span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: -8px;
+  border: 2px solid var(--color-cream);
+  border-radius: 50%;
+  background: var(--color-light);
+  color: var(--color-brand);
+  font-size: 12px;
+  font-weight: 800;
+}
+.avatars span:first-child {
+  margin-left: 0;
+}
+.avatars span:nth-child(3) {
+  background: var(--color-yellow);
+  color: var(--color-on-sticker);
+}
+.proofTitle {
+  font-weight: 700;
+}
+.proof .muted {
+  font-size: 13px;
 }
 .lead {
   font-size: 20px;
@@ -143,9 +199,75 @@
 .mapPanel {
   height: 460px;
   border: 1px solid var(--color-line);
-  border-radius: 6px;
+  border-radius: 20px;
   overflow: hidden;
   background: var(--color-light);
+  box-shadow: 0 18px 40px #00000014;
+}
+/* Below the map attribution, which must stay readable. */
+.chip {
+  position: absolute;
+  top: 52px;
+  left: -28px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px #0000001f;
+  transform: rotate(-2deg);
+}
+.chip > svg {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 8px;
+  background: var(--color-yellow);
+  color: var(--color-on-sticker);
+}
+.chip strong,
+.chip small {
+  display: block;
+}
+.chip small {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+/* The round "Hemat sampai" sticker overlapping the map. */
+.sticker {
+  position: absolute;
+  left: -36px;
+  bottom: 70px;
+  z-index: 500;
+  display: grid;
+  place-content: center;
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  background: var(--color-yellow);
+  color: var(--color-on-sticker);
+  border: 2px solid var(--color-dark);
+  text-align: center;
+  transform: rotate(-8deg);
+  box-shadow: 0 8px 20px #00000026;
+}
+.sticker span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sticker b {
+  display: block;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.sticker small {
+  font-size: 10px;
 }
 .mapPanel > div {
   height: 100%;
@@ -190,7 +312,8 @@
   font-size: 12px;
 }
 .receiptRow time {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 700;
 }
 .receiptRow > span {
   flex: 1;
@@ -297,10 +420,14 @@
 }
 .exampleCode strong {
   display: block;
-  font-size: 36px;
-  letter-spacing: 3px;
-  font-family: ui-monospace, monospace;
+  font-size: 32px;
+  letter-spacing: 1px;
+  font-family: var(--font-mono), ui-monospace, monospace;
   white-space: nowrap;
+}
+.exampleCode small {
+  font-size: 12px;
+  color: var(--color-muted);
 }
 .exampleTicket h3 {
   margin: 14px 0 6px;
@@ -345,13 +472,27 @@
   margin-bottom: 4px;
 }
 .partnerCta {
-  background: var(--color-light);
-  color: var(--color-dark);
+  background: #9fd3ae;
+  color: #14301f;
+  border-radius: 10px;
+}
+.partnerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.partnerActions p {
+  font-size: 13px;
 }
 .verificationExample {
-  background: var(--color-inverse);
-  border: 1px solid var(--color-on-inverse);
-  border-radius: 8px;
+  background: color-mix(
+    in srgb,
+    var(--color-on-inverse) 6%,
+    var(--color-inverse)
+  );
+  border: 1px solid color-mix(in srgb, var(--color-on-inverse) 18%, transparent);
+  border-radius: 16px;
   padding: 32px;
 }
 .codeBoxes {
@@ -365,14 +506,17 @@
   display: grid;
   place-items: center;
   background: var(--color-inverse);
-  border: 1px solid var(--color-on-inverse);
-  border-radius: 6px;
-  font-family: ui-monospace, monospace;
-  font-size: 32px;
+  border: 2px solid #7fd1a3;
+  border-radius: 10px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 30px;
+  font-weight: 700;
 }
 .verificationNote {
-  background: var(--color-inverse);
-  padding: 16px;
+  background: color-mix(in srgb, #7fd1a3 12%, var(--color-inverse));
+  border-left: 3px solid #7fd1a3;
+  border-radius: 8px;
+  padding: 14px 16px;
   display: flex;
   gap: 12px;
   margin-top: 24px;
@@ -393,10 +537,20 @@
   gap: 48px;
   margin-top: 40px;
 }
+.figures > div {
+  border-top: 2px solid var(--color-dark);
+  padding-top: 24px;
+}
+.figures > div.liveFigures {
+  border-top-width: 1px;
+  border-top-color: var(--color-line);
+}
 .figures > div > strong {
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 44px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -1px;
   white-space: nowrap;
 }
 .figures p {
@@ -408,9 +562,8 @@
   font-size: 12px;
   text-decoration: underline;
 }
-.liveFigures {
-  border-left: 1px solid var(--color-line);
-  padding-left: 32px;
+.liveFigures b {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 .liveFigures h3 {
   font-size: 16px;
@@ -789,5 +942,33 @@
   .exampleCode strong {
     font-size: 28px;
     letter-spacing: 2px;
+  }
+}
+
+/* On narrow screens the stickers stay inside the map instead of hanging off it. */
+@media (max-width: 1200px) {
+  .chip {
+    left: 12px;
+  }
+  .sticker {
+    left: 12px;
+    width: 112px;
+    height: 112px;
+  }
+  .sticker b {
+    font-size: 32px;
+  }
+}
+@media (max-width: 640px) {
+  .sticker {
+    width: 92px;
+    height: 92px;
+    bottom: 150px;
+  }
+  .sticker b {
+    font-size: 26px;
+  }
+  .sticker small {
+    display: none;
   }
 }
