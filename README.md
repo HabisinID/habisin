@@ -439,12 +439,24 @@ lihat [docs/module-10.md](docs/module-10.md) untuk definisi, rentang tanggal, da
 
 | Job | Isi |
 | --- | --- |
-| Backend | `manage.py check`, cek migrasi yang belum dibuat, tes Django dengan coverage minimal 90% |
+| Backend | SQLite: pemeriksaan dengan RuntimeWarning sebagai error, cek dan terapkan migrasi, tes Django dengan coverage minimal 90% |
+| PostgreSQL | PostgreSQL 16: konfigurasi produksi, pemeriksaan dan migrasi, seluruh tes Django termasuk upgrade migrasi dan pelestarian data |
 | Frontend | ESLint, TypeScript, dan `next build` |
-| End-to-end | Menjalankan Django (migrate + `seed_demo`) dan build produksi Next.js, lalu semua tes Playwright |
+| End-to-end | Backend disposable (`serve-backend.py`) dan build produksi Next.js, lalu semua tes Playwright; `test.only` dan tes flaky menggagalkan CI |
 
-Jika job end-to-end gagal, log Django/Next.js dan hasil Playwright tersedia sebagai
-artifact `e2e-debug` di halaman run tersebut. Jangan merge PR dengan CI merah.
+Setiap job dibatasi 20 menit. Laporan XML coverage tersedia sebagai artifact
+`backend-coverage`; log Django/Next.js, trace kegagalan, dan laporan HTML Playwright
+tersedia sebagai `e2e-debug`, termasuk saat retry berhasil. Artifact disimpan 7 hari.
+Backend browser memakai database/media sementara dan batas login khusus tes;
+fixture mitra disetujui lewat API admin dengan akun sementara. Untuk menjalankan
+tes mitra secara lokal, set `HABISIN_TEST_ADMIN_PASSWORD` yang sama pada proses
+`serve-backend.py` dan Playwright; pada proses Playwright set juga
+`E2E_ADMIN_USERNAME=workspace_admin` dan `E2E_ADMIN_PASSWORD` dengan sandi yang
+sama agar helper persetujuan memakai akun sementara tersebut. Pengaturan rate
+limit produksi tetap berlaku
+di aplikasi asli. Jangan merge PR
+dengan CI merah. Atur branch protection di GitHub agar keempat job wajib lulus
+dan PR mendapat review rekan; CodeRabbit tetap menjadi masukan tambahan.
 
 Untuk menjalankan pemeriksaan yang sama secara lokal, jalankan setiap blok dari root
 repository. Tes backend memakai database tes terpisah.

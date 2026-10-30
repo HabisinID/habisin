@@ -239,16 +239,16 @@ test("admin real summary, take down, locked partner, restore and log", async ({
     page.getByRole("region", { name: "Ringkasan admin" }),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "Belum tersedia. Alur komplain pembeli belum diimplementasikan.",
-    ),
-  ).toBeVisible();
+    page.getByRole("link", { name: "Buka laporan komplain", exact: true }),
+  ).toHaveAttribute("href", "/admin/complaints");
   await page.goto("/admin/listings");
   await page
-    .getByRole("button", { name: `Turunkan ${foodName}`, exact: true })
+    .getByRole("button", { name: `Take-down ${foodName}`, exact: true })
     .click();
-  await page.getByLabel("Alasan (wajib)").fill(why);
-  await page.getByRole("button", { name: "Ya, turunkan" }).click();
+  await page.getByLabel("Alasan take-down *", { exact: true }).fill(why);
+  await page
+    .getByRole("button", { name: "Take-down sekarang", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(
     (
@@ -265,23 +265,23 @@ test("admin real summary, take down, locked partner, restore and log", async ({
       (row: { id: number }) => row.id === food.id,
     ),
   ).toBe(false);
-  await page
-    .getByRole("button", { name: `Pulihkan ${foodName}`, exact: true })
-    .click();
-  await page.getByLabel("Alasan (wajib)").fill(restored);
-  await page.getByRole("button", { name: "Ya, pulihkan" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // The current listing screen exposes emergency take-down. Restore through
+  // the admin API, then verify both audit entries in the log screen.
+  expect(
+    (
+      await mutate(page.request, `admin/listings/${food.id}/moderate`, {
+        action: "restore",
+        reason: restored,
+      })
+    ).status(),
+  ).toBe(200);
   const updated = (
     await (await request.get("/api/partner/listings")).json()
   ).find((row: { id: number }) => row.id === food.id);
   expect(updated.active).toBe(false);
   await page.goto("/admin/log");
-  await expect(
-    page.getByRole("cell", { name: why, exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("cell", { name: restored, exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(why, { exact: true })).toBeVisible();
+  await expect(page.getByText(restored, { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await noOverflow(page);
 });
