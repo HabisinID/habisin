@@ -83,7 +83,7 @@ Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota. 
 ### Raihan Daffa Aprilianda — Reputation & Impact Dashboard
 
 - **Modul 9 — Rating Toko & Sistem Komplain (Ulasan)**
-  Form pengisian rating bintang (1–5) dan ulasan teks untuk pembeli yang sudah menyelesaikan pengambilan (AJAX). Komponen tampilan rata-rata rating pada profil toko. Fitur **edit ulasan** dan **hapus ulasan**. Form laporan komplain sederhana jika makanan tidak higienis, yang dapat dilihat dan dihapus oleh pelapornya.
+  Form rating bintang (1–5) dan ulasan produk untuk pembeli yang sudah mengambil pesanan. Rating toko dihitung dari ulasan produknya. Pembeli dapat mengedit/menghapus ulasannya sendiri, membuat komplain untuk pesanan yang memenuhi syarat, dan melihat statusnya. Admin meninjau komplain dan dapat menurunkan listing yang dilaporkan.
 - **Modul 10 — Dasbor Statistik & Kalkulator Dampak Lingkungan**
   Halaman metrik dampak lingkungan publik: akumulasi total porsi makanan terselamatkan, total kilogram sampah terhindarkan (W), dan estimasi penurunan gas rumah kaca (W × 2,5 kg CO₂e). Widget statistik performa penjualan di dasbor mitra (total porsi terselamatkan dan total rupiah terhimpun).
 
@@ -96,7 +96,7 @@ Aplikasi dibagi menjadi **10 modul mandiri (zero-dependency)** untuk 5 anggota. 
 | Christiano Hosea | Listing Makanan | Buat listing | Tabel produk mitra & peta | Edit listing, ubah stok, nonaktifkan | Hapus listing |
 | Damica Adreeza Ramadhan | Moderation Log | Catat tindakan moderasi | Riwayat & filter log | Edit catatan/alasan | Hapus entri log |
 | Violin Monica | Reservasi/Pesanan | Buat pesanan | Ringkasan & tiket digital | Edit pesanan, status bayar, verifikasi kasir | Batal & hapus dari riwayat |
-| Raihan Daffa Aprilianda | Ulasan & Komplain | Tulis ulasan/komplain | Rating di profil toko | Edit ulasan | Hapus ulasan/komplain |
+| Raihan Daffa Aprilianda | Ulasan & Komplain | Tulis ulasan/komplain | Rating toko, ulasan sendiri, status komplain sendiri | Edit ulasan sendiri | Hapus ulasan sendiri |
 
 ---
 
@@ -108,7 +108,7 @@ Pengguna umum yang mencari dan memesan makanan surplus dari gerai di sekitarnya.
 - Mencari dan memfilter katalog makanan.
 - Memesan, mengedit, dan membatalkan pesanan serta melakukan mock payment.
 - Mengklaim tiket digital dengan kode klaim unik.
-- Memberi, mengedit, dan menghapus rating, ulasan, serta laporan komplain.
+- Memberi, mengedit, dan menghapus ulasan sendiri; membuat laporan komplain dan memantau statusnya.
 
 ### Mitra
 Pemilik atau pengelola gerai makanan yang ingin mendaftarkan dan mengelola tokonya di platform. Hak akses & fitur:
@@ -393,12 +393,12 @@ cleanup pada media pengguna sebagai bagian tes; tes memakai direktori sementara.
 
 ### Status implementasi
 
-Modul 1 (akun), Modul 2 (toko), Modul 3 (listing), Modul 4 (discovery), Modul 7 (pesanan dan pembayaran simulasi) dan Modul 8 (tiket digital dan verifikasi kode kasir, termasuk Pindai QR) tersedia. Implementasi belum mencakup seluruh 10 modul. Persetujuan mitra/moderasi,
-moderation log, ulasan/komplain, statistik dampak aktual, dan PWA
-offline belum diimplementasikan. Kalkulator dampak memakai asumsi ilustratif; pemesanan
-demo tidak dihitung sebagai makanan yang benar-benar terselamatkan. Katalog awal berisi
-data demo; akun mitra dapat membuat listing sendiri. Modul 4 menyediakan popup toko,
-katalog profil toko, deep link makanan, dan lifecycle peta yang mempertahankan viewport.
+Fitur akun, onboarding toko, listing, discovery, pemesanan, tiket, ulasan, dan komplain
+tersedia. Admin dapat meninjau komplain, persetujuan mitra, listing, dan log moderasi.
+Bagian statistik performa penjualan mitra pada Modul 10 juga tersedia; rinciannya ada di
+[docs/module-10.md](docs/module-10.md). PWA offline juga belum diimplementasikan. Katalog awal berisi data demo; akun
+mitra dapat membuat listing sendiri. Modul 4 menyediakan popup toko, katalog profil
+toko, deep link makanan, dan lifecycle peta yang mempertahankan viewport.
 
 ### Dari pesanan sampai diambil (Modul 7–8)
 
@@ -416,6 +416,21 @@ Pembeli membayar, membuka tiket, lalu kasir mencocokkan kodenya. Detail ada di
 | Kasir: kode yang sama ditolak | Tiket pembeli ikut berubah |
 | --- | --- |
 | ![Kode yang sama ditolak karena sudah dipakai](docs/screenshots/modul-8/05-kasir-sudah-dipakai.png) | ![Tiket menampilkan Sudah dipakai dan kode dicoret](docs/screenshots/modul-8/06-tiket-sudah-dipakai.png) |
+
+### Ulasan dan penanganan komplain (Modul 9)
+
+Pembeli dapat mengulas produk setelah pesanan diambil, mengurutkan ulasan di halaman
+toko, dan mengelola laporan komplain. Admin meninjau laporan, menandai progres, atau
+menurunkan listing yang dilaporkan. Panduan alur, API, keamanan, dan tes ada di
+[docs/module_9.md](docs/module_9.md).
+
+### Performa penjualan mitra (Bagian Modul 10)
+
+Dashboard mitra memisahkan porsi berbayar yang sudah diambil, nilai transaksi simulasi,
+dan porsi donasi gratis yang sudah diambil. Grafik menunjukkan porsi berbayar yang
+diambil per hari selama tujuh hari terakhir. Statistik ini tidak menghitung pesanan
+batal atau yang belum diambil. Kalkulator dampak lingkungan publik belum termasuk;
+lihat [docs/module-10.md](docs/module-10.md) untuk definisi, rentang tanggal, dan tes.
 
 ### Verifikasi
 
@@ -587,7 +602,7 @@ Pembeli masuk ke **Jelajahi → Peta**. Seluruh header atas memakai `SiteHeader`
 
 Integrasi memakai **OrderSummary/OrderList Modul 7**: buat pending → ringkasan/edit catatan/jumlah → pembayaran simulasi → tiket kode teks. Keranjang/batch checkout dan pembatalan mitra ditunda; endpoint `/api/checkout` dan `/api/partner/reservations/:id/cancel` tidak tersedia. Tabel/kolom historisnya tetap dipertahankan. QR/verifikasi kasir saat itu belum tersedia; kini ada di [Modul 8](docs/module-8.md).
 
-Mitra masuk ke dashboard **Baris 10 · Mitra · Dasbor**. Sidebar menyediakan Dasbor, Listing, Pesanan, Profil toko dan Akun; Verifikasi kode kini membuka halaman kasir [Modul 8](docs/module-8.md). `GET /api/partner/dashboard?period=today|week|month|year` hanya membaca data akun sendiri. Grafik/angka menunjukkan porsi terpesan dan nominal simulasi, bukan klaim pengambilan selesai. Listing dan toko tetap memakai CRUD existing. **Tandai habis** mengubah stok nol melalui `POST /api/partner/listings/:id/sold-out`; respons menyertakan token undo60detik. `POST /api/partner/listings/:id/undo-sold-out` menerima `token` sekali; perubahan stok atau pembatalan pesanan membatalkan token lama agar tidak menimpa stok terbaru. Refresh dashboard setiap30detik/saat fokus/mutasi; keputusan transaksi tetap di server.
+Mitra masuk ke dashboard **Baris 10 · Mitra · Dasbor**. Sidebar menyediakan Dasbor, Listing, Pesanan, Profil toko dan Akun; Verifikasi kode kini membuka halaman kasir [Modul 8](docs/module-8.md). `GET /api/partner/dashboard?period=today|week|month|year` hanya membaca data akun sendiri. Widget performa menghitung porsi berbayar, nominal simulasi, dan donasi gratis hanya dari pesanan `picked_up`; grafik memakai waktu pengambilan dalam WIB. Nilai transaksi bukan pembayaran nyata. Kontrak dan cakupan rinci ada di [docs/module-10.md](docs/module-10.md). Listing dan toko tetap memakai CRUD existing. **Tandai habis** mengubah stok nol melalui `POST /api/partner/listings/:id/sold-out`; respons menyertakan token undo 60 detik. `POST /api/partner/listings/:id/undo-sold-out` menerima `token` sekali; perubahan stok atau pembatalan pesanan membatalkan token lama agar tidak menimpa stok terbaru. Refresh dashboard setiap 30 detik/saat fokus/mutasi; keputusan transaksi tetap di server.
 
 Migrasi additive `0010_listingstockaction_checkoutbatch` menambah tabel token checkout/undo. Backup database kerja sebelum migrasi; suite browser harus memakai backend/media sementara pada panduan verifikasi. Tidak ada dependency baru untuk fitur ini.
 
@@ -675,3 +690,63 @@ review teman.
   ponsel, tema gelap) sebelum di-commit.
 - Violin memutuskan setiap perubahan cakupan, menyetujui perubahan pada berkas teman,
   dan melakukan push sendiri; merge menunggu review teman dan CI.
+
+### Branch: `feat/reviews` — Modul 9
+
+**Tools dan tujuan.** OpenAI Codex digunakan untuk membantu implementasi API dan UI
+ulasan produk, agregasi rating toko, pengelolaan ulasan pembeli, serta pengajuan dan
+penanganan komplain. Tes Django dan Playwright dipakai untuk memeriksa aturan akses,
+status pesanan, dan interaksi UI.
+
+**Strategi prompt dan kendali manusia.**
+
+- Saya memberikan kriteria penerimaan dan batas file khusus Modul 9, lalu meminta
+  implementasi, tes, dan dokumentasi dikerjakan bertahap.
+- Saya memberikan screenshot referensi dan log kegagalan saat perlu membandingkan UI atau
+  mendiagnosis tes.
+- Saya menentukan cakupan fitur dan melakukan commit setelah meninjau hasil.
+
+**Keterbatasan AI dan perbaikan manual.**
+
+- Implementasi awal masih memungkinkan ulasan ganda untuk produk yang sama melalui
+  pesanan lain. Saya menemukan kasus itu; aturan kelayakan diperketat, batas unik database
+  ditambahkan, dan tes regresi dibuat.
+- Playwright sempat timeout karena host tes `127.0.0.1` berbeda dari host server
+  `localhost`, sehingga permintaan HMR dev diblokir. Saya memeriksa log server dan
+  diagnostik tes, lalu menjalankan ulang tes dengan host yang konsisten. Seluruh tes
+  review kemudian lolos.
+
+**Verifikasi.** Dokumentasi Modul 9 mencantumkan tes backend `main.test_reviews` dan
+`main.test_admin_complaints`, serta Playwright `reviews.spec.ts` dan
+`admin-complaints.spec.ts`. Tes browser menggunakan mock API; tes tersebut memeriksa
+perilaku UI, bukan isi database produksi.
+
+### Branch: `feat/statistics-dashboard` — Statistik Modul 10
+
+**Tools dan tujuan.** OpenAI Codex membantu membangun API statistik seller dan widget
+performa penjualan pada dashboard mitra, lalu menambahkan cakupan tes dan dokumentasi.
+UI dikembangkan dari kriteria yang diberikan Raihan, termasuk jumlah porsi, nilai
+transaksi, porsi donasi gratis, dan grafik tujuh hari.
+
+**Strategi prompt dan kendali manusia.**
+
+- Saya membatasi pekerjaan ke widget performa dashboard mitra dan meminta kalkulator
+  dampak lingkungan diabaikan untuk tahap ini.
+- Saya memberikan acuan UI dan mengarahkan pekerjaan secara bertahap: integrasi widget
+  ke `/partner`, definisi metrik, jarak antarkomponen, lalu tes.
+- Saya menguji hasil dan meminta widget diintegrasikan ke dashboard mitra saat belum
+  muncul di halaman `/partner`.
+
+**Keterbatasan AI dan perbaikan manual.**
+
+- Fixture Playwright berisi angka sintetis, bukan data penjualan. Saya memastikan
+  agregasi juga diperiksa lewat tes backend dengan database tes.
+- Saya memperjelas bahwa porsi terselamatkan hanya menghitung pesanan `picked_up`,
+  donasi gratis dihitung terpisah, dan nilai transaksi tetap diberi label simulasi.
+- Kalkulator lingkungan belum selesai. Saya meminta agar angka dampak aktual tidak
+  diklaim sebelum asumsi berat porsi ditetapkan.
+
+**Verifikasi.** Cakupan tersedia di `main.test_statistics_dashboard` dan
+`frontend/tests/partner-statistics.spec.ts`. Dashboard admin yang dikerjakan terpisah
+menguji endpoint ringkasan dan antrean di `main.test_admin_complaints` serta
+`main.test_workspace_revision`.
