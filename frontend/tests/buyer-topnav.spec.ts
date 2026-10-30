@@ -223,3 +223,57 @@ test("saving a profile from orders updates the navbar and reopened profile", asy
     .click();
   await expect(dialog.getByLabel("Nama lengkap")).toHaveValue("Rani Putri");
 });
+
+test("while the account loads, order pages show no guest menu or sign-in buttons", async ({
+  page,
+}) => {
+  // Hold every answer (React may ask twice in development) until the loading
+  // state has been checked.
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
+  await page.route("**/api/auth/me", async (route) => {
+    await held;
+    await route.fulfill({
+      json: { id: 1, username: "rani", name: "Rani Ayu", role: "buyer" },
+    });
+  });
+  await page.goto("/pesanan");
+  const banner = page.getByRole("banner");
+  await expect(page.getByText("Memuat pesanan…")).toBeAttached();
+  await expect(banner.getByRole("link", { name: "Dampak" })).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: "Masuk" })).toHaveCount(0);
+  await expect(
+    banner.getByRole("button", { name: "Daftar gratis" }),
+  ).toHaveCount(0);
+  answer();
+  await expect(buyerNav(page).getByRole("link")).toHaveText([
+    "Jelajahi",
+    "Pesanan",
+  ]);
+});
+
+test("while the account loads, the home page shows neither the landing page nor its menu", async ({
+  page,
+}) => {
+  // Hold every answer (React may ask twice in development).
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
+  await page.route("**/api/auth/me", async (route) => {
+    await held;
+    await route.fulfill({
+      json: { id: 1, username: "rani", name: "Rani Ayu", role: "buyer" },
+    });
+  });
+  await page.goto("/");
+  const banner = page.getByRole("banner");
+  await expect(page.getByText("Memuat HABISIN…")).toBeAttached();
+  await expect(banner.getByRole("link", { name: "Dampak" })).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: "Masuk" })).toHaveCount(0);
+  await expect(page.locator("#dampak")).toHaveCount(0);
+  answer();
+  await expect(buyerNav(page).getByRole("link")).toHaveText([
+    "Jelajahi",
+    "Pesanan",
+  ]);
+  await expect(page.getByText("Memuat HABISIN…")).toHaveCount(0);
+});

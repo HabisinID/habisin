@@ -4,6 +4,8 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+from ._moderation_merge import AddFieldPreservingColumns, CreateModerationLog
+
 
 class Migration(migrations.Migration):
 
@@ -13,57 +15,57 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='deleted_at',
             field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='moderated_at',
             field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='moderated_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='moderated_listings', to=settings.AUTH_USER_MODEL),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='listing',
             name='moderation_reason',
             field=models.CharField(blank=True, max_length=500),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='category',
             field=models.CharField(blank=True, max_length=30),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='city',
             field=models.CharField(blank=True, default='Depok', max_length=80),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='closed_at',
             field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='landmark',
             field=models.CharField(blank=True, max_length=250),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='neighborhood',
             field=models.CharField(blank=True, max_length=120),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='weekly_hours',
             field=models.JSONField(blank=True, default=list),
         ),
-        migrations.CreateModel(
+        CreateModerationLog(
             name='ModerationLog',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),

@@ -1,4 +1,4 @@
-import AdminWorkspace from "@/components/admin-workspace";
+import AdminModerationLog from "@/components/admin-moderation-log";
 export default function AdminLogPage() {
-  return <AdminWorkspace mode="log" />;
+  return <AdminModerationLog />;
 }

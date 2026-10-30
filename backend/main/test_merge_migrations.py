@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0016_repair_profile_picture_columns')]
+    final = [('main', '0019_reconcile_moderation_log_tables')]
 
     def upgrade_from(self, origin, status):
         executor = MigrationExecutor(connection)

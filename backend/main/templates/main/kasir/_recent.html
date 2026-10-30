@@ -11,7 +11,7 @@
           <span class="what">{{ log.get_outcome_display }}</span>
         {% endif %}
       </span>
-      {% if log.outcome == "picked_up" %}<span class="badge">Diambil</span>{% else %}<span class="badge no" title="{{ log.get_outcome_display }}">Ditolak</span>{% endif %}
+      {% if log.outcome == "picked_up" %}<span class="status">Diambil</span>{% else %}<span class="status no" title="{{ log.get_outcome_display }}">Ditolak</span>{% endif %}
     </li>
   {% empty %}
     <li class="empty">Belum ada verifikasi.</li>

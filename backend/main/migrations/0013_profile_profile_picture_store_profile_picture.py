@@ -2,6 +2,8 @@
 
 from django.db import migrations, models
 
+from ._moderation_merge import AddFieldPreservingColumns
+
 
 class Migration(migrations.Migration):
 
@@ -10,12 +12,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='profile',
             name='profile_picture',
             field=models.ImageField(blank=True, upload_to='profiles/'),
         ),
-        migrations.AddField(
+        AddFieldPreservingColumns(
             model_name='store',
             name='profile_picture',
             field=models.ImageField(blank=True, upload_to='stores/'),
