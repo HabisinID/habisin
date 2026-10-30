@@ -206,6 +206,31 @@ seed juga mengatur ulang stok dan menolak pesanan aktif.
 Nama toko, produk, dan koordinat adalah ilustrasi, bukan inventaris atau kemitraan nyata.
 Tidak ada akun dengan password bawaan. Buat akun dari tombol **Daftar gratis**.
 
+### Seed 40 toko demo sekitar Depok
+
+Dari direktori Django pada deployment PWS, setelah command ini terdeploy:
+
+```bash
+python manage.py seed_depok_stores
+```
+
+Untuk menambahkan satu listing per toko agar muncul pada katalog/peta discovery,
+gunakan deadline eksplisit (contoh: tersedia sepanjang 20 November 2026 WIB):
+
+```bash
+python manage.py seed_depok_stores --with-listings --pickup-end '2026-11-21T00:00:00+07:00'
+```
+
+Command membuat 40 toko fiktif berlabel `[DEMO]` di sepuluh area Depok, dengan
+koordinat ilustrasi tanpa memanggil geocoder. Pemilik demo khusus berstatus
+inactive dengan password yang tidak dapat dipakai login. Data tidak memakai ID
+toko/listing tetap dan tidak mengambil alih akun yang kebetulan bernama sama.
+Pengulangan hanya menambahkan entri yang belum ada; stok, deadline, status buka,
+listing yang dihapus/dimoderasi, dan pesanan yang sudah ada tidak direset.
+Opsi deadline berlaku untuk listing baru saja; pengulangan tidak memperpanjang
+listing lama. Tanpa listing yang aktif, berstok, dan belum kedaluwarsa, toko tidak
+muncul pada discovery. Jangan menjalankan suite tes pada database PWS.
+
 ### Instalasi pertama — frontend
 
 Buka terminal kedua dari root repository:
