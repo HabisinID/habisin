@@ -416,6 +416,31 @@ class FreeClaimTests(TestCase):
 
 
 class SeedDemoTests(TestCase):
+    def test_custom_deadline_keeps_demo_visible_until_review(self):
+        now = timezone.now()
+        deadline = now + timedelta(days=22)
+        call_command("seed_demo", pickup_end=deadline.isoformat(), stdout=StringIO())
+        self.assertEqual(Listing.objects.count(), 6)
+        self.assertEqual(set(Listing.objects.values_list("pickup_end", flat=True)), {deadline})
+        with patch("main.listing_services.timezone.now", return_value=deadline - timedelta(seconds=1)):
+            self.assertEqual(available_listings().count(), 6)
+        with patch("main.listing_services.timezone.now", return_value=deadline):
+            self.assertEqual(available_listings().count(), 0)
+
+    def test_invalid_deadline_does_not_change_existing_catalog(self):
+        call_command("seed_demo", stdout=StringIO())
+        before = list(Listing.objects.order_by("pk").values())
+        for value in ["invalid", "2026-99-99T00:00:00+07:00", "2099-11-21T00:00:00", (timezone.now() - timedelta(days=1)).isoformat()]:
+            with self.subTest(value=value), self.assertRaises(CommandError):
+                call_command("seed_demo", pickup_end=value, stdout=StringIO())
+            self.assertEqual(list(Listing.objects.order_by("pk").values()), before)
+
+    def test_default_deadline_remains_eight_hours(self):
+        now = timezone.now()
+        with patch("main.management.commands.seed_demo.timezone.localtime", return_value=now):
+            call_command("seed_demo", stdout=StringIO())
+        self.assertEqual(Listing.objects.get(pk=1).pickup_end, now + timedelta(hours=8))
+
     def test_seed_reads_demo_catalog_as_utf8(self):
         # Windows defaults to cp1252, which turns "·" into "Â·".
         call_command("seed_demo", stdout=StringIO())
