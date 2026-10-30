@@ -51,7 +51,8 @@ test("the cashier types a code, hands the order over and sees it used after", as
   await page.getByLabel("Karakter 1").click();
   await page.keyboard.type(order.code.toLowerCase());
   await expect(page.getByText("Kode cocok")).toBeVisible();
-  await expect(page.getByText("Kasir Roti × 2")).toBeVisible();
+  await expect(page.locator("#result").getByText("Kasir Roti")).toBeVisible();
+  await expect(page.locator("#result").getByText("2 porsi")).toBeVisible();
   // HTMX settles new controls after swapping the visible response.
   await expect(page.locator("#result")).not.toHaveClass(/htmx-settling/);
   await page.keyboard.press("Enter");

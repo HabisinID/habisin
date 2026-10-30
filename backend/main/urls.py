@@ -1,8 +1,20 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
-from . import store_views, commerce_views, reviews_views, verification, workspace_views
+from . import store_views, commerce_views, workspace_views, reviews_views, verification
+from rest_framework.routers import DefaultRouter, SimpleRouter
+
+router = DefaultRouter()
+router.register(r"admin/moderation-logs", views.ModerationLogViewSet, basename="moderationlog")
+router.register(r"admin/listings", views.AdminListingViewSet, basename="adminlisting")
+approval_router = SimpleRouter()
+approval_router.trailing_slash = "/?"
+approval_router.register(r"admin/partner-approvals", views.PartnerApprovalViewSet, basename="partnerapproval")
+approval_router.register(r"admin/activity-logs", views.ModerationLogViewSet, basename="activitylog")
 
 urlpatterns = [
+    path("", include(router.urls)),
+    path("", include(approval_router.urls)),
+
     path("partner/orders", workspace_views.partner_orders),
     path("partner/reservations/<int:pk>/cancel", workspace_views.partner_cancel),
     path("partner/stores/<int:pk>/close", workspace_views.close_store),

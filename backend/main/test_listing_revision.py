@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 from .geocoding import location_token
-from .models import Listing, Profile, Reservation, Store
+from .models import Listing, Profile, Reservation, Store, PartnerApproval
 
 
 def listing_payload(store_id):
@@ -29,6 +29,7 @@ class MultipleStoreAPITests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="branches", password="Branch-Secure-927!")
         Profile.objects.create(user=self.user, role="partner")
+        PartnerApproval.objects.create(user=self.user, status="approved")
         self.client = APIClient()
         self.client.force_authenticate(self.user)
 
@@ -50,6 +51,7 @@ class MultipleStoreAPITests(TestCase):
     def test_foreign_owner_roles_csrf_and_location_validation(self):
         other = User.objects.create_user(username="foreign_partner")
         Profile.objects.create(user=other, role="partner")
+        PartnerApproval.objects.create(user=other, status="approved")
         item = self.create("A")
         path = f'/api/partner/stores/{item["id"]}'
         self.client.force_authenticate(other)
@@ -126,6 +128,7 @@ class LinkedListingTests(TestCase):
     def setUp(self):
         self.partner = User.objects.create_user(username="linked_partner", password="Linked-Secure-927!")
         Profile.objects.create(user=self.partner, role="partner")
+        PartnerApproval.objects.create(user=self.partner, status="approved")
         self.buyer = User.objects.create_user(username="linked_buyer")
         Profile.objects.create(user=self.buyer)
         self.a = create_store(self.partner)

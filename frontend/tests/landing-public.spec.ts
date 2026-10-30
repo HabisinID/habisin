@@ -178,14 +178,11 @@ test("empty, loading and offline catalogs never become demo listing sections and
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route(
-    "**/api/listings",
-    async (r) => {
-      await gate;
-      await r.fulfill({ json: [] });
-    },
-    { times: 1 },
-  );
+  // Hold every catalog request: React may ask twice in development.
+  await page.route("**/api/listings", async (r) => {
+    await gate;
+    await r.fulfill({ json: [] });
+  });
   await page.goto("/");
   await expect(
     page.getByText("Memuat makanan yang sedang tersedia…"),

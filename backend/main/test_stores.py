@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from .geocoding import GeocodingUnavailable, location_token, search_address, TOKEN_SALT
-from .models import GeocodingCache, GeocodingQuota, Profile, Store
+from .models import GeocodingCache, GeocodingQuota, Profile, Store, PartnerApproval
 
 
 class StoreTests(TestCase):
@@ -21,8 +21,10 @@ class StoreTests(TestCase):
         cache.clear()
         self.user = User.objects.create_user(username="partner", password="Secure-Meal-927!")
         Profile.objects.create(user=self.user, role="partner")
+        PartnerApproval.objects.create(user=self.user, status="approved")
         self.other = User.objects.create_user(username="other")
         Profile.objects.create(user=self.other, role="partner")
+        PartnerApproval.objects.create(user=self.other, status="approved")
         self.client = APIClient()
         self.client.force_authenticate(self.user)
         self.data = {"name": "Dapur Berkah", "description": "Makanan rumahan setiap hari.", "address": "Jalan Margonda Raya 10, Depok", "opening_time": "08:00", "closing_time": "21:00", "latitude": -6.36, "longitude": 106.83, "location_confirmed": True}

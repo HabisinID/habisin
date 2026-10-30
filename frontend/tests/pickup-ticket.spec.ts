@@ -47,7 +47,21 @@ test("a paid order opens its ticket with QR, code, timeline and route", async ({
   expect(await qr.boundingBox()).toMatchObject({ width: 144, height: 144 });
   await expect(page.getByTestId("ticket-code")).toHaveText(ticketCode);
   await expect(page.getByText(/^Ambil sebelum \d{2}\.\d{2}$/)).toBeVisible();
-  for (const step of ["Dibayar", "Toko buka", "Batas batal", "Batas ambil"])
+  await expect(page.getByText("Aktif · sudah dibayar")).toBeVisible();
+  await expect(
+    page.getByText("Tunjukkan kode atau QR ini ke kasir.", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /^Toko mulai melayani \d{2}\.\d{2}\. Pesanan ditahan kasir sampai \d{2}\.\d{2}\.$/,
+    ),
+  ).toBeVisible();
+  for (const step of [
+    "Dibayar",
+    "Toko mulai melayani",
+    "Batas batal",
+    "Batas ambil",
+  ])
     await expect(
       page.getByRole("list", { name: "Linimasa pesanan" }).getByText(step),
     ).toBeVisible();
@@ -63,34 +77,148 @@ test("cancelling from the ticket asks inline, then shows it cancelled", async ({
   await openTicket(page);
   await page.getByRole("button", { name: "Batalkan pesanan" }).click();
   await expect(
+    page.getByText("Batalkan pesanan? 1 porsi akan dikembalikan ke toko."),
+  ).toBeVisible();
+  await expect(
     page.getByText(/^Bisa dibatalkan sampai \d{2}\.\d{2} · 30 menit/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Ya, batalkan" }).click();
+  await expect(
+    page.getByRole("button", { name: "Tidak, simpan tiket" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Ya, batalkan pesanan" }).click();
   await expect(page.getByText("Dibatalkan", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: /^QR kode ambil/ })).toHaveCount(
     0,
   );
 });
 
-test("a picked-up ticket replaces the QR and strikes the code", async ({
-  page,
-}) => {
-  const id = await openTicket(page);
+// Raihan's review API, answered here so the ticket's review form can be
+// tested without a cashier handing the order over first.
+async function feedback(
+  page: Page,
+  id: number,
+  answer: Record<string, unknown> = {},
+) {
+  await page.route(`**/api/reservations/${id}/feedback`, (route) =>
+    route.fulfill({
+      json: {
+        can_review: true,
+        review: null,
+        can_complain: true,
+        complaint: null,
+        ...answer,
+      },
+    }),
+  );
+}
+
+async function pickedUp(page: Page, id: number) {
   await showAs(page, id, (order) => {
     order.status = "picked_up";
     order.picked_up_at = new Date().toISOString();
   });
+}
+
+test("a picked-up ticket says when the cashier handed it over", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  await feedback(page, id);
+  await pickedUp(page, id);
+  await expect(page.getByText("Selesai diambil")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Diambil pukul \d{2}\.\d{2}$/ }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Linimasa pesanan" })
+      .getByText("Diambil", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /^Kode dipakai \d{2}\.\d{2} dan tidak bisa digunakan lagi\.$/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /^Diserahkan kasir .+\. Terima kasih sudah menyelamatkan 1 porsi dari terbuang\.$/,
+    ),
+  ).toBeVisible();
   await expect(page.getByText("Sudah dipakai", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: /^QR kode ambil/ })).toHaveCount(
     0,
   );
-  await expect(page.getByTestId("ticket-code")).toHaveCSS(
-    "text-decoration-line",
-    "line-through",
-  );
+  await expect(page.getByRole("link", { name: /Buka rute/ })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Batalkan pesanan" }),
   ).toHaveCount(0);
+});
+
+test("after pickup the buyer rates the food with stars and chips", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  await feedback(page, id);
+  let sent: unknown = null;
+  await page.route("**/api/reviews", async (route) => {
+    sent = route.request().postDataJSON();
+    await route.fulfill({
+      status: 201,
+      json: { id: 9, rating: 4, comment: "Masih segar, Porsi sesuai" },
+    });
+  });
+  await pickedUp(page, id);
+  const form = page.getByRole("region", { name: /^Bagaimana / });
+  await expect(
+    form.getByText(
+      /^Ulasanmu tampil di halaman .+ dan membantu pembeli lain\.$/,
+    ),
+  ).toBeVisible();
+  const send = form.getByRole("button", { name: "Kirim ulasan" });
+  await expect(send).toBeDisabled();
+  await form.getByRole("radio", { name: "4 bintang" }).check();
+  for (const chip of ["Masih segar", "Porsi sesuai"])
+    await form.getByRole("button", { name: chip }).click();
+  await expect(
+    form.getByRole("button", { name: "Masih segar" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(form.getByRole("button", { name: "Kasir ramah" })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Sesuai foto" })).toBeVisible();
+  await send.click();
+  await expect(
+    page.getByText("Terima kasih! Ulasanmu sudah tersimpan."),
+  ).toBeVisible();
+  expect(sent).toEqual({
+    reservation_id: id,
+    rating: 4,
+    comment: "Masih segar, Porsi sesuai",
+  });
+  await expect(
+    page.getByRole("link", { name: "Laporkan masalah" }),
+  ).toHaveAttribute("href", `/komplain/${id}`);
+});
+
+test("Nanti saja hides the review form, and a sent review is not asked again", async ({
+  page,
+}) => {
+  const id = await openTicket(page);
+  await feedback(page, id);
+  await pickedUp(page, id);
+  await page.getByRole("button", { name: "Nanti saja" }).click();
+  await expect(page.getByRole("button", { name: "Kirim ulasan" })).toHaveCount(
+    0,
+  );
+  await page.unroute(`**/api/reservations/${id}/feedback`);
+  await feedback(page, id, {
+    can_review: false,
+    review: { id: 9, rating: 5, comment: "" },
+  });
+  await page.reload();
+  await expect(page.getByText("Ulasanmu sudah tersimpan.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ubah ulasan" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kirim ulasan" })).toHaveCount(
+    0,
+  );
 });
 
 test("the last 30 minutes turn the ticket orange and close cancelling", async ({
@@ -128,7 +256,7 @@ test("cancelled and expired tickets no longer ask to pick up", async ({
 }) => {
   const id = await openTicket(page);
   await page.getByRole("button", { name: "Batalkan pesanan" }).click();
-  await page.getByRole("button", { name: "Ya, batalkan" }).click();
+  await page.getByRole("button", { name: "Ya, batalkan pesanan" }).click();
   await expect(page.getByText("Pesanan dibatalkan")).toBeVisible();
   await expect(page.getByText(/^Ambil sebelum/)).toHaveCount(0);
   await showAs(page, id, (order) => {
@@ -138,6 +266,26 @@ test("cancelled and expired tickets no longer ask to pick up", async ({
     page.getByText(/^Batas ambil \d{2}\.\d{2} sudah lewat$/),
   ).toBeVisible();
   await expect(page.getByText(/^Ambil sebelum/)).toHaveCount(0);
+  await expect(
+    page.getByText(
+      /^Pesanan tidak diambil\. 1 porsi sudah kembali ke .+ pukul \d{2}\.\d{2}\.$/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Lihat di peta" }),
+  ).toHaveAttribute("href", "/jelajahi");
+});
+
+test("offline, the ticket stays readable from the device", async ({ page }) => {
+  const id = await openTicket(page);
+  const code = await page.getByTestId("ticket-code").textContent();
+  await page.route(`**/api/reservations/${id}`, (route) => route.abort());
+  await page.reload();
+  await expect(
+    page.getByText("Tersimpan di perangkat", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("ticket-code")).toHaveText(code!);
+  await expect(page.getByRole("img", { name: /^QR kode ambil/ })).toBeVisible();
 });
 
 test("a failed refresh shows an error that clears once a refresh succeeds", async ({
@@ -177,7 +325,7 @@ test("a slow refresh started before cancelling never brings the QR back", async 
   );
   await page.evaluate(() => dispatchEvent(new Event("focus")));
   await page.getByRole("button", { name: "Batalkan pesanan" }).click();
-  await page.getByRole("button", { name: "Ya, batalkan" }).click();
+  await page.getByRole("button", { name: "Ya, batalkan pesanan" }).click();
   await expect(page.getByText("Pesanan dibatalkan")).toBeVisible();
   release();
   await page.waitForTimeout(500);
