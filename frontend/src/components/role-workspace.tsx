@@ -162,7 +162,7 @@ export default function RoleWorkspace({
             user ? (
               <>
                 <Link
-                  href="/partner/account"
+                  href={role === "admin" ? "/admin/account" : "/partner/account"}
                   data-navbar-avatar
                   className={s.avatar}
                   aria-label={`Akun ${user.name || user.username}`}
