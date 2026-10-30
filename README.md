@@ -545,13 +545,160 @@ npm run start
 Hentikan `npm run dev` terlebih dahulu agar port 3000 tersedia. Ini menjalankan build
 produksi Next.js secara lokal; backend masih mengikuti konfigurasi environment-nya.
 
-### Catatan deployment
+## Deployment — Vercel + PWS
 
-Untuk deployment, tetapkan `DEBUG=False`, `SECRET_KEY` acak yang kuat,
-`ALLOWED_HOSTS`, dan `CSRF_TRUSTED_ORIGINS` sesuai domain HTTPS. Cookie secure otomatis
-aktif ketika debug mati. Jalankan `python manage.py collectstatic --noinput` untuk
-aset Django admin. Konfigurasi produksi lebih lanjut diperlukan sebelum menerima
-pengguna atau transaksi sungguhan.
+Frontend Next.js berjalan di Vercel; backend Django berjalan di PWS (Pacil Web
+Service). SQLite hanya untuk development. Dengan `PRODUCTION=True`, backend
+memakai PostgreSQL ITF dan schema yang diberikan kepada proyek.
+
+### 1. Siapkan environment backend PWS
+
+Simpan variabel berikut pada konfigurasi environment proyek PWS, bukan di Git.
+Ganti seluruh placeholder dengan domain dan kredensial proyek yang sebenarnya.
+
+```dotenv
+PRODUCTION=True
+DEBUG=False
+SECRET_KEY=<kunci-acak-kuat>
+ALLOWED_HOSTS=<domain-pws>,<domain-frontend-vercel>
+CSRF_TRUSTED_ORIGINS=https://<domain-frontend-vercel>,https://<domain-pws>
+DB_NAME=<nama-database-itf>
+DB_USER=<user-database-itf>
+DB_PASSWORD=<password-database-itf>
+DB_HOST=<host-database-itf>
+DB_PORT=5432
+SCHEMA=<schema-proyek-itf>
+NOMINATIM_USER_AGENT=HABISIN/1.0 (<kontak-pengelola>)
+```
+
+Buat `SECRET_KEY` sekali dan simpan untuk deployment berikutnya:
+
+```bash
+python -c 'import secrets; print(secrets.token_urlsafe(50))'
+```
+
+`ALLOWED_HOSTS` berisi hostname saja, tanpa protokol/path. Origin pada
+`CSRF_TRUSTED_ORIGINS` menyertakan `https://`, tanpa trailing slash. Pisahkan nilai
+dengan koma tanpa spasi. Sertakan domain Vercel/custom domain yang benar-benar
+akan dipakai browser; tambahkan domain Preview tertentu hanya jika diperlukan.
+`SCHEMA` wajib ada dan sudah dapat diakses oleh user database ITF; jangan
+mengganti nilainya menjadi `public` jika proyek diberi schema sendiri.
+Flag produksi yang salah ketik, kredensial tidak lengkap, atau kunci demo lokal
+akan menghentikan startup. Cookie sesi dan CSRF memakai secure saat debug mati.
+
+### 2. Publikasikan backend ke PWS
+
+PWS menerima deployment pada branch remote `master`. Nama branch sumber lokal
+boleh berbeda: refspec Git menentukan kode yang dikirim. Tutorial PWS menunjukkan
+pemetaan `main:master`; lihat [panduan PWS PBP](https://pbp.cs.ui.ac.id/en/tutorial/tutorial-1.html).
+
+Repo ini adalah monorepo: `manage.py` dan `requirements.txt` berada di `backend/`.
+Jika proyek PWS sudah memakai konfigurasi monorepo, pertahankan build/start yang
+berjalan dari folder itu. Untuk proyek PWS yang mengharapkan Django pada root
+repository, publikasikan subtree backend sebagai berikut, dari root repo lokal:
+
+```bash
+# Tambahkan sekali; URL persisnya tersedia pada proyek PWS milik tim.
+git remote add pws <URL-GIT-PWS>
+# Jika remote sudah ada, periksa dengan: git remote get-url pws
+
+# Pastikan main sudah memuat perubahan backend yang lulus CI.
+git subtree split --prefix=backend main
+# Salin hash commit hasil split pada perintah berikut.
+git push pws <HASH-HASIL-SPLIT>:master
+```
+
+Perintah push di atas adalah langkah publikasi manual oleh pengelola. Ia mengirim
+isi `backend/` sebagai root ke PWS, bukan mengubah branch sumber atau mengirim
+frontend. Jika menguji branch fitur, ganti `main` pada perintah split dengan nama
+branch tersebut; deployment itu memakai database PWS yang sama. Untuk penggunaan
+normal, publikasikan kode yang sudah digabung ke `main`. Jangan mencampur pola
+push monorepo penuh dan subtree pada remote yang sama atau memakai force push
+untuk melewati penolakan riwayat; periksa dahulu pola deployment tim.
+
+Pada lingkungan build/release PWS, aktifkan virtualenv yang disediakan platform
+lalu jalankan dari direktori Django (root hasil subtree, atau `backend/` untuk
+monorepo penuh):
+
+```bash
+python -m pip install -r requirements.txt
+python manage.py check
+python manage.py migrate --noinput
+python manage.py migrate --check
+python manage.py collectstatic --noinput
+```
+
+Cadangkan database sebelum migrasi deployment yang mengubah schema. Gunakan WSGI
+`habisin.wsgi:application` untuk server aplikasi. Jika PWS meminta start command,
+contohnya berikut; sesuaikan port dengan konfigurasi platform:
+
+```bash
+gunicorn habisin.wsgi:application --bind 0.0.0.0:<PORT-PWS>
+```
+
+Jangan memakai `runserver` untuk produksi. Pastikan build, migrasi, dan startup
+berhasil melalui log PWS sebelum menghubungkan frontend. Detail pengisian
+build/start mengikuti fasilitas proyek PWS yang tersedia; repository ini belum
+menyertakan skrip deployment PWS otomatis.
+
+### 3. Deploy frontend di Vercel
+
+Import repository GitHub sebagai proyek Vercel dengan pengaturan berikut:
+
+| Pengaturan | Nilai |
+| --- | --- |
+| Framework Preset | Next.js |
+| Root Directory | `frontend` |
+| Node.js | 22.x |
+| Install Command | `npm ci` |
+| Build Command | `npm run build` |
+| Output Directory | Default Next.js |
+| Production Branch | `main` |
+| Environment `BACKEND_URL` | `https://<domain-pws>` tanpa `/api` atau trailing slash |
+
+Atur `BACKEND_URL` untuk environment Production; isi Preview juga jika deployment
+preview perlu backend. Jangan menaruh kredensial database atau `SECRET_KEY` pada
+frontend. Pengaturan root mengikuti [dokumentasi monorepo Vercel](https://vercel.com/docs/monorepos).
+Perubahan [environment Vercel](https://vercel.com/docs/environment-variables)
+memerlukan deployment baru agar berlaku.
+
+Browser mengakses `/api/*` dan `/media/*` pada domain frontend. Rewrite dalam
+`frontend/next.config.ts` meneruskannya ke `BACKEND_URL`; pertahankan pola ini
+agar autentikasi sesi tetap lewat origin frontend. Setelah domain Vercel final
+tersedia, sesuaikan `CSRF_TRUSTED_ORIGINS` dan `ALLOWED_HOSTS` backend lalu restart
+backend jika konfigurasi berubah.
+
+### 4. Seed demo untuk penilaian
+
+Setelah commit yang menambahkan `--pickup-end` terdeploy dan migrasi selesai,
+jalankan sekali pada lingkungan Django PWS yang memakai database produksi:
+
+```bash
+python manage.py seed_demo --pickup-end '2026-11-21T00:00:00+07:00'
+```
+
+Enam listing demo tetap tampil sepanjang **20 November 2026 WIB**, selama masih
+aktif dan stoknya tersedia. Seed memperbarui stok dan batas ambil listing demo;
+ia menolak benturan ID milik mitra serta pesanan aktif yang belum kedaluwarsa.
+Listing milik mitra tidak diperpanjang oleh perintah ini. Jangan menjalankan seed
+pada setiap startup atau redeploy. Tanpa `--pickup-end`, deadline kembali menjadi
+delapan jam sejak seed; tanggal eksplisit yang sudah lewat akan ditolak.
+
+### 5. Media dan pemeriksaan setelah deploy
+
+Foto upload memerlukan direktori persisten yang writable; arahkan `MEDIA_ROOT`
+ke direktori/volume persisten yang disediakan deployment. Cadangkan file media
+bersama database. Dengan `DEBUG=False`, URLconf saat ini **tidak menyajikan
+`/media/`**. Konfigurasikan web server/storage untuk menyajikannya dari lokasi
+tersebut sebelum memakai upload di produksi. WhiteNoise/`collectstatic` melayani
+aset statis, bukan upload pengguna; rewrite Vercel sendiri tidak menyimpan foto.
+
+Periksa katalog melalui `https://<domain-pws>/api/listings` dan
+`https://<domain-frontend-vercel>/api/listings`, lalu coba login, logout, perubahan
+profil, dan alur pesanan lewat frontend. Pastikan cookie secure tersimpan, mutasi
+tidak mendapat CSRF 403, dan foto bisa dibuka setelah restart/redeploy. Jika
+katalog kosong, periksa stok, status aktif, dan `pickup_end` pada database PWS;
+menjalankan seed pada SQLite lokal tidak mengubah database PWS.
 
 ---
 
