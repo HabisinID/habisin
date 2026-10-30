@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from .commerce_views import require_role
 from .listing_services import ListingConflict, available_listings, lock_listing
-from .models import AdminModerationLog, Complaint, Listing, ListingStockAction, ModerationLog, Reservation, Store
+from .models import AdminModerationLog, Complaint, Listing, ListingStockAction, ModerationLog, PartnerApproval, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, StoreSerializer
 from .views import release_stock
 
@@ -142,12 +142,58 @@ def admin_summary(request):
     Reservation.expire_overdue()
     now = timezone.localtime()
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return Response({"listings_live": available_listings().count(), "orders_today": Reservation.objects.filter(created_at__gte=start).count(),
+    end = start + timedelta(days=1)
+    completed_today = Reservation.objects.filter(
+        status="picked_up", picked_up_at__gte=start, picked_up_at__lt=end
+    )
+    complaint_counts = {
+        row["status"]: row["total"]
+        for row in Complaint.objects.values("status").annotate(total=Count("id"))
+    }
+    complaints_new = complaint_counts.get("open", 0)
+    complaints_reviewed = complaint_counts.get("reviewed", 0)
+    # Keep the legacy field's meaning: all unresolved reports.
+    complaints_open = complaints_new + complaints_reviewed
+    complaint_preview = [
+        {
+            "id": complaint.pk,
+            "listing_name": complaint.reservation.listing.name,
+            "store_name": complaint.store.name,
+            "reason_label": complaint.get_reason_display(),
+            "created_at": complaint.created_at.isoformat(),
+        }
+        for complaint in Complaint.objects.filter(status__in=["open", "reviewed"])
+        .select_related("store", "reservation__listing")[:3]
+    ]
+    pending_approvals = (
+        PartnerApproval.objects.filter(status="pending")
+        .select_related("user")
+        .prefetch_related("user__stores")
+        .order_by("requested_at", "id")
+    )
+    partner_approval_preview = []
+    for approval in pending_approvals[:3]:
+        store = next(iter(approval.user.stores.all()), None)
+        partner_approval_preview.append({
+            "id": approval.pk,
+            "name": (approval.user.get_full_name() or approval.user.username),
+            "store_name": store.name if store else None,
+            "category": store.category if store else None,
+            "neighborhood": store.neighborhood if store else None,
+            "requested_at": approval.requested_at.isoformat(),
+        })
+    return Response({"listings_live": available_listings().count(), "orders_today": Reservation.objects.filter(created_at__gte=start, created_at__lt=end).count(),
                      "partners_active": User.objects.filter(is_active=True, is_staff=False, profile__role="partner").count(),
-                     "stores_open": Store.objects.filter(is_open=True, closed_at__isnull=True).count(),
-                     "listings_taken_down": Listing.objects.filter(moderated_at__isnull=False, deleted_at__isnull=True).count(),
                      "recent_activity": [log_data(row) for row in ModerationLog.objects.select_related("actor")[:5]],
-                     "complaints_available": False, "partner_approval_available": False})
+                     "complaints_available": True, "complaints_open": complaints_open,
+                     "complaints_new": complaints_new,
+                     "complaints_reviewed": complaints_reviewed,
+                     "complaints_unresolved": complaints_open,
+                     "complaint_preview": complaint_preview,
+                     "partner_approval_available": True,
+                     "partner_approvals_pending": PartnerApproval.objects.filter(status="pending").count(),
+                     "partner_approval_preview": partner_approval_preview,
+                     "pickup_portions_today": completed_today.aggregate(total=Sum("quantity"))["total"] or 0})
 
 
 @api_view(["GET"])

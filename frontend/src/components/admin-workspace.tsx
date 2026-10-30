@@ -12,11 +12,30 @@ type Summary = {
   listings_live: number;
   orders_today: number;
   partners_active: number;
-  stores_open: number;
-  listings_taken_down: number;
   recent_activity: ModerationEntry[];
   complaints_available: boolean;
+  complaints_open: number;
+  complaints_new: number;
+  complaints_reviewed: number;
+  complaints_unresolved: number;
+  complaint_preview: {
+    id: number;
+    listing_name: string;
+    store_name: string;
+    reason_label: string;
+    created_at: string;
+  }[];
   partner_approval_available: boolean;
+  partner_approvals_pending: number;
+  partner_approval_preview: {
+    id: number;
+    name: string;
+    store_name: string | null;
+    category: string | null;
+    neighborhood: string | null;
+    requested_at: string;
+  }[];
+  pickup_portions_today: number;
 };
 type PageData<T> = {
   results: T[];
@@ -32,6 +51,16 @@ const dateTime = (value: string) =>
     minute: "2-digit",
     timeZone: "Asia/Jakarta",
   });
+const relativeTime = (value: string) => {
+  const hours = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(value).getTime()) / 3_600_000),
+  );
+  if (hours < 1) return "<1 jam";
+  if (hours < 24) return `${hours} jam`;
+  const days = Math.floor(hours / 24);
+  return `${days} hari`;
+};
 export default function AdminWorkspace({ mode = "summary" }: { mode?: Mode }) {
   return (
     <RoleWorkspace
@@ -283,23 +312,79 @@ function AdminContent({ mode }: { mode: Mode }) {
         <>
           <div className={s.two}>
             <section className={s.card}>
-              <ShieldAlert size={24} className="text-urgency-text" />
-              <h2 className={`${s.title} mt-4`}>Laporan komplain</h2>
-              <p className={`${s.muted} my-3`}>
-                Belum tersedia. Alur komplain pembeli belum diimplementasikan.
-              </p>
-              <button className={s.secondary} disabled>
-                Laporan komplain belum tersedia
-              </button>
+              <div className="flex items-center gap-3">
+                <ShieldAlert size={24} className="text-urgency-text" />
+                <div>
+                  <h2 className={s.title}>Laporan komplain terbuka</h2>
+                  <p className={s.muted}>
+                    {summary.complaints_new ?? summary.complaints_open ?? 0} baru · {summary.complaints_reviewed ?? 0} sedang ditinjau
+                  </p>
+                </div>
+                <strong className="ml-auto font-mono text-2xl">
+                  {summary.complaints_unresolved ?? summary.complaints_open ?? 0}
+                </strong>
+              </div>
+              {summary.complaint_preview?.length ? (
+                <ul className="-mx-6 mt-5 divide-y divide-line border-y border-line">
+                  {summary.complaint_preview.slice(0, 3).map((complaint) => (
+                    <li key={complaint.id} className="flex items-center gap-4 px-6 py-3">
+                      <span className="shrink-0 font-mono text-xs text-muted">
+                        LK-{String(complaint.id).padStart(4, "0")}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm">{complaint.listing_name}</strong>
+                        <span className={s.muted}>
+                          {complaint.reason_label} · {complaint.store_name}
+                        </span>
+                      </span>
+                      <time className="shrink-0 font-mono text-xs" dateTime={complaint.created_at}>
+                        {dateTime(complaint.created_at)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={`${s.muted} mt-5`}>Tidak ada laporan komplain terbuka.</p>
+              )}
+              <Link href="/admin/complaints" className="mt-4 inline-flex items-center gap-2 font-semibold text-brand hover:underline">
+                Buka laporan komplain <ArrowRight size={16} aria-hidden="true" />
+              </Link>
             </section>
             <section className={s.card}>
-              <h2 className={s.title}>Pendaftaran mitra</h2>
-              <p className={`${s.muted} my-3`}>
-                Peninjauan pendaftaran belum tersedia. Jumlah mitra aktif
-                ditampilkan dari akun yang ada.
+              <div className="flex items-center gap-3">
+                <h2 className={s.title}>Pendaftaran mitra menunggu</h2>
+                <strong className="ml-auto font-mono text-2xl">
+                  {summary.partner_approvals_pending ?? 0}
+                </strong>
+              </div>
+              <p className={`${s.muted} mt-1`}>
+                Menunggu persetujuan admin.
               </p>
-              <Link href="/admin/listings" className={s.secondary}>
-                Tinjau listing saat ini
+              {summary.partner_approval_preview?.length ? (
+                <ul className="-mx-6 mt-5 divide-y divide-line border-y border-line">
+                  {summary.partner_approval_preview.slice(0, 3).map((approval) => (
+                    <li key={approval.id} className="flex items-center gap-4 px-6 py-3">
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm">
+                          {approval.store_name || approval.name}
+                        </strong>
+                        <span className={s.muted}>
+                          {approval.store_name
+                            ? [approval.category, approval.neighborhood].filter(Boolean).join(" · ") || approval.name
+                            : `Pendaftar · ${approval.name}`}
+                        </span>
+                      </span>
+                      <time className="shrink-0 font-mono text-xs" dateTime={approval.requested_at}>
+                        {relativeTime(approval.requested_at)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={`${s.muted} mt-5`}>Tidak ada pendaftaran mitra yang menunggu.</p>
+              )}
+              <Link href="/admin/partner-approval" className="mt-4 inline-flex items-center gap-2 font-semibold text-brand hover:underline">
+                Buka pendaftaran mitra ({summary.partner_approvals_pending ?? 0}) <ArrowRight size={16} aria-hidden="true" />
               </Link>
             </section>
           </div>
@@ -307,9 +392,9 @@ function AdminContent({ mode }: { mode: Mode }) {
           <div className={s.metrics}>
             {[
               [summary.listings_live, "listing tayang"],
-              [summary.orders_today, "pesanan dibuat hari ini"],
-              [summary.partners_active, "akun mitra aktif"],
-              [summary.stores_open, "toko aktif"],
+              [summary.orders_today, "pesanan hari ini"],
+              [summary.partners_active, "mitra aktif"],
+              [summary.pickup_portions_today ?? 0, "porsi terselamatkan hari ini"],
             ].map(([value, label]) => (
               <div key={label}>
                 <strong>{value}</strong>
