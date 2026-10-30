@@ -840,9 +840,9 @@ class ListingTakeDownTests(TestCase):
         self.assertEqual(log.reason, "Mengandung konten yang melanggar")
         self.assertEqual(log.admin_user, self.admin)
 
-    def test_take_down_twice_is_rejected(self):
+    def test_take_down_retry_does_not_duplicate_log(self):
         self.assertEqual(self.take_down().status_code, 200)
-        self.assertEqual(self.take_down().status_code, 400)
+        self.assertEqual(self.take_down().status_code, 200)
         self.assertEqual(AdminModerationLog.objects.filter(action_type="TAKEDOWN_LISTING").count(), 1)
 
     def test_taken_down_listing_disappears_from_public_views(self):
@@ -876,7 +876,7 @@ class ListingTakeDownTests(TestCase):
     def test_partner_cannot_reactivate_taken_down_listing(self):
         self.take_down()
         response = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 409)
         self.item.refresh_from_db()
         self.assertFalse(self.item.active)
         self.assertTrue(self.item.taken_down)

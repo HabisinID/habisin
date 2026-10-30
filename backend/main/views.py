@@ -19,6 +19,7 @@ from .listing_services import ListingConflict, available_listings, lock_listing,
 from .listing_services import ListingConflict, available_listings, lock_listing, lock_stores, ensure_partner_listing_mutable
 from .listing_media import compensate_media_writes, delete_listing_file, save_listing_with_media
 from .reservation_policy import reservation_policy
+from .moderation import moderate_listing
 from rest_framework import serializers as drf_serializers
 from .serializers import PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer, PartnerApprovalSerializer, ModerationLogSerializer, AdminListingSerializer
 from .serializers import PartnerListingReadSerializer, PartnerListingSerializer, UserSerializer, RegisterSerializer, ListingSerializer, ReservationSerializer, ReservationCreateSerializer, ReservationUpdateSerializer
@@ -196,7 +197,10 @@ def partner_listing_detail(request, pk):
     with compensate_media_writes() as media, transaction.atomic():
         target_id = _target_store_id(request.data)
         item = lock_listing(pk, request.user, target_id)
-        ensure_partner_listing_mutable(item)
+        if request.method != "GET":
+            ensure_partner_listing_mutable(item)
+        elif item.deleted_at:
+            return Response({"detail": "Listing sudah dihapus."}, status=404)
         if request.method == "DELETE":
             if item.reservation_set.filter(status__in=Reservation.ACTIVE_STATUSES).exists():
                 return Response({"detail": "Listing memiliki pesanan aktif. Tangani pesanan sebelum menghapus listing."}, status=409)
@@ -439,45 +443,14 @@ class AdminListingViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"], url_path="take-down")
     def take_down(self, request, pk=None):
         listing = self.get_object()
-        if listing.taken_down:
-            return Response({"detail": "Listing sudah diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
-        reason = str(request.data.get("reason", "")).strip()
-        if not reason:
-            return Response({"detail": "Alasan take-down wajib diisi."}, status=status.HTTP_400_BAD_REQUEST)
-        with transaction.atomic():
-            Reservation.objects.filter(listing=listing, status__in=Reservation.ACTIVE_STATUSES).update(
-                status="cancelled",
-                cancellation_note="Listing diturunkan oleh admin.",
-                cancelled_at=timezone.now(),
-            )
-            listing.taken_down = True
-            listing.takedown_reason = reason
-            listing.active = False
-            listing.save(update_fields=["taken_down", "takedown_reason", "active"])
-            AdminModerationLog.objects.create(
-                admin_user=request.user,
-                action_type="TAKEDOWN_LISTING",
-                target_name=listing.name,
-                reason=reason,
-            )
+        listing = moderate_listing(listing.pk, request.user, "take_down", request.data.get("reason"))
         return Response(AdminListingSerializer(listing).data)
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         listing = self.get_object()
-        if not listing.taken_down:
-            return Response({"detail": "Listing tidak dalam status diturunkan."}, status=status.HTTP_400_BAD_REQUEST)
-        reason = str(request.data.get("reason", "")).strip() or "Dipulihkan oleh admin"
-        with transaction.atomic():
-            listing.taken_down = False
-            listing.takedown_reason = ""
-            listing.save(update_fields=["taken_down", "takedown_reason"])
-            AdminModerationLog.objects.create(
-                admin_user=request.user,
-                action_type="RESTORE_LISTING",
-                target_name=listing.name,
-                reason=reason,
-            )
+        reason = request.data.get("reason") or "Dipulihkan oleh admin"
+        listing = moderate_listing(listing.pk, request.user, "restore", reason, require_removed=True)
         return Response(AdminListingSerializer(listing).data)
 
 

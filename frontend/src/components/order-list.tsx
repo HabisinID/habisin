@@ -35,7 +35,7 @@ const legend: [Reservation["status"], string][] = [
   ],
   [
     "cancelled",
-    "Pesanan dibatalkan oleh pembeli atau mitra. Porsi dikembalikan ke toko.",
+    "Pesanan dibatalkan oleh pembeli, mitra, atau admin. Porsi dikembalikan ke toko.",
   ],
   ["expired", "Tidak diambil sampai batas ambil. Porsi kembali ke toko."],
 ];

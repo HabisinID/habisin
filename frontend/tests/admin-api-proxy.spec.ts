@@ -1,10 +1,13 @@
 import { expect, test } from "./fixtures";
 import { mutate } from "./backend-fixtures";
 
-test("admin API keeps slash, POST body and session across the frontend proxy", async ({ request }) => {
+test("admin API keeps slash, POST body and session across the frontend proxy", async ({
+  request,
+}) => {
   const login = await mutate(request, "auth/login", {
     username: process.env.E2E_ADMIN_USERNAME || "workspace_admin",
-    password: process.env.E2E_ADMIN_PASSWORD || process.env.HABISIN_TEST_ADMIN_PASSWORD,
+    password:
+      process.env.E2E_ADMIN_PASSWORD || process.env.HABISIN_TEST_ADMIN_PASSWORD,
   });
   expect(login.status()).toBe(200);
   const foods = await (await request.get("/api/listings")).json();
@@ -26,7 +29,9 @@ test("admin API keeps slash, POST body and session across the frontend proxy", a
     expect(response.headers().location).toBeUndefined();
   }
   const restore = await request.post("/api/admin/listings/999999999/restore/", {
-    data: {}, headers: { "X-CSRFToken": csrf.csrfToken }, maxRedirects: 0,
+    data: {},
+    headers: { "X-CSRFToken": csrf.csrfToken },
+    maxRedirects: 0,
   });
   expect(restore.status()).toBe(404);
   const cashier = await request.get("/api/partner/kasir", { maxRedirects: 0 });

@@ -92,7 +92,7 @@ class WorkspaceRevisionTests(TestCase):
         self.assertEqual(self.moderate(action='activate').status_code,400)
         self.assertEqual(ModerationLog.objects.count(),0)
 
-    def test_takedown_blocks_every_mutation_but_preserves_tickets_and_restore(self):
+    def test_takedown_blocks_every_mutation_cancels_tickets_and_restores(self):
         order=self.order(paid=True)
         self.admin();self.assertEqual(self.moderate().status_code,200)
         self.assertEqual(self.moderate().status_code,200)
@@ -109,7 +109,7 @@ class WorkspaceRevisionTests(TestCase):
             self.assertEqual(getattr(self.client,method)(path+suffix,payload,format='json').status_code,409)
         self.client.force_authenticate(self.buyer)
         self.assertNotIn(self.a.pk,[row['id'] for row in self.client.get('/api/listings').data])
-        self.assertEqual(self.client.get(f'/api/reservations/{order.pk}').data['status'],'paid')
+        self.assertEqual(self.client.get(f'/api/reservations/{order.pk}').data['status'],'cancelled')
         self.assertEqual(self.client.post('/api/reservations',{'listing_id':self.a.pk},format='json').status_code,400)
         self.admin();self.assertEqual(self.moderate('restore','Foto diperbaiki').status_code,200)
         self.a.refresh_from_db();self.assertFalse(self.a.active);self.assertIsNone(self.a.moderated_at)

@@ -17,6 +17,7 @@ from .listing_services import ListingConflict, available_listings, lock_listing
 from .models import AdminModerationLog, Complaint, Listing, ListingStockAction, ModerationLog, PartnerApproval, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, StoreSerializer
 from .views import release_stock
+from .moderation import moderate_listing as apply_moderation
 
 WIB = ZoneInfo("Asia/Jakarta")
 
@@ -202,7 +203,7 @@ def admin_listings(request):
     items = Listing.objects.filter(deleted_at__isnull=True).select_related("store_profile").order_by("-pk")
     status = request.query_params.get("status", "all")
     if status == "removed":
-        items = items.filter(moderated_at__isnull=False)
+        items = items.filter(Q(moderated_at__isnull=False) | Q(taken_down=True))
     elif status == "live":
         items = available_listings(items)
     elif status != "all":
@@ -225,26 +226,8 @@ def admin_listings(request):
 @api_view(["POST"])
 def moderate_listing(request, pk):
     require_role(request, "admin")
-    reason = reason_value(request)
-    action = request.data.get("action")
-    if action not in ["take_down", "restore"]:
-        raise ValidationError({"action": "Pilih turunkan atau pulihkan."})
-    with transaction.atomic():
-        item = lock_listing(pk)
-        if item.deleted_at:
-            raise ListingConflict("Listing sudah dihapus pemilik.")
-        removed = bool(item.moderated_at)
-        if removed == (action == "take_down"):
-            return Response(ListingSerializer(item).data)
-        item.moderated_at = timezone.now() if action == "take_down" else None
-        item.moderated_by = request.user if action == "take_down" else None
-        item.moderation_reason = reason if action == "take_down" else ""
-        item.active = False
-        item.save(update_fields=["moderated_at", "moderated_by", "moderation_reason", "active"])
-        ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
-        ModerationLog.objects.create(listing=item, actor=request.user, target_name=item.name, store_name=item.store, action=action, reason=reason)
-        AdminModerationLog.objects.create(admin_user=request.user, action_type="TAKEDOWN_LISTING" if action == "take_down" else "RESTORE_LISTING", target_name=item.name, reason=reason)
-        return Response(ListingSerializer(item).data)
+    item = apply_moderation(pk, request.user, request.data.get("action"), request.data.get("reason"))
+    return Response(ListingSerializer(item).data)
 
 
 @api_view(["GET"])

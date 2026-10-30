@@ -92,7 +92,7 @@ class ListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active", "store_id", "store_summary", "image_source", "prepared_at", "packaging", "storage_notes", "allergens", "buyer_notes", "moderated_at", "moderation_reason", "deleted_at"]
+        fields = ["id", "name", "store", "category", "description", "address", "price", "original_price", "stock", "image", "latitude", "longitude", "pickup_start", "pickup_end", "active", "store_id", "store_summary", "image_source", "prepared_at", "packaging", "storage_notes", "allergens", "buyer_notes", "moderated_at", "moderation_reason", "deleted_at", "taken_down", "takedown_reason"]
 
 
 class PartnerListingSerializer(ListingSerializer):
@@ -109,7 +109,7 @@ class PartnerListingSerializer(ListingSerializer):
 
     class Meta(ListingSerializer.Meta):
         fields = ListingSerializer.Meta.fields + ["image_file"]
-        read_only_fields = ["id", "store", "address", "latitude", "longitude", "store_summary", "moderated_at", "moderation_reason", "deleted_at"]
+        read_only_fields = ["id", "store", "address", "latitude", "longitude", "store_summary", "moderated_at", "moderation_reason", "deleted_at", "taken_down", "takedown_reason"]
 
     def validate_name(self, value):
         if len(value) > 60 and (self.instance is None or value != self.instance.name):
@@ -367,5 +367,5 @@ class AdminListingSerializer(ListingSerializer):
     owner_username = serializers.ReadOnlyField(source="owner.username")
 
     class Meta(ListingSerializer.Meta):
-        fields = ListingSerializer.Meta.fields + ["taken_down", "takedown_reason", "owner_username"]
+        fields = ListingSerializer.Meta.fields + ["owner_username"]
         read_only_fields = ["taken_down", "takedown_reason"]
