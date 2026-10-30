@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from .commerce_views import require_role
 from .listing_services import ListingConflict, available_listings, lock_listing
-from .models import Complaint, Listing, ListingStockAction, ModerationLog, PartnerApproval, Reservation, Store
+from .models import AdminModerationLog, Complaint, Listing, ListingStockAction, ModerationLog, PartnerApproval, Reservation, Store
 from .serializers import ListingSerializer, PartnerOrderSerializer, StoreSerializer
 from .views import release_stock
 
@@ -210,7 +210,16 @@ def admin_listings(request):
     query = request.query_params.get("q", "").strip()[:100]
     if query:
         items = items.filter(Q(name__icontains=query) | Q(store__icontains=query))
-    return Response(paginated(request, items, ListingSerializer))
+    data = paginated(request, items, ListingSerializer)
+    reports = {}
+    rows = Complaint.objects.filter(reservation__listing_id__in=[row["id"] for row in data["results"]]).exclude(status="resolved").order_by("-created_at").values("reservation__listing_id", "description", "created_at")
+    for row in rows:
+        reports.setdefault(row["reservation__listing_id"], []).append({"description": row["description"], "created_at": row["created_at"].isoformat()})
+    for row in data["results"]:
+        found = reports.get(row["id"], [])
+        row["report_count"] = len(found)
+        row["reports"] = found[:3]
+    return Response(data)
 
 
 @api_view(["POST"])
@@ -234,6 +243,7 @@ def moderate_listing(request, pk):
         item.save(update_fields=["moderated_at", "moderated_by", "moderation_reason", "active"])
         ListingStockAction.objects.filter(listing=item, used=False).update(used=True)
         ModerationLog.objects.create(listing=item, actor=request.user, target_name=item.name, store_name=item.store, action=action, reason=reason)
+        AdminModerationLog.objects.create(admin_user=request.user, action_type="TAKEDOWN_LISTING" if action == "take_down" else "RESTORE_LISTING", target_name=item.name, reason=reason)
         return Response(ListingSerializer(item).data)
 
 

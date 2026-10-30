@@ -9,6 +9,7 @@ router.register(r"admin/listings", views.AdminListingViewSet, basename="adminlis
 approval_router = SimpleRouter()
 approval_router.trailing_slash = "/?"
 approval_router.register(r"admin/partner-approvals", views.PartnerApprovalViewSet, basename="partnerapproval")
+approval_router.register(r"admin/activity-logs", views.ModerationLogViewSet, basename="activitylog")
 
 urlpatterns = [
     path("", include(router.urls)),
