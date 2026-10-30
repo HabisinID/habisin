@@ -1,4 +1,4 @@
-import AdminWorkspace from "@/components/admin-workspace";
+import AdminListings from "@/components/admin-listings";
 export default function AdminListingPage() {
-  return <AdminWorkspace mode="listings" />;
+  return <AdminListings />;
 }
