@@ -160,7 +160,8 @@ class ListingMediaTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.assertEqual(self.client.delete(f'/api/partner/listings/{created["id"]}').status_code, 204)
             self.assertTrue(self.storage.exists(name))
-        self.assertFalse(self.storage.exists(name))
+        self.assertTrue(self.storage.exists(name))
+        self.assertIsNotNone(Listing.objects.get(pk=created["id"]).deleted_at)
 
     def test_cleanup_failure_does_not_undo_successful_replacement(self):
         created = self.upload().data

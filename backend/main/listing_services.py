@@ -17,6 +17,7 @@ def available_listings(queryset=None):
     return queryset.filter(
         active=True,
         taken_down=False,
+        moderated_at__isnull=True,
         stock__gt=0,
         pickup_end__gt=now,
         deleted_at__isnull=True,
@@ -47,7 +48,7 @@ def ensure_partner_listing_mutable(item):
     if item.deleted_at:
         from django.http import Http404
         raise Http404("Listing sudah dihapus.")
-    if item.moderated_at:
-        raise ListingConflict("Listing diturunkan admin dan terkunci. " + item.moderation_reason)
+    if item.moderated_at or item.taken_down:
+        raise ListingConflict("Listing diturunkan admin dan terkunci. " + (item.moderation_reason or item.takedown_reason))
     if item.store_profile_id and item.store_profile.closed_at:
         raise ListingConflict("Toko ditutup permanen; listing tidak dapat diubah.")

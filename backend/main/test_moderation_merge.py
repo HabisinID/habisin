@@ -7,7 +7,7 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 
 
-FINAL = [("main", "0019_reconcile_moderation_log_tables")]
+FINAL = [("main", "0021_buyer_history_archiving")]
 
 
 class ModerationMergeMigrationTests(TransactionTestCase):

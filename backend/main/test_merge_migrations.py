@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class MergeMigrationTests(TransactionTestCase):
-    final = [('main', '0019_reconcile_moderation_log_tables')]
+    final = [('main', '0021_buyer_history_archiving')]
 
     def upgrade_from(self, origin, status):
         executor = MigrationExecutor(connection)
@@ -83,6 +83,13 @@ class MergeMigrationTests(TransactionTestCase):
 class PictureColumnRepairTests(TransactionTestCase):
     before = [("main", "0015_merge_profile_pictures_and_workspace")]
     final = [("main", "0016_repair_profile_picture_columns")]
+
+    def tearDown(self):
+        # The assertion target is historical, but subsequent tests use current
+        # models (including PostgreSQL concurrency tests with new columns).
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDown()
 
     def check_repair(self, missing):
         executor = MigrationExecutor(connection)

@@ -264,7 +264,7 @@ class ReservationFlowTests(TestCase):
         for pk in [cancelled, picked_up]:
             self.assertEqual(self.client.delete(f"/api/reservations/{pk}").status_code, 204)
         self.assertEqual(self.stock(), stock)
-        self.assertEqual(set(Reservation.objects.values_list("pk", flat=True)), {pending, paid})
+        self.assertEqual(set(Reservation.objects.filter(buyer_archived_at__isnull=True).values_list("pk", flat=True)), {pending, paid})
 
     def test_other_users_cannot_touch_order(self):
         pk = self.order()
@@ -525,7 +525,7 @@ class PartnerListingTests(TestCase):
             ids = [row["id"] for row in self.client.get("/api/listings").json()]
             self.assertEqual(item.pk in ids, active)
         self.assertEqual(self.client.delete(path).status_code, 204)
-        self.assertFalse(Listing.objects.filter(pk=item.pk).exists())
+        self.assertTrue(Listing.objects.filter(pk=item.pk, deleted_at__isnull=False, active=False).exists())
 
     def test_inventory_permissions_and_cross_partner_access(self):
         self.client.force_authenticate(self.other)
@@ -840,9 +840,9 @@ class ListingTakeDownTests(TestCase):
         self.assertEqual(log.reason, "Mengandung konten yang melanggar")
         self.assertEqual(log.admin_user, self.admin)
 
-    def test_take_down_twice_is_rejected(self):
+    def test_take_down_retry_does_not_duplicate_log(self):
         self.assertEqual(self.take_down().status_code, 200)
-        self.assertEqual(self.take_down().status_code, 400)
+        self.assertEqual(self.take_down().status_code, 200)
         self.assertEqual(AdminModerationLog.objects.filter(action_type="TAKEDOWN_LISTING").count(), 1)
 
     def test_taken_down_listing_disappears_from_public_views(self):
@@ -876,7 +876,7 @@ class ListingTakeDownTests(TestCase):
     def test_partner_cannot_reactivate_taken_down_listing(self):
         self.take_down()
         response = self.partner_client.patch(f"/api/partner/listings/{self.item.pk}", {"active": True}, format="json")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 409)
         self.item.refresh_from_db()
         self.assertFalse(self.item.active)
         self.assertTrue(self.item.taken_down)
