@@ -11,6 +11,7 @@ import { clock, statusLabel } from "@/lib/orders";
 import Modal from "./modal";
 import RoleWorkspace from "./role-workspace";
 import s from "./role-workspace.module.css";
+import { PartnerPerformancePanel } from "./partner-performance";
 
 type PageData = {
   results: PartnerOrder[];
@@ -29,11 +30,11 @@ export default function PartnerOrders({
       title={dashboard ? "Dasbor" : "Pesanan"}
       subtitle="Kelola pesanan masuk dan riwayat pengambilan seluruh cabang."
     >
-      {() => <OrdersContent />}
+      {() => <OrdersContent dashboard={dashboard} />}
     </RoleWorkspace>
   );
 }
-function OrdersContent() {
+function OrdersContent({ dashboard }: { dashboard: boolean }) {
   const [tab, setTab] = useState("active"),
     [from, setFrom] = useState(""),
     [to, setTo] = useState(""),
@@ -157,7 +158,10 @@ function OrdersContent() {
       : `${minutes} mnt`;
   return (
     <section aria-label="Pesanan toko">
-      <div className={`${s.toolbar} ${s.ordersToolbar}`}>
+      {dashboard && <PartnerPerformancePanel />}
+      <div
+        className={`${s.toolbar} ${s.ordersToolbar} ${dashboard ? "mt-6" : ""}`}
+      >
         <div className={s.filters} aria-label="Filter status pesanan">
           {[
             ["active", "Pesanan masuk"],

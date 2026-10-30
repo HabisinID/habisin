@@ -13,6 +13,7 @@ import {
   Menu,
   ClipboardList,
   History,
+  Flag,
 } from "lucide-react";
 import { api, ApiError, type User } from "@/lib/api";
 import HabisinLogo from "./habisin-logo";
@@ -94,6 +95,7 @@ export default function RoleWorkspace({
       : [
           { href: "/admin", label: "Ringkasan", Icon: LayoutDashboard },
           { href: "/admin/listings", label: "Listing", Icon: List },
+          { href: "/admin/complaints", label: "Laporan komplain", Icon: Flag },
           { href: "/admin/log", label: "Log moderasi", Icon: History },
           { href: "/admin/account", label: "Akun", Icon: UserRound },
           {
@@ -121,14 +123,6 @@ export default function RoleWorkspace({
             {label}
           </Link>
         ),
-      )}
-      {role === "admin" && (
-        <>
-          <button disabled title="Belum diimplementasikan">
-            <ShoppingBag size={18} />
-            Laporan komplain
-          </button>
-        </>
       )}
     </>
   );

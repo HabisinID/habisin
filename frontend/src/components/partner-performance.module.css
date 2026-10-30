@@ -1,0 +1,222 @@
+.performance {
+  padding: 24px 32px 20px;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.header,
+.chartHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.header h2,
+.chartHeading h3 {
+  margin: 0;
+  color: var(--color-dark);
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.periods button {
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-dark);
+  font-weight: 600;
+}
+
+.periods button[aria-pressed="true"] {
+  border-color: var(--color-brand);
+  background: var(--color-light);
+  color: var(--color-brand);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0 24px;
+}
+
+.metric {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.metric > span,
+.metric > small,
+.chartHeading > span,
+.note,
+.loading {
+  color: var(--color-muted);
+}
+
+.metric > span {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.metric strong {
+  overflow-wrap: anywhere;
+  color: var(--color-dark);
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 750;
+}
+
+.metric > small {
+  font-size: 12px;
+}
+
+.chartHeading {
+  margin-bottom: 12px;
+}
+
+.chartHeading h3 {
+  font-size: 15px;
+}
+
+.chartHeading > span {
+  font-size: 12px;
+}
+
+.chart {
+  display: grid;
+  height: 150px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.chartDay {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: 18px minmax(50px, 1fr) 30px;
+  text-align: center;
+}
+
+.error {
+  margin: 0;
+  padding: 0 32px 16px;
+  background: var(--color-surface-2);
+  color: var(--color-error);
+}
+
+.error button {
+  margin-left: 8px;
+  color: var(--color-brand);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.barValue {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.barTrack {
+  display: flex;
+  height: 100%;
+  align-items: end;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.barTrack i {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-brand);
+}
+
+.dayLabel {
+  padding-top: 6px;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.dayLabel small {
+  margin-left: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+}
+
+.loading {
+  min-height: 100px;
+  padding-top: 32px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .performance {
+    padding: 20px 16px;
+  }
+
+  .error {
+    padding: 0 16px 16px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 10px;
+  }
+
+  .metric:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .periods {
+    gap: 5px;
+  }
+
+  .periods button {
+    min-height: 36px;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .chart {
+    gap: 5px;
+  }
+
+  .chartHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}

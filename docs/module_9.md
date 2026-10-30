@@ -3,7 +3,8 @@
 Modul ini memungkinkan pembeli memberi ulasan untuk produk yang sudah diambil dan
 melaporkan masalah pada pesanan. Rating toko dihitung dari seluruh ulasan produk yang
 terhubung ke toko tersebut. Pembeli dapat mengelola ulasannya dari **Akun → Ulasan saya**
-dan memantau status komplain dari halaman yang sama.
+dan memantau status komplain dari halaman yang sama. Laporan masuk ke antrean admin
+untuk ditinjau, diselesaikan, atau ditindaklanjuti dengan penurunan listing.
 
 Jalankan `python manage.py migrate` dari `backend/` setelah memperbarui kode untuk
 menerapkan migrasi ulasan dan komplain. Migrasi fitur ini mencakup `0013_complaint_review`
@@ -27,12 +28,16 @@ migrasi secara manual.
    form kategori masalah: kebersihan, makanan basi/tidak segar, makanan tidak sesuai
    pesanan, atau masalah lainnya. Setelah laporan terkirim, halaman menampilkan konfirmasi.
    Satu pesanan hanya dapat memiliki satu laporan.
-5. **Ulasan di profil toko dan produk.** Profil toko menampilkan rata-rata, jumlah ulasan,
+5. **Penanganan admin.** Admin membuka **Admin → Laporan komplain**, memilih laporan,
+   lalu menandainya **Sedang ditinjau** atau **Selesai**. Jika laporan menunjukkan listing
+   berisiko, admin dapat menurunkan listing dengan alasan wajib; tindakan itu juga
+   menyelesaikan laporan. Komplain selesai tidak dapat dibuka kembali.
+6. **Ulasan di profil toko dan produk.** Profil toko menampilkan rata-rata, jumlah ulasan,
    sebaran rating 1–5, tanggal, dan ulasan lintas produk. Profil produk menampilkan ulasan
    untuk produk tersebut. Daftar mulai menampilkan 4 ulasan; **Lihat ulasan lainnya**
    menambahkan ulasan berikutnya. Urutan dapat diubah ke **Terbaru**, **Rating tertinggi**,
    atau **Rating terendah**.
-6. **Akun → Ulasan saya** menampilkan ulasan milik pembeli, termasuk tanggal, rating,
+7. **Akun → Ulasan saya** menampilkan ulasan milik pembeli, termasuk tanggal, rating,
    produk dan toko. Pembeli dapat mengedit atau menghapus ulasan di bagian ini. Bagian
    **Komplain saya** menampilkan laporan dan statusnya: `open` sebagai **Menunggu
    ditinjau**, `reviewed` sebagai **Sedang ditinjau**, dan `resolved` sebagai **Selesai
@@ -53,6 +58,9 @@ dan mutasi memerlukan header `X-CSRFToken` dari `GET /api/auth/csrf`.
 | `GET` | `/api/stores/{storeId}/reviews` | Publik. Mengembalikan `{store_id, average_rating, review_count, reviews}` untuk seluruh produk toko. Jika belum ada ulasan, `average_rating` bernilai `null`. |
 | `POST` | `/api/complaints` | Pembeli pemilik pesanan. Body `{reservation_id, reason, description}`; membuat laporan dan mengembalikan `201`. |
 | `GET` | `/api/reviews/mine` | Pembeli masuk. Mengembalikan `{reviews, complaints}` milik akun aktif. |
+| `GET` | `/api/admin/complaints?status=open|reviewed|resolved|all` | Admin. Mengembalikan antrean terfilter, jumlah per status, dan detail pesanan/listing. Mendukung `q`, `page`, dan `page_size`. |
+| `PATCH` | `/api/admin/complaints/{complaintId}` | Admin. Body `{status: "reviewed"|"resolved"}`. Komplain selesai tidak dapat dibuka kembali. |
+| `POST` | `/api/admin/listings/{listingId}/moderate` | Admin. Body `{action: "take_down", reason}`; menurunkan listing. UI admin kemudian menandai komplain terkait selesai. |
 
 `comment` ulasan boleh kosong dan maksimal 1.000 karakter. `rating` wajib berupa bilangan
 bulat 1–5. `reason` komplain harus salah satu dari `hygiene`, `freshness`, `mismatch`, atau
@@ -70,8 +78,8 @@ bulat 1–5. `reason` komplain harus salah satu dari `hygiene`, `freshness`, `mi
   atau ulasan milik pengguna lain tidak dibocorkan.
 - Komplain hanya dapat dibuat untuk pesanan milik pembeli yang berstatus `paid` atau
   `picked_up`, dan `Complaint` hanya mengizinkan satu laporan per pesanan.
-- Status komplain bersifat baca di antarmuka pembeli. Endpoint perubahan status/moderasi
-  komplain belum termasuk dalam Modul 9.
+- Status komplain bersifat baca di antarmuka pembeli. Endpoint perubahan status hanya
+  dapat digunakan admin. Penurunan listing juga memerlukan alasan dan izin admin.
 - Request tidak valid menghasilkan `400`; pengguna tanpa akses mendapat `403`, resource
   milik pengguna lain atau tidak ditemukan mendapat `404`, dan konflik batas unik mendapat
   `409`.
@@ -83,11 +91,14 @@ Dari `backend/`, aktifkan virtual environment lalu jalankan:
 ```bash
 source .venv/bin/activate
 python manage.py test main.test_reviews
+python manage.py test main.test_admin_complaints
 ```
 
 Suite ini mencakup kelayakan dan keunikan ulasan, rating tidak valid, edit/hapus dan
 kepemilikan, rating publik toko, kelayakan serta duplikasi komplain, status dan kategori
 tidak valid, akses anonim, pemisahan data antar pembeli, dan kebutuhan profil toko.
+Tes akses admin, antrean komplain, perubahan status, dan penurunan listing ada di
+`main.test_admin_complaints`.
 
 ## Verifikasi frontend
 
@@ -102,8 +113,11 @@ Next.js (`localhost`, bukan `127.0.0.1`, agar origin HMR sesuai):
 
 ```bash
 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e -- tests/reviews.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e -- tests/admin-complaints.spec.ts
 ```
 
 Tes Playwright memakai mock API dan mencakup kirim ulasan, edit/hapus ulasan, kirim
 komplain, pengelolaan ulasan dan status komplain di akun pembeli, serta ringkasan rating
 toko dan pengurutan ulasan. Backend tidak perlu dijalankan untuk suite frontend ini.
+Tes `admin-complaints.spec.ts` menggunakan fixture tiruan untuk memilih laporan, mengubah
+status, dan menurunkan listing melalui panel admin.
